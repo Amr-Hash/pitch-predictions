@@ -7,9 +7,15 @@ from decouple import Csv, config
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+IS_VERCEL = os.environ.get("VERCEL") == "1"
+
 SECRET_KEY = config("SECRET_KEY", default="django-insecure-dev-key-change-in-production")
-DEBUG = config("DEBUG", default=True, cast=bool)
-ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="localhost,127.0.0.1,backend", cast=Csv())
+DEBUG = config("DEBUG", default=not IS_VERCEL, cast=bool)
+ALLOWED_HOSTS = config(
+    "ALLOWED_HOSTS",
+    default="localhost,127.0.0.1,backend,.vercel.app" if IS_VERCEL else "localhost,127.0.0.1,backend",
+    cast=Csv(),
+)
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -85,7 +91,10 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+if IS_VERCEL:
+    STATICFILES_STORAGE = "django.contrib.staticfiles.storage.StaticFilesStorage"
+else:
+    STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
@@ -119,11 +128,21 @@ SIMPLE_JWT = {
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
 
+_default_cors = (
+    "http://localhost:3000,http://127.0.0.1:3000,"
+    "https://worldcup-predictions-phi.vercel.app,"
+    "https://worldcup-predictions.vercel.app"
+)
 CORS_ALLOWED_ORIGINS = config(
     "CORS_ALLOWED_ORIGINS",
-    default="http://localhost:3000,http://127.0.0.1:3000",
+    default=_default_cors,
     cast=Csv(),
 )
+
+if IS_VERCEL:
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
 
 SPECTACULAR_SETTINGS = {
     "TITLE": "World Cup Prediction API",
