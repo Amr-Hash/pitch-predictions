@@ -150,23 +150,31 @@ class Command(BaseCommand):
         return cup_groups
 
     def _seed_wc_tournament(self, teams):
-        tournament, _ = Tournament.objects.update_or_create(
+        tournament, created = Tournament.objects.update_or_create(
             name=WC2026_TOURNAMENT["name"],
             year=WC2026_TOURNAMENT["year"],
             defaults={
                 "name_ar": WC2026_TOURNAMENT_AR,
                 "start_date": WC2026_TOURNAMENT["start_date"],
                 "end_date": WC2026_TOURNAMENT["end_date"],
-                "is_active": True,
             },
         )
+        update_fields = []
+        if created:
+            tournament.is_active = True
+            update_fields.append("is_active")
         if not tournament.name_ar:
             tournament.name_ar = WC2026_TOURNAMENT_AR
-            tournament.save(update_fields=["name_ar"])
+            update_fields.append("name_ar")
+        if update_fields:
+            tournament.save(update_fields=update_fields)
+
+        if Match.objects.filter(tournament=tournament).exists():
+            return Match.objects.filter(tournament=tournament).count()
+
         stages = self._create_stages(tournament, STAGES_CONFIG)
         cup_groups = self._create_cup_groups(tournament, WC2026_GROUPS, teams)
 
-        Match.objects.filter(tournament=tournament).delete()
         for group_letter, matchday, home_code, away_code, kickoff in WC2026_GROUP_MATCHES:
             if isinstance(kickoff, str):
                 from datetime import datetime
@@ -191,22 +199,24 @@ class Command(BaseCommand):
                 "name_ar": DEMO_TEST_CUP_AR,
                 "start_date": schedule["start_date"],
                 "end_date": schedule["end_date"],
-                "is_active": True,
             },
         )
-        tournament.start_date = schedule["start_date"]
-        tournament.end_date = schedule["end_date"]
-        tournament.is_archived = False
-        if not tournament.name_ar:
-            tournament.name_ar = DEMO_TEST_CUP_AR
+        update_fields = []
         if created:
             tournament.is_active = True
-        tournament.save()
+            update_fields.append("is_active")
+        if not tournament.name_ar:
+            tournament.name_ar = DEMO_TEST_CUP_AR
+            update_fields.append("name_ar")
+        if update_fields:
+            tournament.save(update_fields=update_fields)
+
+        if Match.objects.filter(tournament=tournament).exists():
+            return Match.objects.filter(tournament=tournament).count()
 
         stages = self._create_stages(tournament, TEST_STAGES_CONFIG)
         cup_groups = self._create_cup_groups(tournament, schedule["groups"], teams)
 
-        Match.objects.filter(tournament=tournament).delete()
         for group_letter, matchday, home_code, away_code, kickoff in schedule["matches"]:
             Match.objects.create(
                 tournament=tournament,
