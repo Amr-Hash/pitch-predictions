@@ -1,28 +1,35 @@
 "use client";
 
 import Link from "next/link";
-import { Match } from "@/lib/api";
+import { Match, Prediction } from "@/lib/api";
 import { useLocale, useT } from "@/lib/i18n";
 import { matchContextLabel, teamLabel } from "@/lib/localize";
 
 interface Props {
   match: Match;
+  prediction?: Prediction | null;
   showPredictLink?: boolean;
   showResultLink?: boolean;
 }
 
-export function MatchCard({ match, showPredictLink, showResultLink }: Props) {
+export function MatchCard({ match, prediction, showPredictLink, showResultLink }: Props) {
   const { locale } = useLocale();
   const t = useT();
   const kickoff = new Date(match.kickoff_time).toLocaleString(
     locale === "ar" ? "ar-EG" : undefined
   );
   const isFinished = match.status === "finished";
-  const canPredict = showPredictLink && !match.is_locked && !isFinished;
+  const canEdit = showPredictLink && !match.is_locked && !isFinished;
   const context = matchContextLabel(match, locale, t("group"));
   const matchdaySuffix = match.matchday
     ? ` · ${t("matchday", { day: match.matchday })}`
     : "";
+
+  const predictLabel = prediction
+    ? canEdit
+      ? t("editPrediction")
+      : t("viewPrediction")
+    : t("predict");
 
   return (
     <div className="card">
@@ -40,6 +47,11 @@ export function MatchCard({ match, showPredictLink, showResultLink }: Props) {
             }`}
           >
             {match.is_matchday_locked ? t("notYetOpen") : t("locked")}
+          </span>
+        )}
+        {isFinished && (
+          <span className="rounded bg-gray-100 px-2 py-0.5 text-gray-700">
+            {t("matchFinished")}
           </span>
         )}
       </div>
@@ -67,13 +79,24 @@ export function MatchCard({ match, showPredictLink, showResultLink }: Props) {
           <p className="font-semibold">{teamLabel(match.away_team, locale)}</p>
         </div>
       </div>
+      {prediction && (
+        <p className="mt-3 text-center text-sm text-pitch-700">
+          {t("yourPrediction")}:{" "}
+          <span className="font-semibold">
+            {prediction.predicted_home_score}-{prediction.predicted_away_score}
+          </span>
+          {prediction.points_awarded > 0 && (
+            <span className="ml-2 text-pitch-600">+{prediction.points_awarded} {t("points")}</span>
+          )}
+        </p>
+      )}
       {match.lock_reason && !isFinished && match.is_locked && (
         <p className="mt-2 text-center text-xs text-amber-700">{match.lock_reason}</p>
       )}
       <div className="mt-3 flex justify-center gap-2">
-        {canPredict && (
+        {showPredictLink && (canEdit || (prediction && isFinished)) && (
           <Link href={`/matches/${match.id}`} className="btn-primary text-sm">
-            {t("predict")}
+            {predictLabel}
           </Link>
         )}
         {showResultLink && isFinished && (

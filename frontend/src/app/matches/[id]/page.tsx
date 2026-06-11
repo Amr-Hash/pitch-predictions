@@ -4,11 +4,13 @@ import { useParams, useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import { api, Match, Prediction, unwrapList } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { useT } from "@/lib/i18n";
 
 export default function MatchDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { user, token, loading: authLoading } = useAuth();
   const router = useRouter();
+  const t = useT();
   const [match, setMatch] = useState<Match | null>(null);
   const [prediction, setPrediction] = useState<Prediction | null>(null);
   const [homeScore, setHomeScore] = useState("");
@@ -89,8 +91,8 @@ export default function MatchDetailPage() {
   if (authLoading || !user) return <div>Loading...</div>;
   if (!match) return <div>Match not found</div>;
 
-  const locked = match.is_locked || match.status === "finished";
-  const canPredict = !locked;
+  const isFinished = match.status === "finished";
+  const canEdit = !match.is_locked && !isFinished;
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -108,7 +110,15 @@ export default function MatchDetailPage() {
             )}
             <p className="text-lg font-semibold">{match.home_team.name}</p>
           </div>
-          <div className="text-center text-gray-400">vs</div>
+          <div className="text-center">
+            {isFinished ? (
+              <p className="text-3xl font-bold">
+                {match.home_score} - {match.away_score}
+              </p>
+            ) : (
+              <p className="text-gray-400">vs</p>
+            )}
+          </div>
           <div className="flex-1 text-center">
             {match.away_team.flag_url && (
               <img src={match.away_team.flag_url} alt="" className="mx-auto mb-2 h-12 w-16 object-cover" />
@@ -119,14 +129,19 @@ export default function MatchDetailPage() {
         <p className="mt-4 text-center text-sm text-gray-500">
           Kickoff: {new Date(match.kickoff_time).toLocaleString()}
         </p>
-        {locked && (
+        {isFinished && (
+          <p className="mt-2 text-center text-sm font-medium text-gray-700">
+            {t("matchFinished")} {t("predictionsLocked")}
+          </p>
+        )}
+        {!isFinished && match.is_locked && (
           <p className={`mt-2 text-center text-sm font-medium ${match.is_matchday_locked ? "text-amber-700" : "text-red-600"}`}>
             {match.lock_reason || "Prediction window has closed for this match."}
           </p>
         )}
       </div>
 
-      {canPredict && (
+      {canEdit && (
         <div className="card">
           {error && <div className="mb-4 rounded-lg bg-red-50 p-3 text-red-700">{error}</div>}
           {success && <div className="mb-4 rounded-lg bg-green-50 p-3 text-green-700">{success}</div>}
@@ -178,7 +193,7 @@ export default function MatchDetailPage() {
               </div>
             )}
             <button type="submit" className="btn-primary w-full">
-              {prediction ? "Update Prediction" : "Submit Prediction"}
+              {prediction ? t("editPrediction") : t("predict")}
             </button>
           </form>
         </div>
@@ -186,14 +201,20 @@ export default function MatchDetailPage() {
 
       {prediction && (
         <div className="card mt-6">
-          <h2 className="mb-3 font-semibold">Your Prediction</h2>
+          <h2 className="mb-3 font-semibold">{t("yourPrediction")}</h2>
           <div className="text-sm">
             {prediction.predicted_home_score}-{prediction.predicted_away_score}
             {prediction.predicted_winner_team && ` (${prediction.predicted_winner_team.name} advances)`}
             {prediction.points_awarded > 0 && (
-              <span className="ml-2 text-pitch-600">+{prediction.points_awarded} pts</span>
+              <span className="ml-2 text-pitch-600">+{prediction.points_awarded} {t("points")}</span>
             )}
           </div>
+        </div>
+      )}
+
+      {!prediction && isFinished && (
+        <div className="card mt-6 text-sm text-gray-500">
+          You did not submit a prediction for this match.
         </div>
       )}
     </div>

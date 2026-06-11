@@ -151,6 +151,13 @@ class MatchAdminUpdateSerializer(serializers.ModelSerializer):
         )
 
     def validate(self, attrs):
+        status = attrs.get("status")
+        if status and status != Match.Status.FINISHED:
+            raise serializers.ValidationError(
+                {"status": "Scores can only be saved with status set to finished."}
+            )
+        if "status" not in attrs and self.instance:
+            attrs["status"] = Match.Status.FINISHED
         _validate_match_result(self.instance, attrs)
         return attrs
 

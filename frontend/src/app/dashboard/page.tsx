@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { api, Dashboard } from "@/lib/api";
+import { api, Dashboard, Prediction, unwrapList } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useTournament } from "@/lib/tournament";
 import { EmptyState } from "@/components/EmptyState";
@@ -18,6 +18,7 @@ function DashboardContent() {
   const { locale } = useLocale();
   const t = useT();
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
+  const [predictionsByMatch, setPredictionsByMatch] = useState<Record<number, Prediction>>({});
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
 
@@ -26,9 +27,18 @@ function DashboardContent() {
     setLoading(true);
     setError("");
     setDashboard(null);
-    api
-      .getDashboard(token, { tournament: selectedTournament.id })
-      .then(setDashboard)
+    Promise.all([
+      api.getDashboard(token, { tournament: selectedTournament.id }),
+      api.getPredictions(token, { tournament: selectedTournament.id }),
+    ])
+      .then(([dashboardData, predictionsData]) => {
+        setDashboard(dashboardData);
+        const map: Record<number, Prediction> = {};
+        for (const prediction of unwrapList(predictionsData)) {
+          map[prediction.match] = prediction;
+        }
+        setPredictionsByMatch(map);
+      })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, [token, selectedTournament]);
@@ -98,7 +108,7 @@ function DashboardContent() {
         {hasPending ? (
           <div className="grid gap-4 sm:grid-cols-2">
             {dashboard.pending_predictions.map((m) => (
-              <MatchCard key={m.id} match={m} showPredictLink />
+              <MatchCard key={m.id} match={m} prediction={predictionsByMatch[m.id]} showPredictLink />
             ))}
           </div>
         ) : (
@@ -120,7 +130,7 @@ function DashboardContent() {
         {hasUpcoming ? (
           <div className="grid gap-4 sm:grid-cols-2">
             {dashboard.upcoming_matches.map((m) => (
-              <MatchCard key={m.id} match={m} showPredictLink />
+              <MatchCard key={m.id} match={m} prediction={predictionsByMatch[m.id]} showPredictLink />
             ))}
           </div>
         ) : (
@@ -138,7 +148,12 @@ function DashboardContent() {
         {hasResults ? (
           <div className="grid gap-4 sm:grid-cols-2">
             {dashboard.recent_results.map((m) => (
-              <MatchCard key={m.id} match={m} showResultLink />
+              <MatchCard
+                key={m.id}
+                match={m}
+                prediction={predictionsByMatch[m.id]}
+                showResultLink
+              />
             ))}
           </div>
         ) : (

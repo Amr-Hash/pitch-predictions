@@ -4,6 +4,10 @@ from tournaments.models import Match, Stage
 
 
 def validate_prediction_lock(match):
+    if match.status == Match.Status.FINISHED:
+        raise ValidationError(
+            {"detail": "This match has finished. Predictions can no longer be changed."}
+        )
     if match.is_locked:
         message = match.lock_reason or "Prediction window has closed for this match."
         raise ValidationError({"detail": message})

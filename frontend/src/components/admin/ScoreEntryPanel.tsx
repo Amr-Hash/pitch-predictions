@@ -6,7 +6,6 @@ import { api, Match } from "@/lib/api";
 interface ScoreDraft {
   home_score: string;
   away_score: string;
-  status: string;
   winner_team: string;
 }
 
@@ -14,7 +13,6 @@ function toDraft(match: Match): ScoreDraft {
   return {
     home_score: match.home_score !== null ? String(match.home_score) : "",
     away_score: match.away_score !== null ? String(match.away_score) : "",
-    status: match.status,
     winner_team: match.winner_team ? String(match.winner_team.id) : "",
   };
 }
@@ -47,7 +45,7 @@ export function ScoreEntryPanel({
     setError("");
     try {
       await api.adminUpdateMatch(token, match.id, {
-        status: draft.status,
+        status: "finished",
         home_score: draft.home_score === "" ? null : Number(draft.home_score),
         away_score: draft.away_score === "" ? null : Number(draft.away_score),
         winner_team: draft.winner_team ? Number(draft.winner_team) : null,
@@ -76,7 +74,7 @@ export function ScoreEntryPanel({
             min={0}
             value={draft.home_score}
             onChange={(e) => setDraft({ ...draft, home_score: e.target.value })}
-            required={draft.status === "finished"}
+            required
           />
         </div>
         <span className="pb-2 text-gray-400">–</span>
@@ -90,20 +88,8 @@ export function ScoreEntryPanel({
             min={0}
             value={draft.away_score}
             onChange={(e) => setDraft({ ...draft, away_score: e.target.value })}
-            required={draft.status === "finished"}
+            required
           />
-        </div>
-        <div>
-          <label className="mb-1 block text-xs font-medium text-gray-600">Status</label>
-          <select
-            className="input min-w-[120px]"
-            value={draft.status}
-            onChange={(e) => setDraft({ ...draft, status: e.target.value })}
-          >
-            <option value="scheduled">Scheduled</option>
-            <option value="live">Live</option>
-            <option value="finished">Finished</option>
-          </select>
         </div>
         {showWinner && (
           <div>
@@ -112,7 +98,7 @@ export function ScoreEntryPanel({
               className="input min-w-[140px]"
               value={draft.winner_team}
               onChange={(e) => setDraft({ ...draft, winner_team: e.target.value })}
-              required={draft.status === "finished"}
+              required
             >
               <option value="">Pick winner</option>
               <option value={match.home_team.id}>{match.home_team.name}</option>
@@ -122,11 +108,11 @@ export function ScoreEntryPanel({
         )}
       </div>
       <p className="mt-2 text-xs text-gray-500">
-        Set status to <strong>finished</strong> to award prediction points automatically.
+        Saving marks the match as <strong>finished</strong> and awards prediction points automatically.
       </p>
       <div className="mt-4 flex gap-2">
         <button type="submit" className="btn-primary text-sm" disabled={saving}>
-          {saving ? "Saving…" : "Save score"}
+          {saving ? "Saving…" : "Save final score"}
         </button>
         <button type="button" className="btn-secondary text-sm" onClick={onCancel}>
           Cancel

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { api, Match } from "@/lib/api";
+import { api, Match, Prediction, unwrapList } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useTournament } from "@/lib/tournament";
 import { MatchCard } from "@/components/MatchCard";
@@ -23,6 +23,7 @@ function MatchesContent() {
   const matchdayFilter = searchParams.get("matchday") || "";
 
   const [matches, setMatches] = useState<Match[]>([]);
+  const [predictionsByMatch, setPredictionsByMatch] = useState<Record<number, Prediction>>({});
 
   useEffect(() => {
     if (!authLoading && !user) router.push("/login");
@@ -35,10 +36,19 @@ function MatchesContent() {
     };
     if (cupGroupFilter) params.cup_group = cupGroupFilter;
     if (matchdayFilter) params.matchday = Number(matchdayFilter);
-    api.getMatches(token, params).then((data) => {
-      const list = Array.isArray(data) ? data : data.results || [];
-      setMatches(list);
-    });
+    Promise.all([
+      api.getMatches(token, params).then((data) => {
+        const list = Array.isArray(data) ? data : data.results || [];
+        setMatches(list);
+      }),
+      api.getPredictions(token, { tournament: selectedTournament.id }).then((data) => {
+        const map: Record<number, Prediction> = {};
+        for (const prediction of unwrapList(data)) {
+          map[prediction.match] = prediction;
+        }
+        setPredictionsByMatch(map);
+      }),
+    ]);
   }, [token, cupGroupFilter, matchdayFilter, selectedTournament]);
 
   const grouped = useMemo(() => {
@@ -123,7 +133,13 @@ function MatchesContent() {
               </h2>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {grouped[day].map((m) => (
-                  <MatchCard key={m.id} match={m} showPredictLink showResultLink />
+                  <MatchCard
+                    key={m.id}
+                    match={m}
+                    prediction={predictionsByMatch[m.id]}
+                    showPredictLink
+                    showResultLink
+                  />
                 ))}
               </div>
             </section>
@@ -132,7 +148,13 @@ function MatchesContent() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {matches.map((m) => (
-            <MatchCard key={m.id} match={m} showPredictLink showResultLink />
+            <MatchCard
+              key={m.id}
+              match={m}
+              prediction={predictionsByMatch[m.id]}
+              showPredictLink
+              showResultLink
+            />
           ))}
         </div>
       )}
