@@ -25,7 +25,13 @@ export default function AdminTournamentsPage() {
 
   const load = useCallback(() => {
     if (!token) return;
-    api.adminGetTournaments(token).then((data) => setTournaments(unwrapList(data)));
+    setError("");
+    api
+      .adminGetTournaments(token)
+      .then((data) => setTournaments(unwrapList(data)))
+      .catch((err) =>
+        setError(err instanceof Error ? err.message : "Could not load tournaments.")
+      );
   }, [token]);
 
   useEffect(() => {

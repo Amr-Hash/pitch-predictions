@@ -58,6 +58,8 @@ class AdminTournamentViewSet(viewsets.ModelViewSet):
     def get_serializer_class(self):
         if self.action == "retrieve":
             return TournamentDetailSerializer
+        if self.action == "list":
+            return TournamentListSerializer
         return TournamentCreateSerializer
 
 

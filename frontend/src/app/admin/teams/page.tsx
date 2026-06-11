@@ -14,7 +14,11 @@ export default function AdminTeamsPage() {
 
   const load = useCallback(() => {
     if (!token) return;
-    api.adminGetTeams(token).then((data) => setTeams(unwrapList(data)));
+    setError("");
+    api
+      .adminGetTeams(token)
+      .then((data) => setTeams(unwrapList(data)))
+      .catch((err) => setError(err instanceof Error ? err.message : "Could not load teams."));
   }, [token]);
 
   useEffect(() => {
