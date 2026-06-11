@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import { api, Match, Prediction, unwrapList } from "@/lib/api";
@@ -75,13 +76,11 @@ export default function MatchDetailPage() {
     };
     try {
       if (prediction) {
-        const updated = await api.updatePrediction(token, prediction.id, payload);
-        setPrediction(updated);
-        setSuccess("Prediction updated!");
+        await api.updatePrediction(token, prediction.id, payload);
+        router.push("/matches");
       } else {
-        const created = await api.createPrediction(token, payload);
-        setPrediction(created);
-        setSuccess("Prediction submitted!");
+        await api.createPrediction(token, payload);
+        router.push("/matches");
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed");
@@ -96,6 +95,9 @@ export default function MatchDetailPage() {
 
   return (
     <div className="mx-auto max-w-2xl">
+      <Link href="/matches" className="mb-4 inline-flex items-center text-sm text-pitch-600 hover:underline">
+        ← {t("backToMatches")}
+      </Link>
       <h1 className="mb-2 text-3xl font-bold">Match Prediction</h1>
       <p className="mb-6 text-gray-600">
         {match.cup_group_name ? `Group ${match.cup_group_name}` : match.stage_name}

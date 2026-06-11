@@ -104,9 +104,15 @@ export default function HomePage() {
             t={t}
           />
         </div>
-        <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          <strong>{t("knockoutBonus")}</strong> {t("knockoutBonusDesc")}
-        </p>
+        <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4">
+          <ScoreRule
+            points={1}
+            title={t("knockoutBonus")}
+            color="bg-amber-100 text-amber-900 border-amber-300"
+            description={t("knockoutBonusDesc")}
+            t={t}
+          />
+        </div>
       </section>
     </div>
   );

@@ -28,11 +28,25 @@ def _get_outcome(home_score, away_score):
     return "draw"
 
 
+def _get_advancing_team_id(match):
+    """Team that advances from a finished knockout match."""
+    if match.winner_team_id:
+        return match.winner_team_id
+    if match.home_score is None or match.away_score is None:
+        return None
+    if match.home_score > match.away_score:
+        return match.home_team_id
+    if match.away_score > match.home_score:
+        return match.away_team_id
+    return None
+
+
 def calculate_prediction_points(prediction, match):
     """
     Calculate points for a prediction against a finished match.
     Only one of exact score, goal difference, or outcome is awarded.
-    Winner bonus is additive for knockout tied matches.
+    Knockout advancing-team pick awards +1 (additive), including when the
+    score prediction was wrong.
     """
     breakdown = ScoreBreakdown()
 
@@ -54,11 +68,12 @@ def calculate_prediction_points(prediction, match):
     elif _get_outcome(pred_home, pred_away) == _get_outcome(actual_home, actual_away):
         breakdown.outcome_points = 1
 
-    if match.is_knockout and actual_home == actual_away:
+    if match.is_knockout:
+        advancing_team_id = _get_advancing_team_id(match)
         if (
             prediction.predicted_winner_team_id
-            and match.winner_team_id
-            and prediction.predicted_winner_team_id == match.winner_team_id
+            and advancing_team_id
+            and prediction.predicted_winner_team_id == advancing_team_id
         ):
             breakdown.winner_bonus_points = 1
 
