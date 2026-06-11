@@ -137,8 +137,8 @@ SIMPLE_JWT = {
 
 _default_cors = (
     "http://localhost:3000,http://127.0.0.1:3000,"
-    "https://pitch-predictions.vercel.app,"
-    "https://pitch-predictions-amr-hashem.vercel.app"
+    "https://alhabeed.vercel.app,"
+    "https://alhabeed-amr-hashem.vercel.app"
 )
 CORS_ALLOWED_ORIGINS = config(
     "CORS_ALLOWED_ORIGINS",
@@ -153,10 +153,10 @@ if IS_VERCEL:
     CSRF_TRUSTED_ORIGINS = config(
         "CSRF_TRUSTED_ORIGINS",
         default=(
-            "https://pitch-predictions.vercel.app,"
-            "https://pitch-predictions-amr-hashem.vercel.app,"
-            "https://pitch-predictions-api.vercel.app,"
-            "https://pitch-predictions-api-amr-hashem.vercel.app"
+            "https://alhabeed.vercel.app,"
+            "https://alhabeed-amr-hashem.vercel.app,"
+            "https://alhabeed-api.vercel.app,"
+            "https://alhabeed-api-amr-hashem.vercel.app"
         ),
         cast=Csv(),
     )

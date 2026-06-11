@@ -59,7 +59,7 @@ jobs:
           coverage report --fail-under=80
 
       - name: Build Docker image
-        run: docker build -t pitch-predictions-backend ./backend
+        run: docker build -t alhabeed-backend ./backend
 
   frontend-tests:
     runs-on: ubuntu-latest
@@ -90,7 +90,7 @@ jobs:
         run: npm run build
 
       - name: Build Docker image
-        run: docker build -f frontend/Dockerfile.dev -t pitch-predictions-frontend ./frontend
+        run: docker build -f frontend/Dockerfile.dev -t alhabeed-frontend ./frontend
 
   deploy-backend:
     name: Deploy backend to Vercel
@@ -102,7 +102,7 @@ jobs:
       cancel-in-progress: true
     environment:
       name: production-backend
-      url: https://pitch-predictions-api.vercel.app
+      url: https://alhabeed-api.vercel.app
 
     steps:
       - uses: actions/checkout@v4
@@ -125,7 +125,7 @@ jobs:
       cancel-in-progress: true
     environment:
       name: production-frontend
-      url: https://pitch-predictions.vercel.app
+      url: https://alhabeed.vercel.app
 
     steps:
       - uses: actions/checkout@v4

@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: pitch-predictions-backend
+    name: alhabeed-backend
     runtime: docker
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend

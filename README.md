@@ -40,15 +40,15 @@ Stage progression rules apply in order: predictions for Round of 32 must be comp
 
 | Service | URL |
 |---------|-----|
-| **App (frontend)** | https://pitch-predictions.vercel.app |
-| **Backend API** | https://pitch-predictions-api.vercel.app |
-| **Django Admin** | https://pitch-predictions-api.vercel.app/admin/ |
+| **App (frontend)** | https://alhabeed.vercel.app |
+| **Backend API** | https://alhabeed-api.vercel.app |
+| **Django Admin** | https://alhabeed-api.vercel.app/admin/ |
 
 **Important:** After creating Vercel projects, disable **Deployment Protection → Vercel Authentication** so public users can access `*.vercel.app` URLs without a Vercel account:
 
 ```bash
-npx vercel project protection disable pitch-predictions --sso
-npx vercel project protection disable pitch-predictions-api --sso
+npx vercel project protection disable alhabeed --sso
+npx vercel project protection disable alhabeed-api --sso
 ```
 
 Legacy URL `/world-cup-groups` redirects to `/tournament-groups`.
@@ -59,7 +59,7 @@ The frontend proxies `/api/*` to the backend using Next.js rewrites. Use the bac
 
 Production Postgres database name: **`alhabeed`** (renamed from Neon default `neondb`).
 
-1. Open [Vercel Storage → Neon](https://vercel.com/amr-hashem/pitch-predictions-api/stores) for **pitch-predictions-api**
+1. Open [Vercel Storage → Neon](https://vercel.com/amr-hashem/alhabeed-api/stores) for **alhabeed-api**
 2. Ensure `DATABASE_URL` points to the `alhabeed` database (updated automatically after rename)
 3. To rename locally or on another host: `python manage.py rename_database --from neondb --to alhabeed`
 4. Redeploy the backend after any `DATABASE_URL` change: `cd backend && npx vercel deploy --prod`
@@ -240,8 +240,8 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on every push and pull request:
 3. Docker image builds for both services
 
 **On push to `main`/`master` (after tests pass):**
-1. Deploy backend to Vercel (`pitch-predictions-api`)
-2. Deploy frontend to Vercel (`pitch-predictions`)
+1. Deploy backend to Vercel (`alhabeed-api`)
+2. Deploy frontend to Vercel (`alhabeed`)
 
 ### One-time GitHub secret setup
 
