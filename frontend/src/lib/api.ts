@@ -30,6 +30,7 @@ export interface Group {
 export interface Team {
   id: number;
   name: string;
+  name_ar?: string;
   code: string;
   flag_url: string;
 }
@@ -39,8 +40,10 @@ export interface Match {
   tournament: number;
   stage: number;
   stage_name: string;
+  stage_name_ar?: string;
   cup_group: number | null;
   cup_group_name: string | null;
+  cup_group_name_ar?: string | null;
   matchday: number | null;
   home_team: Team;
   away_team: Team;
@@ -63,6 +66,7 @@ export interface CupGroupTeam {
 export interface CupGroup {
   id: number;
   name: string;
+  name_ar?: string;
   tournament?: number;
   group_teams: CupGroupTeam[];
 }
@@ -100,6 +104,7 @@ export interface Dashboard {
 export interface Tournament {
   id: number;
   name: string;
+  name_ar?: string;
   year: number;
   start_date: string;
   end_date: string;
@@ -107,7 +112,7 @@ export interface Tournament {
   is_archived?: boolean;
   stage_count?: number;
   match_count?: number;
-  stages?: { id: number; name: string; order: number; stage_type: string }[];
+  stages?: { id: number; name: string; name_ar?: string; order: number; stage_type: string }[];
   cup_groups?: CupGroup[];
 }
 

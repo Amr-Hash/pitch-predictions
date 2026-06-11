@@ -3,6 +3,7 @@ from django.db import models
 
 class Tournament(models.Model):
     name = models.CharField(max_length=200)
+    name_ar = models.CharField(max_length=200, blank=True, default="")
     year = models.PositiveIntegerField()
     start_date = models.DateField()
     end_date = models.DateField()
@@ -34,6 +35,7 @@ class Stage(models.Model):
         Tournament, on_delete=models.CASCADE, related_name="stages"
     )
     name = models.CharField(max_length=100)
+    name_ar = models.CharField(max_length=100, blank=True, default="")
     order = models.PositiveIntegerField()
     stage_type = models.CharField(
         max_length=10, choices=StageType.choices, default=StageType.GROUP
@@ -52,6 +54,7 @@ class Stage(models.Model):
 
 class Team(models.Model):
     name = models.CharField(max_length=100)
+    name_ar = models.CharField(max_length=100, blank=True, default="")
     code = models.CharField(max_length=3, unique=True)
     flag_url = models.URLField(blank=True)
 
@@ -72,6 +75,7 @@ class CupGroup(models.Model):
         Tournament, on_delete=models.CASCADE, related_name="cup_groups"
     )
     name = models.CharField(max_length=1)
+    name_ar = models.CharField(max_length=50, blank=True, default="")
     teams = models.ManyToManyField(
         Team, through="CupGroupTeam", related_name="cup_groups"
     )

@@ -6,13 +6,13 @@ from .models import CupGroup, CupGroupTeam, Match, Stage, Team, Tournament
 class TeamSerializer(serializers.ModelSerializer):
     class Meta:
         model = Team
-        fields = ("id", "name", "code", "flag_url")
+        fields = ("id", "name", "name_ar", "code", "flag_url")
 
 
 class StageSerializer(serializers.ModelSerializer):
     class Meta:
         model = Stage
-        fields = ("id", "name", "order", "stage_type")
+        fields = ("id", "name", "name_ar", "order", "stage_type")
 
 
 class CupGroupTeamSerializer(serializers.ModelSerializer):
@@ -28,7 +28,7 @@ class CupGroupSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CupGroup
-        fields = ("id", "tournament", "name", "group_teams")
+        fields = ("id", "tournament", "name", "name_ar", "group_teams")
 
 
 class CupGroupCreateSerializer(serializers.ModelSerializer):
@@ -38,7 +38,7 @@ class CupGroupCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CupGroup
-        fields = ("id", "tournament", "name", "team_ids")
+        fields = ("id", "tournament", "name", "name_ar", "team_ids")
 
     def _set_teams(self, cup_group, team_ids):
         cup_group.group_teams.all().delete()
@@ -69,7 +69,9 @@ class MatchSerializer(serializers.ModelSerializer):
     away_team = TeamSerializer(read_only=True)
     winner_team = TeamSerializer(read_only=True)
     stage_name = serializers.CharField(source="stage.name", read_only=True)
+    stage_name_ar = serializers.CharField(source="stage.name_ar", read_only=True)
     cup_group_name = serializers.CharField(source="cup_group.name", read_only=True)
+    cup_group_name_ar = serializers.CharField(source="cup_group.name_ar", read_only=True)
     is_knockout = serializers.BooleanField(read_only=True)
     is_locked = serializers.BooleanField(read_only=True)
     is_matchday_locked = serializers.BooleanField(read_only=True)
@@ -82,8 +84,10 @@ class MatchSerializer(serializers.ModelSerializer):
             "tournament",
             "stage",
             "stage_name",
+            "stage_name_ar",
             "cup_group",
             "cup_group_name",
+            "cup_group_name_ar",
             "matchday",
             "home_team",
             "away_team",
@@ -160,6 +164,7 @@ class TournamentListSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "name",
+            "name_ar",
             "year",
             "start_date",
             "end_date",
@@ -179,6 +184,7 @@ class TournamentDetailSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "name",
+            "name_ar",
             "year",
             "start_date",
             "end_date",
@@ -192,20 +198,29 @@ class TournamentDetailSerializer(serializers.ModelSerializer):
 class TournamentCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tournament
-        fields = ("id", "name", "year", "start_date", "end_date", "is_active", "is_archived")
+        fields = (
+            "id",
+            "name",
+            "name_ar",
+            "year",
+            "start_date",
+            "end_date",
+            "is_active",
+            "is_archived",
+        )
         read_only_fields = ("id",)
 
 
 class StageCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Stage
-        fields = ("tournament", "name", "order", "stage_type")
+        fields = ("tournament", "name", "name_ar", "order", "stage_type")
 
 
 class TeamCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Team
-        fields = ("name", "code", "flag_url")
+        fields = ("name", "name_ar", "code", "flag_url")
 
 
 class MatchCreateSerializer(serializers.ModelSerializer):

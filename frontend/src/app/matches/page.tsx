@@ -9,10 +9,14 @@ import { useTournament } from "@/lib/tournament";
 import { MatchCard } from "@/components/MatchCard";
 import { EmptyState } from "@/components/EmptyState";
 import { RequireTournament } from "@/components/RequireTournament";
+import { useLocale, useT } from "@/lib/i18n";
+import { tournamentLabel } from "@/lib/localize";
 
 function MatchesContent() {
   const { user, token, loading: authLoading } = useAuth();
   const { selectedTournament } = useTournament();
+  const { locale } = useLocale();
+  const t = useT();
   const router = useRouter();
   const searchParams = useSearchParams();
   const cupGroupFilter = searchParams.get("cup_group") || "";
@@ -46,10 +50,11 @@ function MatchesContent() {
     return byDay;
   }, [matches]);
 
-  if (authLoading || !user) return <div>Loading...</div>;
+  if (authLoading || !user) return <div>{t("loading")}</div>;
   if (!selectedTournament) return null;
 
   const isTestCup = selectedTournament.name === "Demo Test Cup";
+  const tournamentName = tournamentLabel(selectedTournament, locale);
   const showGrouped = !matchdayFilter && matches.some((m) => m.matchday);
   const tournamentQuery = `tournament=${selectedTournament.id}`;
   const baseQuery = [tournamentQuery, cupGroupFilter ? `cup_group=${cupGroupFilter}` : ""]
@@ -58,9 +63,9 @@ function MatchesContent() {
 
   return (
     <div>
-      <h1 className="mb-2 text-3xl font-bold">Matches</h1>
+      <h1 className="mb-2 text-3xl font-bold">{t("matches")}</h1>
       <p className="mb-4 text-gray-600">
-        {selectedTournament.name} ({selectedTournament.year}) — {matches.length} fixtures
+        {tournamentName} ({selectedTournament.year}) — {t("fixtures", { count: matches.length })}
       </p>
 
       {isTestCup && (
@@ -80,7 +85,7 @@ function MatchesContent() {
           href={baseQuery ? `/matches?${baseQuery}` : "/matches"}
           active={!matchdayFilter}
         >
-          All matchdays
+          {t("allMatchdays")}
         </FilterLink>
         {[1, 2, 3].map((day) => {
           const parts = [tournamentQuery, `matchday=${day}`, cupGroupFilter ? `cup_group=${cupGroupFilter}` : ""]
@@ -92,13 +97,13 @@ function MatchesContent() {
               href={`/matches?${parts}`}
               active={matchdayFilter === String(day)}
             >
-              Matchday {day}
+              {t("filterMatchday", { day })}
             </FilterLink>
           );
         })}
         {cupGroupFilter && (
           <span className="rounded-full bg-pitch-100 px-3 py-1 text-sm text-pitch-800">
-            Group {cupGroupFilter}
+            {t("group")} {cupGroupFilter}
           </span>
         )}
       </div>
@@ -106,20 +111,15 @@ function MatchesContent() {
       {matches.length === 0 ? (
         <EmptyState
           icon="📅"
-          title="No matches for this tournament"
-          description="Fixtures will appear here once they are added for the selected competition."
+          title={t("noMatchesForTournament")}
+          description={t("noMatchesDesc")}
         />
       ) : showGrouped ? (
         [1, 2, 3].map((day) =>
           grouped[day].length > 0 ? (
             <section key={day} className="mb-10">
               <h2 className="mb-4 text-xl font-semibold">
-                Matchday {day}
-                {day > 1 && (
-                  <span className="ml-2 text-sm font-normal text-gray-500">
-                    — predictions unlock after Matchday {day - 1} completes
-                  </span>
-                )}
+                {t("filterMatchday", { day })}
               </h2>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {grouped[day].map((m) => (
@@ -164,9 +164,10 @@ function FilterLink({
 }
 
 export default function MatchesPage() {
+  const t = useT();
   return (
     <RequireTournament>
-      <Suspense fallback={<div>Loading...</div>}>
+      <Suspense fallback={<div>{t("loading")}</div>}>
         <MatchesContent />
       </Suspense>
     </RequireTournament>

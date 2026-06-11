@@ -9,7 +9,7 @@ export default function AdminTeamsPage() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [form, setForm] = useState({ name: "", code: "", flag_url: "" });
+  const [form, setForm] = useState({ name: "", name_ar: "", code: "", flag_url: "" });
   const [editingId, setEditingId] = useState<number | null>(null);
 
   const load = useCallback(() => {
@@ -35,7 +35,7 @@ export default function AdminTeamsPage() {
         await api.adminCreateTeam(token, form);
         setSuccess("Team created.");
       }
-      setForm({ name: "", code: "", flag_url: "" });
+      setForm({ name: "", name_ar: "", code: "", flag_url: "" });
       load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save team.");
@@ -44,7 +44,7 @@ export default function AdminTeamsPage() {
 
   function startEdit(team: Team) {
     setEditingId(team.id);
-    setForm({ name: team.name, code: team.code, flag_url: team.flag_url || "" });
+    setForm({ name: team.name, name_ar: team.name_ar || "", code: team.code, flag_url: team.flag_url || "" });
   }
 
   async function handleDelete(id: number) {
@@ -79,6 +79,15 @@ export default function AdminTeamsPage() {
             />
           </div>
           <div>
+            <label className="mb-1 block text-sm font-medium">Arabic name</label>
+            <input
+              className="input"
+              dir="rtl"
+              value={form.name_ar}
+              onChange={(e) => setForm({ ...form, name_ar: e.target.value })}
+            />
+          </div>
+          <div>
             <label className="mb-1 block text-sm font-medium">Code (3 letters)</label>
             <input
               className="input uppercase"
@@ -109,7 +118,7 @@ export default function AdminTeamsPage() {
               className="btn-secondary"
               onClick={() => {
                 setEditingId(null);
-                setForm({ name: "", code: "", flag_url: "" });
+                setForm({ name: "", name_ar: "", code: "", flag_url: "" });
               }}
             >
               Cancel

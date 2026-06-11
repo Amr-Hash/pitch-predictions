@@ -156,7 +156,7 @@ export function TournamentHub({ tournamentId }: { tournamentId: number }) {
   const [selectedTeamIds, setSelectedTeamIds] = useState<number[]>([]);
   const [editingGroupId, setEditingGroupId] = useState<number | null>(null);
 
-  const [stageForm, setStageForm] = useState({ name: "", order: 1, stage_type: "group" });
+  const [stageForm, setStageForm] = useState({ name: "", name_ar: "", order: 1, stage_type: "group" });
 
   const loadAll = useCallback(async () => {
     if (!token) return;
@@ -289,7 +289,7 @@ export function TournamentHub({ tournamentId }: { tournamentId: number }) {
         ...stageForm,
       });
       setSuccess("Stage / round created.");
-      setStageForm({ name: "", order: stages.length + 1, stage_type: "group" });
+      setStageForm({ name: "", name_ar: "", order: stages.length + 1, stage_type: "group" });
       loadAll();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create stage.");
@@ -675,6 +675,15 @@ export function TournamentHub({ tournamentId }: { tournamentId: number }) {
                   onChange={(e) => setStageForm({ ...stageForm, name: e.target.value })}
                   placeholder="Group Stage MD1"
                   required
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium">Arabic name</label>
+                <input
+                  className="input"
+                  dir="rtl"
+                  value={stageForm.name_ar}
+                  onChange={(e) => setStageForm({ ...stageForm, name_ar: e.target.value })}
                 />
               </div>
               <div>

@@ -4,15 +4,18 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { APP_NAME } from "@/lib/brand";
 import { useAuth } from "@/lib/auth";
+import { LanguageToggle } from "@/components/LanguageToggle";
+import { useT } from "@/lib/i18n";
 
 const LINKS = [
-  { href: "/admin", label: "Tournaments" },
-  { href: "/admin/teams", label: "Teams" },
+  { href: "/admin", labelKey: "adminTournaments" as const },
+  { href: "/admin/teams", labelKey: "adminTeams" as const },
 ];
 
 export function AdminNavbar() {
   const { user, logout } = useAuth();
   const pathname = usePathname();
+  const t = useT();
 
   const tournamentDetailMatch = pathname.match(/^\/admin\/tournaments\/(\d+)/);
 
@@ -23,10 +26,11 @@ export function AdminNavbar() {
           <span>⚙️</span>
           <span>{APP_NAME}</span>
           <span className="rounded-full bg-amber-200 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-amber-900">
-            Admin
+            {t("admin")}
           </span>
         </Link>
         <div className="flex flex-wrap items-center gap-2">
+          <LanguageToggle />
           {LINKS.map((item) => {
             const active =
               item.href === "/admin"
@@ -42,18 +46,18 @@ export function AdminNavbar() {
                     : "text-amber-800 hover:bg-amber-100"
                 }`}
               >
-                {item.label}
+                {t(item.labelKey)}
               </Link>
             );
           })}
           {tournamentDetailMatch && (
             <span className="rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-amber-900 shadow-sm">
-              Managing tournament
+              {t("managingTournament")}
             </span>
           )}
           <span className="ml-2 text-sm text-amber-700">{user?.username}</span>
           <button onClick={logout} className="btn-secondary border-amber-300 bg-white text-sm">
-            Logout
+            {t("logout")}
           </button>
         </div>
       </div>

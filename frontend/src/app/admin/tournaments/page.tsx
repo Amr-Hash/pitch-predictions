@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/auth";
 
 const emptyForm = {
   name: "",
+  name_ar: "",
   year: new Date().getFullYear(),
   start_date: "",
   end_date: "",
@@ -66,6 +67,7 @@ export default function AdminTournamentsPage() {
     setEditingId(t.id);
     setForm({
       name: t.name,
+      name_ar: t.name_ar || "",
       year: t.year,
       start_date: t.start_date,
       end_date: t.end_date,
@@ -105,6 +107,15 @@ export default function AdminTournamentsPage() {
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               required
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium">Arabic name</label>
+            <input
+              className="input"
+              dir="rtl"
+              value={form.name_ar}
+              onChange={(e) => setForm({ ...form, name_ar: e.target.value })}
             />
           </div>
           <div>

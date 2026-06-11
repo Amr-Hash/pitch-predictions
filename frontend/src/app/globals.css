@@ -6,6 +6,10 @@ body {
   @apply bg-gray-50 text-gray-900 antialiased;
 }
 
+[dir="rtl"] body {
+  font-family: system-ui, "Segoe UI", Tahoma, Arial, sans-serif;
+}
+
 @layer components {
   .btn-primary {
     @apply rounded-lg bg-pitch-600 px-4 py-2 font-medium text-white transition hover:bg-pitch-700 disabled:opacity-50;

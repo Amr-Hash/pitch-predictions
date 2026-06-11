@@ -2,6 +2,13 @@ from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 
 from groups.models import Group, GroupMember
+from tournaments.ar_translations import (
+    DEMO_TEST_CUP_AR,
+    WC2026_TOURNAMENT_AR,
+    cup_group_name_ar,
+    stage_name_ar,
+    team_name_ar,
+)
 from tournaments.models import CupGroup, CupGroupTeam, Match, Stage, Team, Tournament
 from tournaments.test_tournament_data import build_test_tournament_schedule
 from tournaments.wc2026_data import (
@@ -97,7 +104,11 @@ class Command(BaseCommand):
             flag_url = f"https://flagcdn.com/w80/{flag_iso}.png"
             team, _ = Team.objects.update_or_create(
                 code=code,
-                defaults={"name": name, "flag_url": flag_url},
+                defaults={
+                    "name": name,
+                    "name_ar": team_name_ar(code, name),
+                    "flag_url": flag_url,
+                },
             )
             teams[code] = team
         return teams
@@ -108,7 +119,11 @@ class Command(BaseCommand):
             stage, _ = Stage.objects.update_or_create(
                 tournament=tournament,
                 order=order,
-                defaults={"name": name, "stage_type": stage_type},
+                defaults={
+                    "name": name,
+                    "name_ar": stage_name_ar(name),
+                    "stage_type": stage_type,
+                },
             )
             stages[order] = stage
         return stages
@@ -119,7 +134,11 @@ class Command(BaseCommand):
             cup_group, _ = CupGroup.objects.update_or_create(
                 tournament=tournament,
                 name=letter,
+                defaults={"name_ar": cup_group_name_ar(letter)},
             )
+            if not cup_group.name_ar:
+                cup_group.name_ar = cup_group_name_ar(letter)
+                cup_group.save(update_fields=["name_ar"])
             cup_groups[letter] = cup_group
             CupGroupTeam.objects.filter(cup_group=cup_group).delete()
             for order, code in enumerate(team_codes):
@@ -135,11 +154,15 @@ class Command(BaseCommand):
             name=WC2026_TOURNAMENT["name"],
             year=WC2026_TOURNAMENT["year"],
             defaults={
+                "name_ar": WC2026_TOURNAMENT_AR,
                 "start_date": WC2026_TOURNAMENT["start_date"],
                 "end_date": WC2026_TOURNAMENT["end_date"],
                 "is_active": True,
             },
         )
+        if not tournament.name_ar:
+            tournament.name_ar = WC2026_TOURNAMENT_AR
+            tournament.save(update_fields=["name_ar"])
         stages = self._create_stages(tournament, STAGES_CONFIG)
         cup_groups = self._create_cup_groups(tournament, WC2026_GROUPS, teams)
 
@@ -165,6 +188,7 @@ class Command(BaseCommand):
             name=schedule["name"],
             year=schedule["year"],
             defaults={
+                "name_ar": DEMO_TEST_CUP_AR,
                 "start_date": schedule["start_date"],
                 "end_date": schedule["end_date"],
                 "is_active": True,
@@ -173,6 +197,8 @@ class Command(BaseCommand):
         tournament.start_date = schedule["start_date"]
         tournament.end_date = schedule["end_date"]
         tournament.is_archived = False
+        if not tournament.name_ar:
+            tournament.name_ar = DEMO_TEST_CUP_AR
         if created:
             tournament.is_active = True
         tournament.save()

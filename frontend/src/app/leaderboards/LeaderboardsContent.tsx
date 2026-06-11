@@ -7,10 +7,14 @@ import { useAuth } from "@/lib/auth";
 import { useTournament } from "@/lib/tournament";
 import { EmptyState } from "@/components/EmptyState";
 import { RequireTournament } from "@/components/RequireTournament";
+import { useLocale, useT } from "@/lib/i18n";
+import { tournamentLabel } from "@/lib/localize";
 
 export default function LeaderboardsContent() {
   const { user, token, loading: authLoading } = useAuth();
   const { selectedTournament } = useTournament();
+  const { locale } = useLocale();
+  const t = useT();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [groups, setGroups] = useState<Group[]>([]);
@@ -38,15 +42,19 @@ export default function LeaderboardsContent() {
     }
   }, [token, selectedGroup, selectedTournament]);
 
-  if (authLoading || !user) return <div>Loading...</div>;
+  if (authLoading || !user) return <div>{t("loading")}</div>;
+
+  const tournamentName = selectedTournament
+    ? tournamentLabel(selectedTournament, locale)
+    : "";
 
   return (
     <RequireTournament>
     <div>
-      <h1 className="mb-2 text-3xl font-bold">Leaderboards</h1>
+      <h1 className="mb-2 text-3xl font-bold">{t("leaderboards")}</h1>
       <p className="mb-6 text-gray-600">
         {selectedTournament
-          ? `Rankings for ${selectedTournament.name} (${selectedTournament.year})`
+          ? t("rankingsFor", { name: tournamentName, year: selectedTournament.year })
           : ""}
       </p>
 
@@ -58,7 +66,7 @@ export default function LeaderboardsContent() {
             setSelectedGroup(e.target.value === "global" ? "global" : Number(e.target.value))
           }
         >
-          <option value="global">Global Leaderboard</option>
+          <option value="global">{t("globalLeaderboard")}</option>
           {groups.map((g) => (
             <option key={g.id} value={g.id}>{g.name}</option>
           ))}
@@ -68,20 +76,20 @@ export default function LeaderboardsContent() {
       {leaderboard.length === 0 ? (
         <EmptyState
           icon="📊"
-          title="No rankings yet"
-          description="Leaderboard standings will appear once players submit predictions and matches are scored for this tournament."
-          action={{ label: "Make predictions", href: "/matches" }}
+          title={t("noRankingsYet")}
+          description={t("noRankingsDesc")}
+          action={{ label: t("makePredictions"), href: "/matches" }}
         />
       ) : (
         <div className="card overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b text-gray-500">
-                <th className="pb-3 pr-4">Rank</th>
-                <th className="pb-3 pr-4">Username</th>
-                <th className="pb-3 pr-4">Points</th>
-                <th className="pb-3 pr-4">Exact</th>
-                <th className="pb-3">Outcomes</th>
+                <th className="pb-3 pr-4">{t("rank")}</th>
+                <th className="pb-3 pr-4">{t("username")}</th>
+                <th className="pb-3 pr-4">{t("points")}</th>
+                <th className="pb-3 pr-4">{t("exact")}</th>
+                <th className="pb-3">{t("outcomes")}</th>
               </tr>
             </thead>
             <tbody>

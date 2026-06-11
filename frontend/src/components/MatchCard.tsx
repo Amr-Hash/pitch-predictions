@@ -1,5 +1,9 @@
+"use client";
+
 import Link from "next/link";
 import { Match } from "@/lib/api";
+import { useLocale, useT } from "@/lib/i18n";
+import { matchContextLabel, teamLabel } from "@/lib/localize";
 
 interface Props {
   match: Match;
@@ -8,16 +12,24 @@ interface Props {
 }
 
 export function MatchCard({ match, showPredictLink, showResultLink }: Props) {
-  const kickoff = new Date(match.kickoff_time).toLocaleString();
+  const { locale } = useLocale();
+  const t = useT();
+  const kickoff = new Date(match.kickoff_time).toLocaleString(
+    locale === "ar" ? "ar-EG" : undefined
+  );
   const isFinished = match.status === "finished";
   const canPredict = showPredictLink && !match.is_locked && !isFinished;
+  const context = matchContextLabel(match, locale, t("group"));
+  const matchdaySuffix = match.matchday
+    ? ` · ${t("matchday", { day: match.matchday })}`
+    : "";
 
   return (
     <div className="card">
       <div className="mb-2 flex items-center justify-between text-xs text-gray-500">
         <span>
-          {match.cup_group_name ? `Group ${match.cup_group_name}` : match.stage_name}
-          {match.matchday ? ` · MD${match.matchday}` : ""}
+          {context}
+          {matchdaySuffix}
         </span>
         {match.is_locked && !isFinished && (
           <span
@@ -27,7 +39,7 @@ export function MatchCard({ match, showPredictLink, showResultLink }: Props) {
                 : "bg-red-100 text-red-700"
             }`}
           >
-            {match.is_matchday_locked ? "Not yet open" : "Locked"}
+            {match.is_matchday_locked ? t("notYetOpen") : t("locked")}
           </span>
         )}
       </div>
@@ -36,7 +48,7 @@ export function MatchCard({ match, showPredictLink, showResultLink }: Props) {
           {match.home_team.flag_url && (
             <img src={match.home_team.flag_url} alt="" className="mx-auto mb-1 h-8 w-12 object-cover" />
           )}
-          <p className="font-semibold">{match.home_team.name}</p>
+          <p className="font-semibold">{teamLabel(match.home_team, locale)}</p>
         </div>
         <div className="text-center">
           {isFinished ? (
@@ -44,7 +56,7 @@ export function MatchCard({ match, showPredictLink, showResultLink }: Props) {
               {match.home_score} - {match.away_score}
             </p>
           ) : (
-            <p className="text-lg text-gray-400">vs</p>
+            <p className="text-lg text-gray-400">{t("vs")}</p>
           )}
           <p className="text-xs text-gray-500">{kickoff}</p>
         </div>
@@ -52,7 +64,7 @@ export function MatchCard({ match, showPredictLink, showResultLink }: Props) {
           {match.away_team.flag_url && (
             <img src={match.away_team.flag_url} alt="" className="mx-auto mb-1 h-8 w-12 object-cover" />
           )}
-          <p className="font-semibold">{match.away_team.name}</p>
+          <p className="font-semibold">{teamLabel(match.away_team, locale)}</p>
         </div>
       </div>
       {match.lock_reason && !isFinished && match.is_locked && (
@@ -61,16 +73,16 @@ export function MatchCard({ match, showPredictLink, showResultLink }: Props) {
       <div className="mt-3 flex justify-center gap-2">
         {canPredict && (
           <Link href={`/matches/${match.id}`} className="btn-primary text-sm">
-            Predict
+            {t("predict")}
           </Link>
         )}
         {showResultLink && isFinished && (
           <Link href={`/matches/${match.id}/results`} className="btn-secondary text-sm">
-            View Results
+            {t("viewResults")}
           </Link>
         )}
         <Link href={`/matches/${match.id}`} className="btn-secondary text-sm">
-          Details
+          {t("details")}
         </Link>
       </div>
     </div>
