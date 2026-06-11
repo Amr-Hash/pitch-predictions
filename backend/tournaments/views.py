@@ -2,8 +2,9 @@ from rest_framework import permissions, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from .models import Match, Stage, Team, Tournament
+from .models import CupGroup, Match, Stage, Team, Tournament
 from .serializers import (
+    CupGroupSerializer,
     MatchCreateSerializer,
     MatchResultSerializer,
     MatchSerializer,
@@ -35,7 +36,18 @@ class TournamentViewSet(viewsets.ReadOnlyModelViewSet):
         qs = Tournament.objects.all()
         if not self.request.user.is_staff:
             qs = qs.filter(is_archived=False)
-        return qs.prefetch_related("stages")
+        return qs.prefetch_related("stages", "cup_groups__group_teams__team")
+
+    @action(detail=True, methods=["get"], url_path="cup-groups")
+    def cup_groups(self, request, pk=None):
+        tournament = self.get_object()
+        groups = (
+            CupGroup.objects.filter(tournament=tournament)
+            .prefetch_related("group_teams__team")
+            .order_by("name")
+        )
+        serializer = CupGroupSerializer(groups, many=True)
+        return Response(serializer.data)
 
 
 class AdminTournamentViewSet(viewsets.ModelViewSet):
@@ -76,18 +88,25 @@ class TeamViewSet(viewsets.ModelViewSet):
 class MatchViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = MatchSerializer
     permission_classes = (permissions.IsAuthenticated,)
+    pagination_class = None
 
     def get_queryset(self):
         qs = Match.objects.select_related(
-            "home_team", "away_team", "winner_team", "stage", "tournament"
+            "home_team", "away_team", "winner_team", "stage", "tournament", "cup_group"
         )
         tournament_id = self.request.query_params.get("tournament")
         stage_id = self.request.query_params.get("stage")
+        matchday = self.request.query_params.get("matchday")
+        cup_group = self.request.query_params.get("cup_group")
         status_filter = self.request.query_params.get("status")
         if tournament_id:
             qs = qs.filter(tournament_id=tournament_id)
         if stage_id:
             qs = qs.filter(stage_id=stage_id)
+        if matchday:
+            qs = qs.filter(matchday=matchday)
+        if cup_group:
+            qs = qs.filter(cup_group__name=cup_group.upper())
         if status_filter:
             qs = qs.filter(status=status_filter)
         return qs

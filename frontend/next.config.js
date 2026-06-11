@@ -11,8 +11,20 @@ const nextConfig = {
   async rewrites() {
     return [
       { source: "/api/:path*", destination: `${backendUrl}/api/:path*` },
-      { source: "/admin", destination: `${backendUrl}/admin` },
-      { source: "/admin/:path*", destination: `${backendUrl}/admin/:path*` },
+    ];
+  },
+  async redirects() {
+    return [
+      {
+        source: "/admin",
+        destination: `${backendUrl}/admin/`,
+        permanent: false,
+      },
+      {
+        source: "/admin/:path*",
+        destination: `${backendUrl}/admin/:path*`,
+        permanent: false,
+      },
     ];
   },
 };

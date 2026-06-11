@@ -150,6 +150,15 @@ if IS_VERCEL:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
+    CSRF_TRUSTED_ORIGINS = config(
+        "CSRF_TRUSTED_ORIGINS",
+        default=(
+            "https://worldcup-predictions-phi.vercel.app,"
+            "https://worldcup-predictions.vercel.app,"
+            "https://worldcup-predictions-api.vercel.app"
+        ),
+        cast=Csv(),
+    )
 
 SPECTACULAR_SETTINGS = {
     "TITLE": "World Cup Prediction API",

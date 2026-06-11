@@ -60,6 +60,43 @@ class Team(models.Model):
         return self.name
 
 
+class CupGroup(models.Model):
+    """FIFA World Cup group (A–L) within a tournament."""
+
+    tournament = models.ForeignKey(
+        Tournament, on_delete=models.CASCADE, related_name="cup_groups"
+    )
+    name = models.CharField(max_length=1)
+    teams = models.ManyToManyField(
+        Team, through="CupGroupTeam", related_name="cup_groups"
+    )
+
+    class Meta:
+        ordering = ["name"]
+        unique_together = ("tournament", "name")
+        indexes = [
+            models.Index(fields=["tournament", "name"]),
+        ]
+
+    def __str__(self):
+        return f"Group {self.name}"
+
+
+class CupGroupTeam(models.Model):
+    cup_group = models.ForeignKey(
+        CupGroup, on_delete=models.CASCADE, related_name="group_teams"
+    )
+    team = models.ForeignKey(Team, on_delete=models.CASCADE)
+    order = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        ordering = ["order"]
+        unique_together = ("cup_group", "team")
+
+    def __str__(self):
+        return f"{self.cup_group.name}: {self.team.code}"
+
+
 class Match(models.Model):
     class Status(models.TextChoices):
         SCHEDULED = "scheduled", "Scheduled"
@@ -70,6 +107,14 @@ class Match(models.Model):
         Tournament, on_delete=models.CASCADE, related_name="matches"
     )
     stage = models.ForeignKey(Stage, on_delete=models.CASCADE, related_name="matches")
+    cup_group = models.ForeignKey(
+        CupGroup,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="matches",
+    )
+    matchday = models.PositiveSmallIntegerField(null=True, blank=True)
     home_team = models.ForeignKey(
         Team, on_delete=models.CASCADE, related_name="home_matches"
     )
@@ -94,6 +139,7 @@ class Match(models.Model):
         ordering = ["kickoff_time"]
         indexes = [
             models.Index(fields=["tournament", "stage"]),
+            models.Index(fields=["tournament", "matchday"]),
             models.Index(fields=["kickoff_time"]),
             models.Index(fields=["status"]),
         ]
@@ -106,7 +152,7 @@ class Match(models.Model):
         return self.stage.stage_type == Stage.StageType.KNOCKOUT
 
     @property
-    def is_locked(self):
+    def is_kickoff_locked(self):
         from django.utils import timezone
         from django.conf import settings
 
@@ -114,3 +160,44 @@ class Match(models.Model):
             hours=settings.PREDICTION_LOCK_HOURS
         )
         return timezone.now() >= lock_time
+
+    def _matchday_lock_info(self):
+        if not self.matchday or self.matchday <= 1:
+            return False, None
+        if self.stage.stage_type != Stage.StageType.GROUP:
+            return False, None
+
+        prev_matchday = self.matchday - 1
+        incomplete = (
+            Match.objects.filter(
+                tournament=self.tournament,
+                matchday=prev_matchday,
+                stage__stage_type=Stage.StageType.GROUP,
+            )
+            .exclude(status=self.Status.FINISHED)
+            .exists()
+        )
+        if incomplete:
+            return (
+                True,
+                f"Predictions open after all Matchday {prev_matchday} games finish.",
+            )
+        return False, None
+
+    @property
+    def is_matchday_locked(self):
+        locked, _ = self._matchday_lock_info()
+        return locked
+
+    @property
+    def lock_reason(self):
+        matchday_locked, matchday_msg = self._matchday_lock_info()
+        if matchday_locked:
+            return matchday_msg
+        if self.is_kickoff_locked:
+            return "Prediction window has closed for this match."
+        return None
+
+    @property
+    def is_locked(self):
+        return self.is_kickoff_locked or self.is_matchday_locked

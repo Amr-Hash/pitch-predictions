@@ -206,6 +206,85 @@ class PredictionLockTests(TestCase):
         self.assertIn("closed", str(response.data).lower())
 
 
+class MatchdayLockTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="mduser", email="md@example.com", password="pass12345"
+        )
+        self.home = Team.objects.create(name="Home", code="HM")
+        self.away = Team.objects.create(name="Away", code="AW")
+        self.tournament = Tournament.objects.create(
+            name="Cup", year=2026,
+            start_date=timezone.now().date(),
+            end_date=timezone.now().date() + timedelta(days=30),
+        )
+        self.stage1 = Stage.objects.create(
+            tournament=self.tournament,
+            name="Matchday 1",
+            order=1,
+            stage_type=Stage.StageType.GROUP,
+        )
+        self.stage2 = Stage.objects.create(
+            tournament=self.tournament,
+            name="Matchday 2",
+            order=2,
+            stage_type=Stage.StageType.GROUP,
+        )
+        self.group = Group.objects.create(name="MD Group", created_by=self.user)
+        GroupMember.objects.create(
+            group=self.group, user=self.user, role=GroupMember.Role.ADMIN
+        )
+        self.md1_match = Match.objects.create(
+            tournament=self.tournament,
+            stage=self.stage1,
+            matchday=1,
+            home_team=self.home,
+            away_team=self.away,
+            kickoff_time=timezone.now() + timedelta(days=5),
+        )
+        self.md2_match = Match.objects.create(
+            tournament=self.tournament,
+            stage=self.stage2,
+            matchday=2,
+            home_team=self.home,
+            away_team=self.away,
+            kickoff_time=timezone.now() + timedelta(days=10),
+        )
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.user)
+
+    def test_matchday_two_locked_until_matchday_one_finishes(self):
+        self.assertTrue(self.md2_match.is_matchday_locked)
+        response = self.client.post(
+            "/api/predictions/",
+            {
+                "group": self.group.id,
+                "match": self.md2_match.id,
+                "predicted_home_score": 1,
+                "predicted_away_score": 0,
+            },
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("matchday 1", str(response.data).lower())
+
+    def test_matchday_two_unlocks_after_matchday_one_complete(self):
+        self.md1_match.status = Match.Status.FINISHED
+        self.md1_match.home_score = 1
+        self.md1_match.away_score = 0
+        self.md1_match.save()
+        self.assertFalse(self.md2_match.is_matchday_locked)
+        response = self.client.post(
+            "/api/predictions/",
+            {
+                "group": self.group.id,
+                "match": self.md2_match.id,
+                "predicted_home_score": 2,
+                "predicted_away_score": 1,
+            },
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+
 class StageProgressionTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(
@@ -219,10 +298,12 @@ class StageProgressionTests(TestCase):
             end_date=timezone.now().date() + timedelta(days=30),
         )
         self.stage1 = Stage.objects.create(
-            tournament=self.tournament, name="Day 1", order=1,
+            tournament=self.tournament, name="Round of 32", order=1,
+            stage_type=Stage.StageType.KNOCKOUT,
         )
         self.stage2 = Stage.objects.create(
-            tournament=self.tournament, name="Day 2", order=2,
+            tournament=self.tournament, name="Round of 16", order=2,
+            stage_type=Stage.StageType.KNOCKOUT,
         )
         self.group = Group.objects.create(name="Stage Group", created_by=self.user)
         GroupMember.objects.create(

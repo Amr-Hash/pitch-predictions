@@ -10,13 +10,25 @@ interface Props {
 export function MatchCard({ match, showPredictLink, showResultLink }: Props) {
   const kickoff = new Date(match.kickoff_time).toLocaleString();
   const isFinished = match.status === "finished";
+  const canPredict = showPredictLink && !match.is_locked && !isFinished;
 
   return (
     <div className="card">
       <div className="mb-2 flex items-center justify-between text-xs text-gray-500">
-        <span>{match.stage_name}</span>
+        <span>
+          {match.cup_group_name ? `Group ${match.cup_group_name}` : match.stage_name}
+          {match.matchday ? ` · MD${match.matchday}` : ""}
+        </span>
         {match.is_locked && !isFinished && (
-          <span className="rounded bg-red-100 px-2 py-0.5 text-red-700">Locked</span>
+          <span
+            className={`rounded px-2 py-0.5 ${
+              match.is_matchday_locked
+                ? "bg-amber-100 text-amber-800"
+                : "bg-red-100 text-red-700"
+            }`}
+          >
+            {match.is_matchday_locked ? "Not yet open" : "Locked"}
+          </span>
         )}
       </div>
       <div className="flex items-center justify-between gap-4">
@@ -43,8 +55,11 @@ export function MatchCard({ match, showPredictLink, showResultLink }: Props) {
           <p className="font-semibold">{match.away_team.name}</p>
         </div>
       </div>
+      {match.lock_reason && !isFinished && match.is_locked && (
+        <p className="mt-2 text-center text-xs text-amber-700">{match.lock_reason}</p>
+      )}
       <div className="mt-3 flex justify-center gap-2">
-        {showPredictLink && !match.is_locked && !isFinished && (
+        {canPredict && (
           <Link href={`/matches/${match.id}`} className="btn-primary text-sm">
             Predict
           </Link>

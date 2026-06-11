@@ -7,12 +7,14 @@ from tournaments.models import Match, Stage
 
 def validate_prediction_lock(match):
     if match.is_locked:
-        raise ValidationError(
-            {"detail": "Prediction window has closed for this match."}
-        )
+        message = match.lock_reason or "Prediction window has closed for this match."
+        raise ValidationError({"detail": message})
 
 
 def validate_stage_progression(user, group, match):
+    if match.stage.stage_type == Stage.StageType.GROUP:
+        return
+
     stage = match.stage
     previous_stage = (
         Stage.objects.filter(

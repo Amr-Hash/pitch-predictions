@@ -36,6 +36,9 @@ export interface Match {
   tournament: number;
   stage: number;
   stage_name: string;
+  cup_group: number | null;
+  cup_group_name: string | null;
+  matchday: number | null;
   home_team: Team;
   away_team: Team;
   kickoff_time: string;
@@ -45,6 +48,19 @@ export interface Match {
   winner_team: Team | null;
   is_knockout: boolean;
   is_locked: boolean;
+  is_matchday_locked: boolean;
+  lock_reason: string | null;
+}
+
+export interface CupGroupTeam {
+  order: number;
+  team: Team;
+}
+
+export interface CupGroup {
+  id: number;
+  name: string;
+  group_teams: CupGroupTeam[];
 }
 
 export interface Prediction {
@@ -156,10 +172,20 @@ export const api = {
   getTournaments: (token: string) =>
     request<{ results?: Tournament[] } | Tournament[]>("/api/tournaments/", {}, token),
 
-  getMatches: (token: string, params?: { tournament?: number; stage?: number }) => {
+  getCupGroups: (token: string, tournamentId: number) =>
+    request<CupGroup[]>(`/api/tournaments/${tournamentId}/cup-groups/`, {}, token),
+
+  getMatches: (token: string, params?: {
+    tournament?: number;
+    stage?: number;
+    matchday?: number;
+    cup_group?: string;
+  }) => {
     const qs = new URLSearchParams();
     if (params?.tournament) qs.set("tournament", String(params.tournament));
     if (params?.stage) qs.set("stage", String(params.stage));
+    if (params?.matchday) qs.set("matchday", String(params.matchday));
+    if (params?.cup_group) qs.set("cup_group", params.cup_group);
     const query = qs.toString() ? `?${qs}` : "";
     return request<{ results?: Match[] } | Match[]>(`/api/tournaments/matches/${query}`, {}, token);
   },

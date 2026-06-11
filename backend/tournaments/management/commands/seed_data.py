@@ -1,51 +1,23 @@
-from django.core.management.base import BaseCommand
+from datetime import datetime
+
 from django.contrib.auth import get_user_model
+from django.core.management.base import BaseCommand
 from django.utils import timezone
-from datetime import timedelta
 
 from groups.models import Group, GroupMember
-from tournaments.models import Match, Stage, Team, Tournament
+from tournaments.models import CupGroup, CupGroupTeam, Match, Stage, Team, Tournament
+from tournaments.wc2026_data import (
+    WC2026_GROUP_MATCHES,
+    WC2026_GROUPS,
+    WC2026_TEAMS,
+    WC2026_TOURNAMENT,
+)
 
 User = get_user_model()
 
-TEAMS = [
-    ("Brazil", "BRA", "https://flagcdn.com/br.svg"),
-    ("Argentina", "ARG", "https://flagcdn.com/ar.svg"),
-    ("France", "FRA", "https://flagcdn.com/fr.svg"),
-    ("Germany", "DEU", "https://flagcdn.com/de.svg"),
-    ("Spain", "ESP", "https://flagcdn.com/es.svg"),
-    ("England", "ENG", "https://flagcdn.com/gb-eng.svg"),
-    ("Portugal", "POR", "https://flagcdn.com/pt.svg"),
-    ("Netherlands", "NED", "https://flagcdn.com/nl.svg"),
-    ("Italy", "ITA", "https://flagcdn.com/it.svg"),
-    ("Belgium", "BEL", "https://flagcdn.com/be.svg"),
-    ("Croatia", "CRO", "https://flagcdn.com/hr.svg"),
-    ("Morocco", "MAR", "https://flagcdn.com/ma.svg"),
-    ("Japan", "JPN", "https://flagcdn.com/jp.svg"),
-    ("USA", "USA", "https://flagcdn.com/us.svg"),
-    ("Mexico", "MEX", "https://flagcdn.com/mx.svg"),
-    ("South Korea", "KOR", "https://flagcdn.com/kr.svg"),
-    ("Uruguay", "URU", "https://flagcdn.com/uy.svg"),
-    ("Colombia", "COL", "https://flagcdn.com/co.svg"),
-    ("Ecuador", "ECU", "https://flagcdn.com/ec.svg"),
-    ("Senegal", "SEN", "https://flagcdn.com/sn.svg"),
-    ("Nigeria", "NGA", "https://flagcdn.com/ng.svg"),
-    ("Ghana", "GHA", "https://flagcdn.com/gh.svg"),
-    ("Cameroon", "CMR", "https://flagcdn.com/cm.svg"),
-    ("Australia", "AUS", "https://flagcdn.com/au.svg"),
-    ("Iran", "IRN", "https://flagcdn.com/ir.svg"),
-    ("Saudi Arabia", "KSA", "https://flagcdn.com/sa.svg"),
-    ("Canada", "CAN", "https://flagcdn.com/ca.svg"),
-    ("Switzerland", "SUI", "https://flagcdn.com/ch.svg"),
-    ("Denmark", "DEN", "https://flagcdn.com/dk.svg"),
-    ("Poland", "POL", "https://flagcdn.com/pl.svg"),
-    ("Serbia", "SRB", "https://flagcdn.com/rs.svg"),
-    ("Wales", "WAL", "https://flagcdn.com/gb-wls.svg"),
-]
-
 
 class Command(BaseCommand):
-    help = "Seed sample World Cup tournament data"
+    help = "Seed FIFA World Cup 2026 tournament data"
 
     def handle(self, *args, **options):
         self.stdout.write("Seeding database...")
@@ -54,38 +26,43 @@ class Command(BaseCommand):
             email="admin@worldcup.com",
             defaults={"username": "admin", "is_staff": True, "is_superuser": True},
         )
-        if not admin.has_usable_password():
-            admin.set_password("admin12345")
-            admin.save()
+        admin.username = admin.username or "admin"
+        admin.is_staff = True
+        admin.is_superuser = True
+        admin.is_active = True
+        admin.set_password("admin12345")
+        admin.save()
 
         demo, _ = User.objects.get_or_create(
             email="demo@worldcup.com",
             defaults={"username": "demo"},
         )
-        if not demo.has_usable_password():
-            demo.set_password("demo12345")
-            demo.save()
+        demo.is_active = True
+        demo.set_password("demo12345")
+        demo.save()
 
         teams = {}
-        for name, code, flag in TEAMS:
-            team, _ = Team.objects.get_or_create(
-                code=code, defaults={"name": name, "flag_url": flag}
+        for name, code, flag_iso in WC2026_TEAMS:
+            flag_url = f"https://flagcdn.com/w80/{flag_iso}.png"
+            team, _ = Team.objects.update_or_create(
+                code=code,
+                defaults={"name": name, "flag_url": flag_url},
             )
             teams[code] = team
 
-        tournament, _ = Tournament.objects.get_or_create(
-            name="FIFA World Cup",
-            year=2026,
+        tournament, _ = Tournament.objects.update_or_create(
+            name=WC2026_TOURNAMENT["name"],
+            year=WC2026_TOURNAMENT["year"],
             defaults={
-                "start_date": timezone.now().date(),
-                "end_date": timezone.now().date() + timedelta(days=30),
+                "start_date": WC2026_TOURNAMENT["start_date"],
+                "end_date": WC2026_TOURNAMENT["end_date"],
             },
         )
 
         stages_config = [
-            ("Group Stage Day 1", 1, Stage.StageType.GROUP),
-            ("Group Stage Day 2", 2, Stage.StageType.GROUP),
-            ("Group Stage Day 3", 3, Stage.StageType.GROUP),
+            ("Group Stage — Matchday 1", 1, Stage.StageType.GROUP),
+            ("Group Stage — Matchday 2", 2, Stage.StageType.GROUP),
+            ("Group Stage — Matchday 3", 3, Stage.StageType.GROUP),
             ("Round of 32", 4, Stage.StageType.KNOCKOUT),
             ("Round of 16", 5, Stage.StageType.KNOCKOUT),
             ("Quarter Finals", 6, Stage.StageType.KNOCKOUT),
@@ -103,103 +80,46 @@ class Command(BaseCommand):
             )
             stages[order] = stage
 
-        team_codes = list(teams.keys())
-        base_time = timezone.now() + timedelta(days=1)
-        match_num = 0
-
-        for day in [1, 2, 3]:
-            stage = stages[day]
-            for i in range(0, 8, 2):
-                home = teams[team_codes[(match_num + i) % len(team_codes)]]
-                away = teams[team_codes[(match_num + i + 1) % len(team_codes)]]
-                Match.objects.get_or_create(
-                    tournament=tournament,
-                    stage=stage,
-                    home_team=home,
-                    away_team=away,
-                    defaults={
-                        "kickoff_time": base_time + timedelta(days=day - 1, hours=i),
-                    },
+        cup_groups = {}
+        for letter, team_codes in WC2026_GROUPS.items():
+            cup_group, _ = CupGroup.objects.update_or_create(
+                tournament=tournament,
+                name=letter,
+            )
+            cup_groups[letter] = cup_group
+            CupGroupTeam.objects.filter(cup_group=cup_group).delete()
+            for order, code in enumerate(team_codes):
+                CupGroupTeam.objects.create(
+                    cup_group=cup_group,
+                    team=teams[code],
+                    order=order,
                 )
-            match_num += 2
 
-        round_of_32_pairs = [
-            ("BRA", "URU"),
-            ("ARG", "ECU"),
-            ("FRA", "POL"),
-            ("DEU", "SRB"),
-            ("ESP", "COL"),
-            ("ENG", "SEN"),
-            ("POR", "GHA"),
-            ("NED", "USA"),
-            ("ITA", "AUS"),
-            ("BEL", "JPN"),
-            ("CRO", "MAR"),
-            ("MEX", "KOR"),
-            ("SUI", "CMR"),
-            ("DEN", "NGA"),
-            ("CAN", "IRN"),
-            ("WAL", "KSA"),
-        ]
-        for i, (home_code, away_code) in enumerate(round_of_32_pairs):
-            Match.objects.get_or_create(
+        Match.objects.filter(tournament=tournament).delete()
+
+        for group_letter, matchday, home_code, away_code, kickoff_iso in WC2026_GROUP_MATCHES:
+            kickoff = datetime.fromisoformat(kickoff_iso.replace("Z", "+00:00"))
+            Match.objects.create(
                 tournament=tournament,
-                stage=stages[4],
+                stage=stages[matchday],
+                cup_group=cup_groups[group_letter],
+                matchday=matchday,
                 home_team=teams[home_code],
                 away_team=teams[away_code],
-                defaults={
-                    "kickoff_time": base_time + timedelta(days=4, hours=i * 2),
-                },
+                kickoff_time=kickoff,
             )
-
-        round_of_16_pairs = [
-            ("BRA", "ARG"),
-            ("FRA", "DEU"),
-            ("ESP", "ENG"),
-            ("POR", "NED"),
-            ("ITA", "BEL"),
-            ("CRO", "MAR"),
-            ("JPN", "USA"),
-            ("MEX", "KOR"),
-        ]
-        for i, (home_code, away_code) in enumerate(round_of_16_pairs):
-            Match.objects.get_or_create(
-                tournament=tournament,
-                stage=stages[5],
-                home_team=teams[home_code],
-                away_team=teams[away_code],
-                defaults={
-                    "kickoff_time": base_time + timedelta(days=6, hours=i * 3),
-                },
-            )
-
-        finished_match, created = Match.objects.get_or_create(
-            tournament=tournament,
-            stage=stages[1],
-            home_team=teams["BRA"],
-            away_team=teams["MEX"],
-            defaults={
-                "kickoff_time": timezone.now() - timedelta(days=1),
-                "status": Match.Status.FINISHED,
-                "home_score": 2,
-                "away_score": 1,
-            },
-        )
-        if not created and finished_match.status != Match.Status.FINISHED:
-            finished_match.status = Match.Status.FINISHED
-            finished_match.home_score = 2
-            finished_match.away_score = 1
-            finished_match.save()
 
         group, _ = Group.objects.get_or_create(
             name="Demo Predictors",
-            defaults={"description": "Sample group for testing", "created_by": demo},
+            defaults={"description": "Sample prediction group", "created_by": demo},
         )
         GroupMember.objects.get_or_create(
             group=group, user=demo, defaults={"role": GroupMember.Role.ADMIN}
         )
         GroupMember.objects.get_or_create(group=group, user=admin)
 
+        match_count = Match.objects.filter(tournament=tournament).count()
         self.stdout.write(self.style.SUCCESS("Seed data created successfully!"))
+        self.stdout.write(f"Tournament: {tournament} — {match_count} group-stage matches")
         self.stdout.write("Admin: admin@worldcup.com / admin12345")
         self.stdout.write("Demo:  demo@worldcup.com / demo12345")

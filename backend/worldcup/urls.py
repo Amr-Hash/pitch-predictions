@@ -2,7 +2,10 @@ from django.contrib import admin
 from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
+from accounts.forms import AdminLoginForm
 from .health import health
+
+admin.site.login_form = AdminLoginForm
 
 urlpatterns = [
     path("api/health/", health, name="health"),

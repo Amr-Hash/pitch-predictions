@@ -42,9 +42,9 @@ Stage progression rules apply in order: predictions for Round of 32 must be comp
 |---------|-----|
 | **App (frontend)** | https://worldcup-predictions-phi.vercel.app |
 | **Backend API** | https://worldcup-predictions-api.vercel.app |
-| **Django Admin** | https://worldcup-predictions-phi.vercel.app/admin/ (proxied via frontend) |
+| **Django Admin** | https://worldcup-predictions-api.vercel.app/admin/ |
 
-The frontend proxies `/api/*` and `/admin/*` to the backend using Next.js rewrites.
+The frontend proxies `/api/*` to the backend using Next.js rewrites. Use the backend URL directly for Django admin (sessions and CSRF do not work reliably through the frontend proxy).
 
 ### Finish database setup (required)
 
@@ -76,8 +76,8 @@ docker compose exec backend python manage.py seed_data
 | Swagger Docs | http://localhost:8000/api/docs/ |
 | Django Admin | http://localhost:8000/admin/ |
 
-**Demo accounts** (after seeding):
-- Admin: `admin@worldcup.com` / `admin12345`
+**Demo accounts** (seeded automatically on deploy):
+- Admin: `admin@worldcup.com` or username `admin` / password `admin12345`
 - Demo user: `demo@worldcup.com` / `demo12345`
 
 ## Local Development (without Docker)

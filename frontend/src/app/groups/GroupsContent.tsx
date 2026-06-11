@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import { api, Group, unwrapList } from "@/lib/api";
@@ -60,7 +61,13 @@ export default function GroupsContent() {
 
   return (
     <div>
-      <h1 className="mb-6 text-3xl font-bold">Groups</h1>
+      <h1 className="mb-2 text-3xl font-bold">Prediction Groups</h1>
+      <p className="mb-6 text-gray-600">
+        Create or join a group to compete with friends.{" "}
+        <Link href="/world-cup-groups" className="font-medium text-pitch-600 hover:underline">
+          View World Cup 2026 groups & teams →
+        </Link>
+      </p>
       {error && <div className="mb-4 rounded-lg bg-red-50 p-3 text-red-700">{error}</div>}
       {success && <div className="mb-4 rounded-lg bg-green-50 p-3 text-green-700">{success}</div>}
 

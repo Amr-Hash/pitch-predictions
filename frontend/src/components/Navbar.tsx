@@ -21,6 +21,9 @@ export function Navbar() {
               <Link href="/groups" className="text-sm font-medium text-gray-600 hover:text-pitch-600">
                 Groups
               </Link>
+              <Link href="/world-cup-groups" className="text-sm font-medium text-gray-600 hover:text-pitch-600">
+                WC Groups
+              </Link>
               <Link href="/matches" className="text-sm font-medium text-gray-600 hover:text-pitch-600">
                 Matches
               </Link>

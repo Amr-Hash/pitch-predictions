@@ -38,13 +38,15 @@ class MatchAdmin(admin.ModelAdmin):
     list_display = (
         "home_team",
         "away_team",
+        "cup_group",
+        "matchday",
         "stage",
         "kickoff_time",
         "status",
         "home_score",
         "away_score",
     )
-    list_filter = ("status", "tournament", "stage")
+    list_filter = ("status", "tournament", "stage", "matchday", "cup_group")
     raw_id_fields = ("home_team", "away_team", "winner_team")
     actions = ["recalculate_scores"]
 

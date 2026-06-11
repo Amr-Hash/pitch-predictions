@@ -70,11 +70,15 @@ export default function MatchDetailPage() {
   if (!match) return <div>Match not found</div>;
 
   const locked = match.is_locked || match.status === "finished";
+  const canPredict = !locked;
 
   return (
     <div className="mx-auto max-w-2xl">
       <h1 className="mb-2 text-3xl font-bold">Match Prediction</h1>
-      <p className="mb-6 text-gray-600">{match.stage_name}</p>
+      <p className="mb-6 text-gray-600">
+        {match.cup_group_name ? `Group ${match.cup_group_name}` : match.stage_name}
+        {match.matchday ? ` · Matchday ${match.matchday}` : ""}
+      </p>
 
       <div className="card mb-6">
         <div className="flex items-center justify-between gap-4">
@@ -96,13 +100,13 @@ export default function MatchDetailPage() {
           Kickoff: {new Date(match.kickoff_time).toLocaleString()}
         </p>
         {locked && (
-          <p className="mt-2 text-center text-sm font-medium text-red-600">
-            Prediction window has closed for this match.
+          <p className={`mt-2 text-center text-sm font-medium ${match.is_matchday_locked ? "text-amber-700" : "text-red-600"}`}>
+            {match.lock_reason || "Prediction window has closed for this match."}
           </p>
         )}
       </div>
 
-      {!locked && (
+      {canPredict && (
         <div className="card">
           {error && <div className="mb-4 rounded-lg bg-red-50 p-3 text-red-700">{error}</div>}
           {success && <div className="mb-4 rounded-lg bg-green-50 p-3 text-green-700">{success}</div>}

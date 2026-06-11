@@ -11,9 +11,9 @@ from .views import (
 )
 
 router = DefaultRouter()
-router.register("", TournamentViewSet, basename="tournament")
 router.register("teams", TeamViewSet, basename="team")
 router.register("matches", MatchViewSet, basename="match")
+router.register("", TournamentViewSet, basename="tournament")
 
 admin_router = DefaultRouter()
 admin_router.register("tournaments", AdminTournamentViewSet, basename="admin-tournament")
