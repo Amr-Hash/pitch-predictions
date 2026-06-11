@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
+from django.db.models import Count
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from rest_framework import generics, permissions, status
@@ -10,7 +11,10 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
+from worldcup.permissions import IsAdminUser
+
 from .serializers import (
+    AdminUserSerializer,
     PasswordResetConfirmSerializer,
     PasswordResetRequestSerializer,
     RegisterSerializer,
@@ -66,6 +70,17 @@ class MeView(generics.RetrieveAPIView):
 
     def get_object(self):
         return self.request.user
+
+
+class AdminUserListView(generics.ListAPIView):
+    permission_classes = (permissions.IsAuthenticated, IsAdminUser)
+    serializer_class = AdminUserSerializer
+    pagination_class = None
+
+    def get_queryset(self):
+        return User.objects.annotate(
+            group_count=Count("group_memberships", distinct=True)
+        ).order_by("-created_at")
 
 
 class PasswordResetRequestView(APIView):

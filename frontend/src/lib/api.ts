@@ -12,6 +12,27 @@ export interface User {
   is_staff: boolean;
 }
 
+export interface AdminUser {
+  id: number;
+  username: string;
+  email: string;
+  is_staff: boolean;
+  group_count: number;
+  created_at: string;
+}
+
+export interface AdminGroup {
+  id: number;
+  name: string;
+  description: string;
+  created_by: number;
+  created_by_username: string;
+  invite_code: string;
+  member_count: number;
+  created_at: string;
+  members?: GroupMember[];
+}
+
 export interface AuthTokens {
   access: string;
   refresh: string;
@@ -467,6 +488,15 @@ export const api = {
       { method: "POST" },
       token
     ),
+
+  adminGetUsers: (token: string) =>
+    request<AdminUser[]>("/api/auth/admin/users", {}, token),
+
+  adminGetGroups: (token: string) =>
+    request<AdminGroup[]>("/api/groups/admin", {}, token),
+
+  adminGetGroup: (token: string, id: number) =>
+    request<AdminGroup>(`/api/groups/admin/${id}`, {}, token),
 };
 
 export function unwrapList<T>(data: { results?: T[] } | T[]): T[] {

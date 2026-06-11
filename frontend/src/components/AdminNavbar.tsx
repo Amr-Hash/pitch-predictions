@@ -8,8 +8,10 @@ import { LanguageToggle } from "@/components/LanguageToggle";
 import { useT } from "@/lib/i18n";
 
 const LINKS = [
-  { href: "/admin", labelKey: "adminTournaments" as const },
-  { href: "/admin/teams", labelKey: "adminTeams" as const },
+  { href: "/admin", labelKey: "adminTournaments" as const, prefix: "/admin/tournaments" },
+  { href: "/admin/teams", labelKey: "adminTeams" as const, prefix: "/admin/teams" },
+  { href: "/admin/users", labelKey: "adminUsers" as const, prefix: "/admin/users" },
+  { href: "/admin/groups", labelKey: "adminGroups" as const, prefix: "/admin/groups" },
 ];
 
 export function AdminNavbar() {
@@ -35,7 +37,7 @@ export function AdminNavbar() {
             const active =
               item.href === "/admin"
                 ? pathname === "/admin" || pathname.startsWith("/admin/tournaments")
-                : pathname.startsWith(item.href);
+                : pathname.startsWith(item.prefix);
             return (
               <Link
                 key={item.href}

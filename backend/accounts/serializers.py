@@ -11,6 +11,21 @@ class UserSerializer(serializers.ModelSerializer):
         read_only_fields = ("id", "is_staff", "created_at")
 
 
+class AdminUserSerializer(serializers.ModelSerializer):
+    group_count = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = User
+        fields = (
+            "id",
+            "username",
+            "email",
+            "is_staff",
+            "group_count",
+            "created_at",
+        )
+
+
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=8)
     password_confirm = serializers.CharField(write_only=True, min_length=8)

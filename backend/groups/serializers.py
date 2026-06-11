@@ -75,3 +75,31 @@ class JoinGroupSerializer(serializers.Serializer):
 
 class InviteUserSerializer(serializers.Serializer):
     email = serializers.EmailField()
+
+
+class AdminGroupListSerializer(serializers.ModelSerializer):
+    created_by_username = serializers.CharField(source="created_by.username", read_only=True)
+    member_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Group
+        fields = (
+            "id",
+            "name",
+            "description",
+            "created_by",
+            "created_by_username",
+            "invite_code",
+            "member_count",
+            "created_at",
+        )
+
+    def get_member_count(self, obj):
+        return obj.memberships.count()
+
+
+class AdminGroupDetailSerializer(AdminGroupListSerializer):
+    members = GroupMemberSerializer(source="memberships", many=True, read_only=True)
+
+    class Meta(AdminGroupListSerializer.Meta):
+        fields = AdminGroupListSerializer.Meta.fields + ("members",)

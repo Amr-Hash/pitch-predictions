@@ -127,6 +127,75 @@ class LogoutTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
 
+class AdminUserListTests(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create_user(
+            username="siteadmin",
+            email="admin@example.com",
+            password="pass12345",
+            is_staff=True,
+        )
+        self.user = User.objects.create_user(
+            username="regular", email="user@example.com", password="pass12345"
+        )
+        self.group = Group.objects.create(name="League", created_by=self.user)
+        GroupMember.objects.create(group=self.group, user=self.user)
+        self.client = APIClient()
+
+    def test_admin_can_list_users(self):
+        self.client.force_authenticate(user=self.admin)
+        response = self.client.get("/api/auth/admin/users")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertGreaterEqual(len(response.data), 2)
+        regular = next(row for row in response.data if row["username"] == "regular")
+        self.assertEqual(regular["group_count"], 1)
+
+    def test_non_admin_forbidden(self):
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get("/api/auth/admin/users")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+
+class AdminGroupListTests(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create_user(
+            username="gadmin",
+            email="gadmin@example.com",
+            password="pass12345",
+            is_staff=True,
+        )
+        self.user = User.objects.create_user(
+            username="gm1", email="gm1@example.com", password="pass12345"
+        )
+        self.other = User.objects.create_user(
+            username="gm2", email="gm2@example.com", password="pass12345"
+        )
+        self.group = Group.objects.create(name="Friends", created_by=self.user)
+        GroupMember.objects.create(
+            group=self.group, user=self.user, role=GroupMember.Role.ADMIN
+        )
+        GroupMember.objects.create(group=self.group, user=self.other)
+        self.client = APIClient()
+
+    def test_admin_can_list_all_groups(self):
+        self.client.force_authenticate(user=self.admin)
+        response = self.client.get("/api/groups/admin")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["member_count"], 2)
+
+    def test_admin_can_view_group_members(self):
+        self.client.force_authenticate(user=self.admin)
+        response = self.client.get(f"/api/groups/admin/{self.group.id}")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data["members"]), 2)
+
+    def test_non_admin_forbidden(self):
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get("/api/groups/admin")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+
 class TournamentTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(

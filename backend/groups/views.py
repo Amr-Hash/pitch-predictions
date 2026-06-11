@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
+from django.db.models import Prefetch
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied, ValidationError
@@ -10,7 +11,11 @@ from tournaments.models import Match
 from tournaments.serializers import MatchSerializer
 
 from .models import Group, GroupMember
+from worldcup.permissions import IsAdminUser
+
 from .serializers import (
+    AdminGroupDetailSerializer,
+    AdminGroupListSerializer,
     GroupCreateSerializer,
     GroupMemberSerializer,
     GroupSerializer,
@@ -37,6 +42,31 @@ class IsGroupAdmin(permissions.BasePermission):
 class IsGroupMember(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
         return obj.memberships.filter(user=request.user).exists()
+
+
+class AdminGroupViewSet(viewsets.ReadOnlyModelViewSet):
+    permission_classes = (permissions.IsAuthenticated, IsAdminUser)
+    pagination_class = None
+
+    def get_queryset(self):
+        return (
+            Group.objects.all()
+            .select_related("created_by")
+            .prefetch_related(
+                Prefetch(
+                    "memberships",
+                    queryset=GroupMember.objects.select_related("user").order_by(
+                        "joined_at"
+                    ),
+                )
+            )
+            .order_by("-created_at")
+        )
+
+    def get_serializer_class(self):
+        if self.action == "retrieve":
+            return AdminGroupDetailSerializer
+        return AdminGroupListSerializer
 
 
 class GroupViewSet(viewsets.ModelViewSet):
