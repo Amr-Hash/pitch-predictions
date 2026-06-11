@@ -226,13 +226,28 @@ Access Django admin at `https://your-app.onrender.com/admin/` to manage tourname
 
 ## CI/CD
 
-GitHub Actions (`.github/workflows/ci.yml`) runs on every push:
+GitHub Actions (`.github/workflows/ci.yml`) runs on every push and pull request:
 
+**On pull requests and pushes (tests only):**
 1. Backend tests with 80% coverage threshold
-2. Frontend lint and tests
+2. Frontend lint, tests, and production build
 3. Docker image builds for both services
 
-Connect Render and Vercel to your GitHub repo for automatic deployments after CI passes.
+**On push to `main`/`master` (after tests pass):**
+1. Deploy backend to Vercel (`worldcup-predictions-api`)
+2. Deploy frontend to Vercel (`worldcup-predictions`)
+
+### One-time GitHub secret setup
+
+Add this secret in **GitHub → Repository → Settings → Secrets and variables → Actions**:
+
+| Secret | How to get it |
+|--------|----------------|
+| `VERCEL_TOKEN` | [Vercel Account Tokens](https://vercel.com/account/tokens) → Create Token |
+
+Project and team IDs are already configured in the workflow file. No other secrets are required for deployment.
+
+Pull requests run tests only — production deploys happen when code is merged to `main`.
 
 ## Project Structure
 
