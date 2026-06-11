@@ -192,7 +192,8 @@ class TournamentDetailSerializer(serializers.ModelSerializer):
 class TournamentCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tournament
-        fields = ("name", "year", "start_date", "end_date", "is_active", "is_archived")
+        fields = ("id", "name", "year", "start_date", "end_date", "is_active", "is_archived")
+        read_only_fields = ("id",)
 
 
 class StageCreateSerializer(serializers.ModelSerializer):
