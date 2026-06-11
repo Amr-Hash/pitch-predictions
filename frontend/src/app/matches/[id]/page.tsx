@@ -11,8 +11,8 @@ export default function MatchDetailPage() {
   const router = useRouter();
   const [match, setMatch] = useState<Match | null>(null);
   const [prediction, setPrediction] = useState<Prediction | null>(null);
-  const [homeScore, setHomeScore] = useState(0);
-  const [awayScore, setAwayScore] = useState(0);
+  const [homeScore, setHomeScore] = useState("");
+  const [awayScore, setAwayScore] = useState("");
   const [winnerId, setWinnerId] = useState<number | "">("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -32,8 +32,8 @@ export default function MatchDetailPage() {
         const existing = unwrapList(data)[0] ?? null;
         setPrediction(existing);
         if (existing) {
-          setHomeScore(existing.predicted_home_score);
-          setAwayScore(existing.predicted_away_score);
+          setHomeScore(String(existing.predicted_home_score));
+          setAwayScore(String(existing.predicted_away_score));
           if (existing.predicted_winner_team) {
             setWinnerId(existing.predicted_winner_team.id);
           }
@@ -42,17 +42,33 @@ export default function MatchDetailPage() {
     ]).catch((e) => setError(e.message));
   }, [token, id]);
 
-  const showWinnerSelect = match?.is_knockout && homeScore === awayScore;
+  const homeScoreNum = homeScore === "" ? null : Number(homeScore);
+  const awayScoreNum = awayScore === "" ? null : Number(awayScore);
+  const showWinnerSelect =
+    match?.is_knockout &&
+    homeScoreNum !== null &&
+    awayScoreNum !== null &&
+    homeScoreNum === awayScoreNum;
+
+  const handleScoreChange = (setter: (value: string) => void, value: string) => {
+    if (value === "" || /^\d+$/.test(value)) {
+      setter(value);
+    }
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!token || !match) return;
+    if (homeScore === "" || awayScore === "") {
+      setError("Please enter both scores.");
+      return;
+    }
     setError("");
     setSuccess("");
     const payload = {
       match: match.id,
-      predicted_home_score: homeScore,
-      predicted_away_score: awayScore,
+      predicted_home_score: Number(homeScore),
+      predicted_away_score: Number(awayScore),
       ...(showWinnerSelect && winnerId ? { predicted_winner_team_id: Number(winnerId) } : {}),
     };
     try {
@@ -119,11 +135,13 @@ export default function MatchDetailPage() {
               <div className="flex-1">
                 <label className="mb-1 block text-sm font-medium">{match.home_team.code} Score</label>
                 <input
-                  type="number"
-                  min={0}
-                  className="input"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  autoComplete="off"
+                  className="input text-center text-2xl"
                   value={homeScore}
-                  onChange={(e) => setHomeScore(Number(e.target.value))}
+                  onChange={(e) => handleScoreChange(setHomeScore, e.target.value)}
                   required
                 />
               </div>
@@ -131,11 +149,13 @@ export default function MatchDetailPage() {
               <div className="flex-1">
                 <label className="mb-1 block text-sm font-medium">{match.away_team.code} Score</label>
                 <input
-                  type="number"
-                  min={0}
-                  className="input"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  autoComplete="off"
+                  className="input text-center text-2xl"
                   value={awayScore}
-                  onChange={(e) => setAwayScore(Number(e.target.value))}
+                  onChange={(e) => handleScoreChange(setAwayScore, e.target.value)}
                   required
                 />
               </div>
