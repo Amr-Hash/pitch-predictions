@@ -1,6 +1,11 @@
+"use client";
+
 import Link from "next/link";
+import { useAuth } from "@/lib/auth";
 
 export default function HomePage() {
+  const { user, loading } = useAuth();
+
   return (
     <div className="flex flex-col items-center py-16 text-center">
       <div className="mb-8 text-6xl">🏆</div>
@@ -12,12 +17,27 @@ export default function HomePage() {
         goal differences, and correct outcomes. Climb the leaderboard and prove you know football best.
       </p>
       <div className="flex flex-wrap justify-center gap-4">
-        <Link href="/register" className="btn-primary px-8 py-3 text-lg">
-          Get Started
-        </Link>
-        <Link href="/login" className="btn-secondary px-8 py-3 text-lg">
-          Login
-        </Link>
+        {loading ? (
+          <span className="text-gray-500">Loading...</span>
+        ) : user ? (
+          <>
+            <Link href="/dashboard" className="btn-primary px-8 py-3 text-lg">
+              Go to Dashboard
+            </Link>
+            <Link href="/matches" className="btn-secondary px-8 py-3 text-lg">
+              View Matches
+            </Link>
+          </>
+        ) : (
+          <>
+            <Link href="/register" className="btn-primary px-8 py-3 text-lg">
+              Get Started
+            </Link>
+            <Link href="/login" className="btn-secondary px-8 py-3 text-lg">
+              Login
+            </Link>
+          </>
+        )}
       </div>
       <div className="mt-16 grid w-full max-w-4xl gap-6 sm:grid-cols-3">
         <div className="card text-left">

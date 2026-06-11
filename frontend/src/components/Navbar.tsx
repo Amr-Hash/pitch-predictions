@@ -2,19 +2,21 @@
 
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
+import { TournamentSelect } from "@/components/TournamentSelect";
 
 export function Navbar() {
   const { user, logout, loading } = useAuth();
 
   return (
     <nav className="border-b border-gray-200 bg-white">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6 lg:px-8">
         <Link href="/" className="flex items-center gap-2 text-xl font-bold text-pitch-700">
           <span>⚽</span> World Cup Predictions
         </Link>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-4">
           {!loading && user ? (
             <>
+              <TournamentSelect />
               <Link href="/dashboard" className="text-sm font-medium text-gray-600 hover:text-pitch-600">
                 Dashboard
               </Link>
@@ -22,7 +24,7 @@ export function Navbar() {
                 Groups
               </Link>
               <Link href="/world-cup-groups" className="text-sm font-medium text-gray-600 hover:text-pitch-600">
-                WC Groups
+                Groups & Teams
               </Link>
               <Link href="/matches" className="text-sm font-medium text-gray-600 hover:text-pitch-600">
                 Matches

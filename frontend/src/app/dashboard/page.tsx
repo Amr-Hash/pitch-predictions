@@ -5,11 +5,13 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { api, Dashboard } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { useTournament } from "@/lib/tournament";
 import { EmptyState } from "@/components/EmptyState";
 import { MatchCard } from "@/components/MatchCard";
 
 export default function DashboardPage() {
   const { user, token, loading: authLoading } = useAuth();
+  const { selectedTournament } = useTournament();
   const router = useRouter();
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
   const [error, setError] = useState("");
@@ -19,11 +21,11 @@ export default function DashboardPage() {
   }, [authLoading, user, router]);
 
   useEffect(() => {
-    if (!token) return;
-    api.getDashboard(token)
+    if (!token || !selectedTournament) return;
+    api.getDashboard(token, { tournament: selectedTournament.id })
       .then(setDashboard)
       .catch((e) => setError(e.message));
-  }, [token]);
+  }, [token, selectedTournament]);
 
   if (authLoading || !user) {
     return (
@@ -65,7 +67,9 @@ export default function DashboardPage() {
         Welcome back, {user.username}
       </h1>
       <p className="mb-6 text-gray-600">
-        Track your predictions, points, and upcoming matches.
+        {selectedTournament
+          ? `Overview for ${selectedTournament.name} (${selectedTournament.year}). Use the tournament menu in the navbar to switch competitions.`
+          : "Track your predictions, points, and upcoming matches."}
       </p>
 
       <div className="mb-8 grid gap-4 sm:grid-cols-3">

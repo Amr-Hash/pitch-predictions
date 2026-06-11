@@ -3,19 +3,20 @@
 import Link from "next/link";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { api, Match, Tournament, unwrapList } from "@/lib/api";
+import { api, Match } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { useTournament } from "@/lib/tournament";
 import { MatchCard } from "@/components/MatchCard";
+import { EmptyState } from "@/components/EmptyState";
 
 function MatchesContent() {
   const { user, token, loading: authLoading } = useAuth();
+  const { selectedTournament } = useTournament();
   const router = useRouter();
   const searchParams = useSearchParams();
   const cupGroupFilter = searchParams.get("cup_group") || "";
   const matchdayFilter = searchParams.get("matchday") || "";
-  const tournamentParam = searchParams.get("tournament") || "";
 
-  const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
 
   useEffect(() => {
@@ -23,28 +24,16 @@ function MatchesContent() {
   }, [authLoading, user, router]);
 
   useEffect(() => {
-    if (!token) return;
-    api.getTournaments(token).then((data) => setTournaments(unwrapList(data)));
-  }, [token]);
-
-  const selectedTournament = useMemo(() => {
-    if (tournamentParam) {
-      return tournaments.find((t) => String(t.id) === tournamentParam) || null;
-    }
-    return (
-      tournaments.find((t) => t.name === "Demo Test Cup") ||
-      tournaments[0] ||
-      null
-    );
-  }, [tournaments, tournamentParam]);
-
-  useEffect(() => {
-    if (!token) return;
-    const params: { cup_group?: string; matchday?: number; tournament?: number } = {};
-    if (selectedTournament) params.tournament = selectedTournament.id;
+    if (!token || !selectedTournament) return;
+    const params: { cup_group?: string; matchday?: number; tournament: number } = {
+      tournament: selectedTournament.id,
+    };
     if (cupGroupFilter) params.cup_group = cupGroupFilter;
     if (matchdayFilter) params.matchday = Number(matchdayFilter);
-    api.getMatches(token, params).then((data) => setMatches(unwrapList(data)));
+    api.getMatches(token, params).then((data) => {
+      const list = Array.isArray(data) ? data : data.results || [];
+      setMatches(list);
+    });
   }, [token, cupGroupFilter, matchdayFilter, selectedTournament]);
 
   const grouped = useMemo(() => {
@@ -56,12 +45,12 @@ function MatchesContent() {
     return byDay;
   }, [matches]);
 
-  const isTestCup = selectedTournament?.name === "Demo Test Cup";
-
   if (authLoading || !user) return <div>Loading...</div>;
+  if (!selectedTournament) return <div>Loading tournaments...</div>;
 
+  const isTestCup = selectedTournament.name === "Demo Test Cup";
   const showGrouped = !matchdayFilter && matches.some((m) => m.matchday);
-  const tournamentQuery = selectedTournament ? `tournament=${selectedTournament.id}` : "";
+  const tournamentQuery = `tournament=${selectedTournament.id}`;
   const baseQuery = [tournamentQuery, cupGroupFilter ? `cup_group=${cupGroupFilter}` : ""]
     .filter(Boolean)
     .join("&");
@@ -69,18 +58,9 @@ function MatchesContent() {
   return (
     <div>
       <h1 className="mb-2 text-3xl font-bold">Matches</h1>
-
-      <div className="mb-4 flex flex-wrap gap-2">
-        {tournaments.map((t) => (
-          <FilterLink
-            key={t.id}
-            href={`/matches?tournament=${t.id}`}
-            active={selectedTournament?.id === t.id}
-          >
-            {t.name}
-          </FilterLink>
-        ))}
-      </div>
+      <p className="mb-4 text-gray-600">
+        {selectedTournament.name} ({selectedTournament.year}) — {matches.length} fixtures
+      </p>
 
       {isTestCup && (
         <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
@@ -90,12 +70,6 @@ function MatchesContent() {
           opens, then Matchday 3.
         </div>
       )}
-
-      <p className="mb-4 text-gray-600">
-        {selectedTournament
-          ? `${selectedTournament.name} (${selectedTournament.year}) — ${matches.length} fixtures`
-          : "Select a tournament"}
-      </p>
 
       <div className="mb-6 flex flex-wrap gap-2">
         <FilterLink
@@ -125,7 +99,13 @@ function MatchesContent() {
         )}
       </div>
 
-      {showGrouped ? (
+      {matches.length === 0 ? (
+        <EmptyState
+          icon="📅"
+          title="No matches for this tournament"
+          description="Fixtures will appear here once they are added for the selected competition."
+        />
+      ) : showGrouped ? (
         [1, 2, 3].map((day) =>
           grouped[day].length > 0 ? (
             <section key={day} className="mb-10">
