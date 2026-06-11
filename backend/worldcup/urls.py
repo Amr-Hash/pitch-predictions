@@ -18,9 +18,13 @@ urlpatterns = [
         name="swagger-ui",
     ),
     path("api/auth/", include("accounts.urls")),
+    path("api/groups/", include("groups.urls")),
     path("api/groups", include("groups.urls")),
+    path("api/tournaments/", include("tournaments.urls")),
     path("api/tournaments", include("tournaments.urls")),
+    path("api/predictions/", include("predictions.urls")),
     path("api/predictions", include("predictions.urls")),
+    path("api/leaderboards/", include("predictions.leaderboard_urls")),
     path("api/leaderboards", include("predictions.leaderboard_urls")),
     path("api/dashboard", DashboardView.as_view(), name="dashboard"),
 ]
