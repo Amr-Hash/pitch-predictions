@@ -44,7 +44,7 @@ Stage progression rules apply in order: predictions for Round of 32 must be comp
 | **Backend API** | https://pitch-predictions-api.vercel.app |
 | **Django Admin** | https://pitch-predictions-api.vercel.app/admin/ |
 
-Legacy URLs (`worldcup-predictions-*`) may still redirect until fully migrated.
+Legacy URL `/world-cup-groups` redirects to `/tournament-groups`.
 
 The frontend proxies `/api/*` to the backend using Next.js rewrites. Use the backend URL directly for Django admin (sessions and CSRF do not work reliably through the frontend proxy).
 
@@ -79,8 +79,8 @@ docker compose exec backend python manage.py seed_data
 | Django Admin | http://localhost:8000/admin/ |
 
 **Demo accounts** (seeded automatically on deploy):
-- Admin: `admin@worldcup.com` or username `admin` / password `admin12345`
-- Demo user: `demo@worldcup.com` / `demo12345`
+- Admin: `admin@alhabeed.com` or username `admin` / password `admin12345`
+- Demo user: `demo@alhabeed.com` / `demo12345`
 
 ## Local Development (without Docker)
 

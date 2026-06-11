@@ -77,7 +77,7 @@ else:
         "default": dj_database_url.config(
             default=config(
                 "DATABASE_URL",
-                default="postgres://worldcup:worldcup@localhost:5432/worldcup",
+                default="postgres://alhabeed:alhabeed@localhost:5432/alhabeed",
             ),
             conn_max_age=0 if IS_VERCEL else 600,
             conn_health_checks=not IS_VERCEL,
@@ -138,9 +138,7 @@ SIMPLE_JWT = {
 _default_cors = (
     "http://localhost:3000,http://127.0.0.1:3000,"
     "https://pitch-predictions.vercel.app,"
-    "https://pitch-predictions-phi.vercel.app,"
-    "https://worldcup-predictions-phi.vercel.app,"
-    "https://worldcup-predictions.vercel.app"
+    "https://pitch-predictions-amr-hashem.vercel.app"
 )
 CORS_ALLOWED_ORIGINS = config(
     "CORS_ALLOWED_ORIGINS",
@@ -156,11 +154,9 @@ if IS_VERCEL:
         "CSRF_TRUSTED_ORIGINS",
         default=(
             "https://pitch-predictions.vercel.app,"
-            "https://pitch-predictions-phi.vercel.app,"
+            "https://pitch-predictions-amr-hashem.vercel.app,"
             "https://pitch-predictions-api.vercel.app,"
-            "https://worldcup-predictions-phi.vercel.app,"
-            "https://worldcup-predictions.vercel.app,"
-            "https://worldcup-predictions-api.vercel.app"
+            "https://pitch-predictions-api-amr-hashem.vercel.app"
         ),
         cast=Csv(),
     )

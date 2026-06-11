@@ -18,9 +18,9 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_USER: worldcup
-          POSTGRES_PASSWORD: worldcup
-          POSTGRES_DB: worldcup
+          POSTGRES_USER: alhabeed
+          POSTGRES_PASSWORD: alhabeed
+          POSTGRES_DB: alhabeed
         ports:
           - 5432:5432
         options: >-
@@ -43,7 +43,7 @@ jobs:
       - name: Run migrations
         working-directory: backend
         env:
-          DATABASE_URL: postgres://worldcup:worldcup@localhost:5432/worldcup
+          DATABASE_URL: postgres://alhabeed:alhabeed@localhost:5432/alhabeed
           SECRET_KEY: test-secret
           JWT_SECRET: test-jwt
         run: python manage.py migrate --noinput
@@ -51,7 +51,7 @@ jobs:
       - name: Run tests with coverage
         working-directory: backend
         env:
-          DATABASE_URL: postgres://worldcup:worldcup@localhost:5432/worldcup
+          DATABASE_URL: postgres://alhabeed:alhabeed@localhost:5432/alhabeed
           SECRET_KEY: test-secret
           JWT_SECRET: test-jwt
         run: |

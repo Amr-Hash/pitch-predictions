@@ -4,15 +4,15 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: worldcup
-      POSTGRES_PASSWORD: worldcup
-      POSTGRES_DB: worldcup
+      POSTGRES_USER: alhabeed
+      POSTGRES_PASSWORD: alhabeed
+      POSTGRES_DB: alhabeed
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U worldcup"]
+      test: ["CMD-SHELL", "pg_isready -U alhabeed"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -24,7 +24,7 @@ services:
     environment:
       SECRET_KEY: dev-secret-key
       DEBUG: "True"
-      DATABASE_URL: postgres://worldcup:worldcup@postgres:5432/worldcup
+      DATABASE_URL: postgres://alhabeed:alhabeed@postgres:5432/alhabeed
       ALLOWED_HOSTS: localhost,127.0.0.1,backend
       CORS_ALLOWED_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
       JWT_SECRET: dev-jwt-secret

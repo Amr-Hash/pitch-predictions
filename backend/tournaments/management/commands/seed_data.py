@@ -33,13 +33,17 @@ TEST_STAGES_CONFIG = [
 
 
 class Command(BaseCommand):
-    help = "Seed World Cup 2026 and demo test tournament data"
+    help = "Seed tournament data and demo accounts for الهبيد (Al-Habeed)"
 
     def handle(self, *args, **options):
         self.stdout.write("Seeding database...")
 
+        User.objects.filter(
+            email__in=["admin@worldcup.com", "demo@worldcup.com"]
+        ).update(is_active=False)
+
         admin, _ = User.objects.get_or_create(
-            email="admin@worldcup.com",
+            email="admin@alhabeed.com",
             defaults={"username": "admin", "is_staff": True, "is_superuser": True},
         )
         admin.username = admin.username or "admin"
@@ -50,7 +54,7 @@ class Command(BaseCommand):
         admin.save()
 
         demo, _ = User.objects.get_or_create(
-            email="demo@worldcup.com",
+            email="demo@alhabeed.com",
             defaults={"username": "demo"},
         )
         demo.is_active = True
@@ -78,8 +82,8 @@ class Command(BaseCommand):
             f"{test_schedule['start_cairo'].strftime('%a %d %b %Y %H:%M')}–"
             f"{test_schedule['end_cairo'].strftime('%H:%M')} Egypt time"
         )
-        self.stdout.write("Admin: admin@worldcup.com / admin12345")
-        self.stdout.write("Demo:  demo@worldcup.com / demo12345")
+        self.stdout.write("Admin: admin@alhabeed.com / admin12345")
+        self.stdout.write("Demo:  demo@alhabeed.com / demo12345")
 
     def _seed_teams(self, team_rows):
         teams = {}
