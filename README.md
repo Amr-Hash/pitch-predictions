@@ -36,6 +36,28 @@ Stage progression rules apply in order: predictions for Round of 32 must be comp
 | Auth | JWT (Simple JWT) |
 | Docs | drf-spectacular (OpenAPI/Swagger) |
 
+## Production URLs (Vercel)
+
+| Service | URL |
+|---------|-----|
+| **App (frontend)** | https://worldcup-predictions-phi.vercel.app |
+| **Backend API** | https://worldcup-predictions-api.vercel.app |
+| **Django Admin** | https://worldcup-predictions-phi.vercel.app/admin/ (proxied via frontend) |
+
+The frontend proxies `/api/*` and `/admin/*` to the backend using Next.js rewrites.
+
+### Finish database setup (required)
+
+1. Open [Vercel Storage → Neon](https://vercel.com/amr-hashem/worldcup-predictions-api/stores) and create a Postgres database for **worldcup-predictions-api**
+2. Redeploy the backend: `cd backend && npx vercel deploy --prod`
+3. Seed data locally:
+   ```bash
+   cd backend
+   npx vercel env pull .env.local
+   pip install -r requirements.txt
+   python manage.py seed_data
+   ```
+
 ## Quick Start (Docker)
 
 ```bash
