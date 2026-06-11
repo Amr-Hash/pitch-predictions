@@ -3,6 +3,9 @@
 import Cookies from "js-cookie";
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { api, User } from "./api";
+import { cacheStaffStatus, clearStaffCache, clearUserSessionData, isStaff } from "./staff";
+
+const TOURNAMENT_STORAGE_KEY = "selected_tournament_id";
 
 interface AuthContextType {
   user: User | null;
@@ -23,12 +26,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loadUser = useCallback(async (accessToken: string): Promise<User | null> => {
     try {
       const me = await api.me(accessToken);
+      cacheStaffStatus(me);
+      if (isStaff(me)) {
+        localStorage.removeItem(TOURNAMENT_STORAGE_KEY);
+      }
       setUser(me);
       setToken(accessToken);
       return me;
     } catch {
       Cookies.remove("access_token");
       Cookies.remove("refresh_token");
+      clearStaffCache();
       setUser(null);
       setToken(null);
       return null;
@@ -70,6 +78,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     Cookies.remove("access_token");
     Cookies.remove("refresh_token");
+    clearUserSessionData();
     setUser(null);
     setToken(null);
   };

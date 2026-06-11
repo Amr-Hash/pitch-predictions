@@ -3,15 +3,15 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { useAuth } from "@/lib/auth";
-import { isStaff, isStaffAllowedPath } from "@/lib/staff";
+import { isStaff, isStaffAllowedPath, isStaffSession } from "@/lib/staff";
 
 export function StaffGuard({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
 
-  const staffBlocked =
-    !loading && Boolean(user && isStaff(user)) && !isStaffAllowedPath(pathname);
+  const staffSession = isStaffSession(user, loading);
+  const staffBlocked = staffSession && !isStaffAllowedPath(pathname);
 
   useEffect(() => {
     if (staffBlocked) {

@@ -69,6 +69,9 @@ export function TournamentProvider({ children }: { children: React.ReactNode }) 
       setSelectedTournament(null);
       setError(null);
       setLoading(false);
+      if (user && isStaff(user)) {
+        localStorage.removeItem(STORAGE_KEY);
+      }
     }
   }, [token, user, loadTournaments]);
 

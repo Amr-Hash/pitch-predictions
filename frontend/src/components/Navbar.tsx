@@ -1,22 +1,29 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect } from "react";
 import { APP_NAME, APP_NAME_LATIN } from "@/lib/brand";
 import { useAuth } from "@/lib/auth";
 import { AdminNavbar } from "@/components/AdminNavbar";
-import { isStaff } from "@/lib/staff";
+import { isStaffAllowedPath, isStaffSession } from "@/lib/staff";
 import { useTournament } from "@/lib/tournament";
 
 export function Navbar() {
   const { user, logout, loading } = useAuth();
   const pathname = usePathname();
+  const router = useRouter();
   const { selectedTournament, clearSelectedTournament } = useTournament();
 
-  const showAdminNav =
-    Boolean(user && isStaff(user)) || (loading && pathname.startsWith("/admin"));
+  const staffSession = isStaffSession(user, loading);
 
-  if (showAdminNav) {
+  useEffect(() => {
+    if (!loading && staffSession && !isStaffAllowedPath(pathname)) {
+      router.replace("/admin");
+    }
+  }, [loading, staffSession, pathname, router]);
+
+  if (staffSession) {
     return <AdminNavbar />;
   }
 
