@@ -7,7 +7,8 @@ router = DefaultRouter(trailing_slash=False)
 router.register("", GroupViewSet, basename="group")
 
 admin_router = DefaultRouter(trailing_slash=False)
-admin_router.register("", AdminGroupViewSet, basename="admin-group")
+# "groups" prefix avoids clashing with GroupViewSet detail URLs at /api/groups/{pk}
+admin_router.register("groups", AdminGroupViewSet, basename="admin-group")
 
 urlpatterns = [
     path("admin/", include(admin_router.urls)),

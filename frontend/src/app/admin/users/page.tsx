@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { api, AdminUser } from "@/lib/api";
+import { api, AdminUser, unwrapList } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useT } from "@/lib/i18n";
 
@@ -18,7 +18,7 @@ export default function AdminUsersPage() {
     setError("");
     api
       .adminGetUsers(token)
-      .then(setUsers)
+      .then((data) => setUsers(unwrapList(data)))
       .catch((err) => setError(err instanceof Error ? err.message : "Could not load users."))
       .finally(() => setLoading(false));
   }, [token]);

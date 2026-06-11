@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { api, AdminGroup } from "@/lib/api";
+import { api, AdminGroup, unwrapList } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useT } from "@/lib/i18n";
 
@@ -21,7 +21,7 @@ export default function AdminGroupsPage() {
     setError("");
     api
       .adminGetGroups(token)
-      .then(setGroups)
+      .then((data) => setGroups(unwrapList(data)))
       .catch((err) => setError(err instanceof Error ? err.message : "Could not load groups."))
       .finally(() => setLoading(false));
   }, [token]);

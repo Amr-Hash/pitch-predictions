@@ -493,10 +493,10 @@ export const api = {
     request<AdminUser[]>("/api/auth/admin/users", {}, token),
 
   adminGetGroups: (token: string) =>
-    request<AdminGroup[]>("/api/groups/admin", {}, token),
+    request<AdminGroup[] | { results: AdminGroup[] }>("/api/groups/admin/groups", {}, token),
 
   adminGetGroup: (token: string, id: number) =>
-    request<AdminGroup>(`/api/groups/admin/${id}`, {}, token),
+    request<AdminGroup>(`/api/groups/admin/groups/${id}`, {}, token),
 };
 
 export function unwrapList<T>(data: { results?: T[] } | T[]): T[] {

@@ -179,20 +179,20 @@ class AdminGroupListTests(TestCase):
 
     def test_admin_can_list_all_groups(self):
         self.client.force_authenticate(user=self.admin)
-        response = self.client.get("/api/groups/admin")
+        response = self.client.get("/api/groups/admin/groups")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
         self.assertEqual(response.data[0]["member_count"], 2)
 
     def test_admin_can_view_group_members(self):
         self.client.force_authenticate(user=self.admin)
-        response = self.client.get(f"/api/groups/admin/{self.group.id}")
+        response = self.client.get(f"/api/groups/admin/groups/{self.group.id}")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data["members"]), 2)
 
     def test_non_admin_forbidden(self):
         self.client.force_authenticate(user=self.user)
-        response = self.client.get("/api/groups/admin")
+        response = self.client.get("/api/groups/admin/groups")
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
 
