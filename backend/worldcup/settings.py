@@ -7,7 +7,7 @@ from decouple import Csv, config
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-IS_VERCEL = os.environ.get("VERCEL") == "1"
+IS_VERCEL = os.environ.get("VERCEL") == "1" or os.environ.get("VERCEL_ENV") is not None
 
 SECRET_KEY = config("SECRET_KEY", default="django-insecure-dev-key-change-in-production")
 DEBUG = config("DEBUG", default=not IS_VERCEL, cast=bool)
@@ -72,10 +72,17 @@ DATABASES = {
             "DATABASE_URL",
             default="postgres://worldcup:worldcup@localhost:5432/worldcup",
         ),
-        conn_max_age=600,
-        conn_health_checks=True,
+        conn_max_age=0 if IS_VERCEL else 600,
+        conn_health_checks=not IS_VERCEL,
     )
 }
+
+if IS_VERCEL and not os.environ.get("DATABASE_URL"):
+    import warnings
+
+    warnings.warn(
+        "DATABASE_URL is not set. Link Neon Postgres in Vercel project settings."
+    )
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
