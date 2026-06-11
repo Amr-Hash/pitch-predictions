@@ -61,12 +61,41 @@ class DashboardTests(TestCase):
         )
         self.client = APIClient()
         self.client.force_authenticate(user=self.user)
+        self.tournament = Tournament.objects.create(
+            name="World Cup",
+            year=2026,
+            start_date=timezone.now().date(),
+            end_date=timezone.now().date() + timedelta(days=30),
+        )
+        self.stage = Stage.objects.create(
+            tournament=self.tournament,
+            name="Group Stage — Matchday 1",
+            order=1,
+            stage_type=Stage.StageType.GROUP,
+        )
+        home = Team.objects.create(name="Home", code="HOM")
+        away = Team.objects.create(name="Away", code="AWY")
+        Match.objects.create(
+            tournament=self.tournament,
+            stage=self.stage,
+            home_team=home,
+            away_team=away,
+            kickoff_time=timezone.now() - timedelta(days=1),
+            status=Match.Status.FINISHED,
+            home_score=2,
+            away_score=1,
+        )
 
     def test_dashboard_returns_data(self):
         response = self.client.get("/api/dashboard")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn("groups", response.data)
         self.assertIn("total_points", response.data)
+
+    def test_dashboard_with_tournament_filter(self):
+        response = self.client.get(f"/api/dashboard?tournament={self.tournament.id}")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data["recent_results"]), 1)
 
 
 class LogoutTests(TestCase):

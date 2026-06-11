@@ -164,13 +164,12 @@ class DashboardView(APIView):
             if match.id not in predicted_match_ids and not match.is_locked:
                 pending.append(match)
 
-        recent_results = (
-            Match.objects.filter(status=Match.Status.FINISHED)
-            .select_related("home_team", "away_team", "stage")
-            .order_by("-kickoff_time")[:10]
-        )
+        recent_results_qs = Match.objects.filter(
+            status=Match.Status.FINISHED
+        ).select_related("home_team", "away_team", "stage")
         if tournament_id:
-            recent_results = recent_results.filter(tournament_id=tournament_id)
+            recent_results_qs = recent_results_qs.filter(tournament_id=tournament_id)
+        recent_results = recent_results_qs.order_by("-kickoff_time")[:10]
 
         total_points = predictions_qs.aggregate(total=Sum("points_awarded"))["total"] or 0
 
