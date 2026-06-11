@@ -66,23 +66,23 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "worldcup.wsgi.application"
 
-DATABASES = {
-    "default": dj_database_url.config(
-        default=config(
-            "DATABASE_URL",
-            default="postgres://worldcup:worldcup@localhost:5432/worldcup",
-        ),
-        conn_max_age=0 if IS_VERCEL else 600,
-        conn_health_checks=not IS_VERCEL,
-    )
-}
-
 if IS_VERCEL and not os.environ.get("DATABASE_URL"):
-    import warnings
-
-    warnings.warn(
-        "DATABASE_URL is not set. Link Neon Postgres in Vercel project settings."
-    )
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.dummy",
+        }
+    }
+else:
+    DATABASES = {
+        "default": dj_database_url.config(
+            default=config(
+                "DATABASE_URL",
+                default="postgres://worldcup:worldcup@localhost:5432/worldcup",
+            ),
+            conn_max_age=0 if IS_VERCEL else 600,
+            conn_health_checks=not IS_VERCEL,
+        )
+    }
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},

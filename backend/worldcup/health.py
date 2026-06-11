@@ -1,9 +1,24 @@
+import os
+
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET
 
 
 @require_GET
 def health(request):
+    if os.environ.get("VERCEL") and not os.environ.get("DATABASE_URL"):
+        return JsonResponse(
+            {
+                "status": "degraded",
+                "database": "not_configured",
+                "detail": (
+                    "DATABASE_URL is missing. Add Neon Postgres in Vercel: "
+                    "Project worldcup-predictions-api → Storage → Create Database → Neon."
+                ),
+            },
+            status=503,
+        )
+
     db_ok = True
     db_error = None
     try:
