@@ -7,6 +7,11 @@ class Tournament(models.Model):
         UEFA_CHAMPIONS_LEAGUE = "uefa_champions_league", "UEFA Champions League"
         SIMPLE = "simple", "Simple (points → GD → GF)"
 
+    class LiveScoreProvider(models.TextChoices):
+        MANUAL = "manual", "Manual (admin only)"
+        API_FOOTBALL = "api_football", "API-Football (api-sports.io)"
+        SPORTMONKS = "sportmonks", "SportMonks"
+
     name = models.CharField(max_length=200)
     name_ar = models.CharField(max_length=200, blank=True, default="")
     year = models.PositiveIntegerField()
@@ -26,6 +31,17 @@ class Tournament(models.Model):
         help_text="Inactive tournaments are hidden from users (still manageable in admin).",
     )
     is_archived = models.BooleanField(default=False)
+    live_score_provider = models.CharField(
+        max_length=20,
+        choices=LiveScoreProvider.choices,
+        default=LiveScoreProvider.MANUAL,
+        help_text="External feed used to update live scores for this tournament.",
+    )
+    live_score_config = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Provider settings such as league_id and season (API keys live in server env).",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -156,6 +172,12 @@ class Match(models.Model):
         null=True,
         blank=True,
         related_name="won_matches",
+    )
+    external_fixture_id = models.CharField(
+        max_length=64,
+        blank=True,
+        default="",
+        help_text="Fixture ID in the tournament live-score provider (for auto sync).",
     )
 
     class Meta:

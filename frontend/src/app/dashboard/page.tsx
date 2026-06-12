@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { api, Dashboard, Prediction, unwrapList } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { loginUrlWithNext } from "@/lib/authRedirect";
 import { useTournament } from "@/lib/tournament";
 import { DashboardGroupsSlider } from "@/components/DashboardGroupsSlider";
 import { GlobalRankPodium } from "@/components/GlobalRankPodium";
@@ -214,7 +215,7 @@ export default function DashboardPage() {
   const t = useT();
 
   useEffect(() => {
-    if (!authLoading && !user) router.push("/login");
+    if (!authLoading && !user) router.push(loginUrlWithNext("/dashboard"));
   }, [authLoading, user, router]);
 
   if (authLoading || !user) {

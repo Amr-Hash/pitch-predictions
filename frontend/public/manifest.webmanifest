@@ -1,6 +1,6 @@
 {
-  "name": "الهبيد — Al-Habeed",
-  "short_name": "الهبيد",
+  "name": "الهبيدة (جمع) — alhabeeda",
+  "short_name": "الهبيدة",
   "description": "Predict match results, compete with friends, and climb the leaderboard.",
   "start_url": "/dashboard",
   "scope": "/",

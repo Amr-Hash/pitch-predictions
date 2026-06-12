@@ -7,6 +7,7 @@ import {
   clearStoredTokens,
   getAccessToken,
   getRefreshToken,
+  onSessionExpired,
   onSessionTokenRefreshed,
   refreshAccessToken,
   storeEmail,
@@ -78,6 +79,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
     return () => onSessionTokenRefreshed(null);
   }, []);
+
+  useEffect(() => {
+    onSessionExpired(() => {
+      clearSession();
+    });
+    return () => onSessionExpired(null);
+  }, [clearSession]);
 
   useEffect(() => {
     restoreSession().finally(() => setLoading(false));

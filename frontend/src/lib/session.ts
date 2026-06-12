@@ -17,11 +17,21 @@ const SHORT_REFRESH_DAYS = 7;
 const ACCESS_COOKIE_DAYS = 1;
 
 type TokenListener = (access: string) => void;
+type SessionExpiredListener = () => void;
 
 let tokenListener: TokenListener | null = null;
+let sessionExpiredListener: SessionExpiredListener | null = null;
 
 export function onSessionTokenRefreshed(listener: TokenListener | null) {
   tokenListener = listener;
+}
+
+export function onSessionExpired(listener: SessionExpiredListener | null) {
+  sessionExpiredListener = listener;
+}
+
+export function emitSessionExpired() {
+  sessionExpiredListener?.();
 }
 
 function cookieBaseOptions() {

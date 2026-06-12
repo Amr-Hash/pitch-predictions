@@ -6,6 +6,7 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APIClient
 
+from predictions.models import Prediction
 from tournaments.models import CupGroup, Match, Stage, Team, Tournament
 
 User = get_user_model()
@@ -167,6 +168,24 @@ class AdminApiTests(TestCase):
             format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_admin_live_score_does_not_award_points(self):
+        pred = Prediction.objects.create(
+            user=self.user,
+            match=self.match,
+            predicted_home_score=2,
+            predicted_away_score=1,
+        )
+        self.client.force_authenticate(user=self.staff)
+        response = self.client.patch(
+            f"/api/tournaments/admin/matches/{self.match.id}",
+            {"home_score": 2, "away_score": 1, "status": "live"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["status"], "live")
+        pred.refresh_from_db()
+        self.assertEqual(pred.points_awarded, 0)
 
     def test_admin_create_match(self):
         self.client.force_authenticate(user=self.staff)

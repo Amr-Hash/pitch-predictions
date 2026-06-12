@@ -273,16 +273,40 @@ export interface Tournament {
   qualifiers_per_group?: number;
   is_active?: boolean;
   is_archived?: boolean;
+  live_score_provider?: "manual" | "api_football" | "sportmonks";
+  live_score_config?: { league_id?: number; season?: number; season_id?: number };
   stage_count?: number;
   match_count?: number;
   stages?: { id: number; name: string; name_ar?: string; order: number; stage_type: string }[];
   cup_groups?: CupGroup[];
 }
 
-class ApiError extends Error {
+export class ApiError extends Error {
   constructor(public status: number, message: string) {
     super(message);
   }
+}
+
+const AUTH_API_PREFIX = "/api/auth/";
+
+async function handleSessionExpired(): Promise<never> {
+  if (typeof window !== "undefined") {
+    const { clearStoredTokens, emitSessionExpired } = await import("./session");
+    const { loginUrlWithNext } = await import("./authRedirect");
+    clearStoredTokens();
+    emitSessionExpired();
+
+    const authPaths = ["/login", "/register", "/forgot-password", "/reset-password"];
+    const current = window.location.pathname;
+    const onAuthPage = authPaths.some((p) => current === p || current.startsWith(`${p}/`));
+    if (!onAuthPage) {
+      const next = window.location.pathname + window.location.search;
+      window.location.assign(loginUrlWithNext(next));
+      return new Promise(() => {}) as never;
+    }
+  }
+
+  throw new ApiError(401, "Session expired");
 }
 
 async function request<T>(
@@ -299,12 +323,17 @@ async function request<T>(
 
   const res = await fetch(`${API_URL}${path}`, { ...options, headers });
 
-  if (res.status === 401 && token && allowRefresh && !path.includes("/auth/refresh")) {
+  if (res.status === 401 && token && allowRefresh && !path.startsWith(AUTH_API_PREFIX)) {
     const { refreshAccessToken } = await import("./session");
     const newAccess = await refreshAccessToken();
     if (newAccess) {
       return request<T>(path, options, newAccess, false);
     }
+    return handleSessionExpired();
+  }
+
+  if (res.status === 401 && token && !path.startsWith(AUTH_API_PREFIX)) {
+    return handleSessionExpired();
   }
 
   if (!res.ok) {
@@ -472,6 +501,8 @@ export const api = {
       qualifiers_per_group?: number;
       is_active?: boolean;
       is_archived?: boolean;
+      live_score_provider?: string;
+      live_score_config?: Record<string, unknown>;
     }
   ) =>
     request<Tournament>(
@@ -493,11 +524,20 @@ export const api = {
       qualifiers_per_group: number;
       is_active: boolean;
       is_archived: boolean;
+      live_score_provider: string;
+      live_score_config: Record<string, unknown>;
     }>
   ) =>
     request<Tournament>(
       `/api/tournaments/admin/tournaments/${id}`,
       { method: "PATCH", body: JSON.stringify(data) },
+      token
+    ),
+
+  adminSyncLiveScores: (token: string, tournamentId: number) =>
+    request<{ tournament_id: number; updated: number; skipped: number }>(
+      `/api/tournaments/admin/tournaments/${tournamentId}/sync-live-scores`,
+      { method: "POST" },
       token
     ),
 
@@ -659,6 +699,7 @@ export const api = {
       home_score: number | null;
       away_score: number | null;
       winner_team: number | null;
+      external_fixture_id?: string;
     }>
   ) =>
     request<Match>(

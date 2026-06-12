@@ -115,11 +115,15 @@ def _validate_match_result(instance, attrs):
                 {"home_score": "Scores are required when marking a match as finished."}
             )
 
-    if instance.is_knockout and home_score == away_score and not winner_team:
-        if status == Match.Status.FINISHED:
-            raise serializers.ValidationError(
-                {"winner_team": "Winner is required for tied knockout matches."}
-            )
+    if (
+        instance.is_knockout
+        and home_score == away_score
+        and not winner_team
+        and status == Match.Status.FINISHED
+    ):
+        raise serializers.ValidationError(
+            {"winner_team": "Winner is required for tied knockout matches."}
+        )
 
     # Clear penalty-winner when the match did not end in a draw.
     if (
@@ -158,28 +162,42 @@ class MatchAdminUpdateSerializer(serializers.ModelSerializer):
             "home_score",
             "away_score",
             "winner_team",
+            "external_fixture_id",
         )
 
     def validate(self, attrs):
-        status = attrs.get("status")
-        if status and status != Match.Status.FINISHED:
-            raise serializers.ValidationError(
-                {"status": "Scores can only be saved with status set to finished."}
-            )
-        if "status" not in attrs and self.instance:
+        status = attrs.get("status", self.instance.status if self.instance else None)
+        allowed = {
+            Match.Status.SCHEDULED,
+            Match.Status.LIVE,
+            Match.Status.FINISHED,
+        }
+        if status not in allowed:
+            raise serializers.ValidationError({"status": "Invalid match status."})
+
+        if status == Match.Status.LIVE:
+            home = attrs.get("home_score", self.instance.home_score)
+            away = attrs.get("away_score", self.instance.away_score)
+            if home is None or away is None:
+                raise serializers.ValidationError(
+                    {"home_score": "Both scores are required for a live match."}
+                )
+
+        if status == Match.Status.FINISHED and "status" not in attrs and self.instance:
             attrs["status"] = Match.Status.FINISHED
+
         _validate_match_result(self.instance, attrs)
         return attrs
 
     def update(self, instance, validated_data):
+        from predictions.services.scoring import recalculate_match_scores
+
         match = super().update(instance, validated_data)
         if (
             match.status == Match.Status.FINISHED
             and match.home_score is not None
             and match.away_score is not None
         ):
-            from predictions.services.scoring import recalculate_match_scores
-
             recalculate_match_scores(match)
         return match
 
@@ -201,6 +219,8 @@ class TournamentListSerializer(serializers.ModelSerializer):
             "qualifiers_per_group",
             "is_active",
             "is_archived",
+            "live_score_provider",
+            "live_score_config",
             "stage_count",
             "match_count",
         )
@@ -223,6 +243,8 @@ class TournamentDetailSerializer(serializers.ModelSerializer):
             "qualifiers_per_group",
             "is_active",
             "is_archived",
+            "live_score_provider",
+            "live_score_config",
             "stages",
             "cup_groups",
         )
@@ -242,6 +264,8 @@ class TournamentCreateSerializer(serializers.ModelSerializer):
             "qualifiers_per_group",
             "is_active",
             "is_archived",
+            "live_score_provider",
+            "live_score_config",
         )
         read_only_fields = ("id",)
 

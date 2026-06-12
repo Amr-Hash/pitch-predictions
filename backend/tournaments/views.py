@@ -1,5 +1,7 @@
-from rest_framework import permissions, viewsets
-from rest_framework.decorators import action
+import os
+
+from rest_framework import permissions, status, viewsets
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 
 from .models import CupGroup, Match, Stage, Team, Tournament
@@ -66,6 +68,14 @@ class AdminTournamentViewSet(viewsets.ModelViewSet):
         if self.action == "list":
             return TournamentListSerializer
         return TournamentCreateSerializer
+
+    @action(detail=True, methods=["post"], url_path="sync-live-scores")
+    def sync_live_scores(self, request, pk=None):
+        from tournaments.services.live_scores import sync_tournament_live_scores
+
+        tournament = self.get_object()
+        result = sync_tournament_live_scores(tournament)
+        return Response({"tournament_id": tournament.id, **result})
 
 
 class StageViewSet(viewsets.ModelViewSet):
@@ -196,3 +206,32 @@ class AdminMatchViewSet(viewsets.ModelViewSet):
                 "predictions": results,
             }
         )
+
+
+@api_view(["POST"])
+@permission_classes([permissions.AllowAny])
+def api_football_webhook(request):
+    """
+    Optional push endpoint for API-Football (or a proxy cron).
+    Set API_FOOTBALL_WEBHOOK_SECRET and send it as X-Webhook-Secret.
+    """
+    secret = os.environ.get("API_FOOTBALL_WEBHOOK_SECRET", "").strip()
+    if not secret or request.headers.get("X-Webhook-Secret") != secret:
+        return Response({"detail": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
+
+    from tournaments.services.live_scores import sync_tournament_live_scores
+
+    tournament_id = request.data.get("tournament_id")
+    if not tournament_id:
+        return Response(
+            {"detail": "tournament_id is required."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        tournament = Tournament.objects.get(pk=tournament_id)
+    except Tournament.DoesNotExist:
+        return Response({"detail": "Tournament not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    result = sync_tournament_live_scores(tournament)
+    return Response({"tournament_id": tournament.id, **result})

@@ -17,6 +17,9 @@ const emptyForm = {
   qualifiers_per_group: 2,
   is_active: true,
   is_archived: false,
+  live_score_provider: "manual",
+  live_score_league_id: "",
+  live_score_season: "",
 };
 
 export default function AdminTournamentsPage() {
@@ -43,22 +46,57 @@ export default function AdminTournamentsPage() {
     load();
   }, [load]);
 
+  function tournamentPayload() {
+    const config: Record<string, number> = {};
+    if (form.live_score_league_id) {
+      config.league_id = Number(form.live_score_league_id);
+    }
+    if (form.live_score_season) {
+      config.season = Number(form.live_score_season);
+    }
+    return {
+      name: form.name,
+      name_ar: form.name_ar,
+      year: form.year,
+      start_date: form.start_date,
+      end_date: form.end_date,
+      standing_rules: form.standing_rules,
+      qualifiers_per_group: form.qualifiers_per_group,
+      is_active: form.is_active,
+      is_archived: form.is_archived,
+      live_score_provider: form.live_score_provider,
+      live_score_config: config,
+    };
+  }
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!token) return;
     setError("");
     setSuccess("");
     try {
+      const payload = tournamentPayload();
       if (editingId) {
-        await api.adminUpdateTournament(token, editingId, form);
+        await api.adminUpdateTournament(token, editingId, payload);
         setSuccess(t("tournamentUpdated"));
         setEditingId(null);
       } else {
-        await api.adminCreateTournament(token, form);
+        await api.adminCreateTournament(token, payload);
         setSuccess(t("tournamentCreated"));
       }
       setForm(emptyForm);
       load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("failedSaveTournament"));
+    }
+  }
+
+  async function syncLiveScores(tournamentId: number) {
+    if (!token) return;
+    setError("");
+    try {
+      await api.adminSyncLiveScores(token, tournamentId);
+      setSuccess(t("adminLiveScoresSynced"));
     } catch (err) {
       setError(err instanceof Error ? err.message : t("failedSaveTournament"));
     }
@@ -88,6 +126,13 @@ export default function AdminTournamentsPage() {
       qualifiers_per_group: tournament.qualifiers_per_group ?? 2,
       is_active: tournament.is_active ?? true,
       is_archived: tournament.is_archived ?? false,
+      live_score_provider: tournament.live_score_provider || "manual",
+      live_score_league_id: tournament.live_score_config?.league_id
+        ? String(tournament.live_score_config.league_id)
+        : "",
+      live_score_season: tournament.live_score_config?.season
+        ? String(tournament.live_score_config.season)
+        : "",
     });
   }
 
@@ -188,6 +233,43 @@ export default function AdminTournamentsPage() {
               }
             />
           </div>
+          <div className="sm:col-span-2">
+            <label className="mb-1 block text-sm font-medium">{t("adminLiveScoreProvider")}</label>
+            <select
+              className="input"
+              value={form.live_score_provider}
+              onChange={(e) => setForm({ ...form, live_score_provider: e.target.value })}
+            >
+              <option value="manual">{t("adminLiveScoreManual")}</option>
+              <option value="api_football">{t("adminLiveScoreApiFootball")}</option>
+              <option value="sportmonks">{t("adminLiveScoreSportmonks")}</option>
+            </select>
+            <p className="mt-1 text-xs text-gray-500">{t("adminLiveScoreConfigHint")}</p>
+          </div>
+          {form.live_score_provider !== "manual" && (
+            <>
+              <div>
+                <label className="mb-1 block text-sm font-medium">{t("adminLiveScoreLeagueId")}</label>
+                <input
+                  className="input"
+                  type="number"
+                  value={form.live_score_league_id}
+                  onChange={(e) => setForm({ ...form, live_score_league_id: e.target.value })}
+                  placeholder="1"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium">{t("adminLiveScoreSeason")}</label>
+                <input
+                  className="input"
+                  type="number"
+                  value={form.live_score_season}
+                  onChange={(e) => setForm({ ...form, live_score_season: e.target.value })}
+                  placeholder="2026"
+                />
+              </div>
+            </>
+          )}
         </div>
         <div className="flex flex-wrap gap-4">
           <label className="flex items-center gap-2 text-sm">
@@ -237,6 +319,9 @@ export default function AdminTournamentsPage() {
               <p className="text-sm text-gray-500">
                 {tournament.start_date} → {tournament.end_date} · {tournament.match_count ?? 0}{" "}
                 {t("matches").toLowerCase()}
+                {tournament.live_score_provider && tournament.live_score_provider !== "manual" && (
+                  <> · {tournament.live_score_provider}</>
+                )}
               </p>
               <div className="mt-1 flex gap-2">
                 <StatusBadge
@@ -262,6 +347,15 @@ export default function AdminTournamentsPage() {
               >
                 {tournament.is_active ? t("adminDeactivate") : t("adminActivate")}
               </button>
+              {tournament.live_score_provider && tournament.live_score_provider !== "manual" && (
+                <button
+                  type="button"
+                  className="btn-secondary text-sm"
+                  onClick={() => syncLiveScores(tournament.id)}
+                >
+                  {t("adminSyncLiveScores")}
+                </button>
+              )}
               <button
                 type="button"
                 className="btn-secondary text-sm"
