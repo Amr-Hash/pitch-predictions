@@ -36,10 +36,16 @@ jobs:
           echo "Waiting 30s for deployment to serve new env..."
           sleep 30
           echo "Mapping fixtures..."
-          curl -sf -X POST \
+          map_code=$(curl -s -o /tmp/map.json -w "%{http_code}" -X POST \
             -H "Authorization: Bearer ${CRON_SECRET}" \
-            "https://alhabeed-api.vercel.app/api/cron/map-wc2026-fixtures"
+            "https://alhabeed-api.vercel.app/api/cron/map-wc2026-fixtures")
+          cat /tmp/map.json
           echo ""
+          echo "Map HTTP status: ${map_code}"
+          if [ "${map_code}" != "200" ]; then
+            echo "::error::Fixture mapping failed. Ensure API_FOOTBALL_KEY is set on Vercel alhabeed-api."
+            exit 1
+          fi
           echo "Triggering sync..."
           curl -sf -X GET \
             -H "Authorization: Bearer ${CRON_SECRET}" \

@@ -63,6 +63,18 @@ async function main() {
   if (!cronSecret) {
     throw new Error("CRON_SECRET is not set.");
   }
+
+  const existing = await vercelFetch(
+    `/v9/projects/${VERCEL_PROJECT_ID}/env?teamId=${VERCEL_TEAM_ID}`
+  );
+  const keys = new Set((existing?.envs || []).map((item) => item.key));
+  if (!keys.has("API_FOOTBALL_KEY")) {
+    console.warn(
+      "WARNING: API_FOOTBALL_KEY is not set on Vercel alhabeed-api. " +
+        "Fixture mapping and live sync will fail until you add it."
+    );
+  }
+
   await upsertEnv("CRON_SECRET", cronSecret);
   for (const item of ENV_VARS) {
     await upsertEnv(item.key, item.value);
