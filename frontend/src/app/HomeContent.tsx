@@ -8,6 +8,7 @@ import { isStaff } from "@/lib/staff";
 import { useTournament } from "@/lib/tournament";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
+import { Logo } from "@/components/Logo";
 import { ScoringRulesSection } from "@/components/ScoringRulesSection";
 import { useT } from "@/lib/i18n";
 
@@ -43,8 +44,8 @@ export default function HomeContent() {
 
   return (
     <div className="flex flex-col items-center py-10 text-center sm:py-16">
-      <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-pitch-500 via-gold-400 to-fan-500 text-5xl shadow-lg ring-4 ring-white">
-        ⚽
+      <div className="mb-6 rounded-full shadow-xl ring-4 ring-white">
+        <Logo variant="hero" size={96} priority className="rounded-full" />
       </div>
       <h1 className="mb-2 font-display text-4xl font-extrabold text-night-900 sm:text-5xl">
         {APP_NAME}

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { APP_NAME } from "@/lib/brand";
+import { Logo } from "@/components/Logo";
 import { useAuth } from "@/lib/auth";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { useT } from "@/lib/i18n";
@@ -26,7 +27,7 @@ export function AdminNavbar() {
     <nav className="bg-night-900">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
         <Link href="/admin" className="flex items-center gap-2 text-xl font-extrabold text-white">
-          <span>⚙️</span>
+          <Logo size={36} className="rounded-full shadow-md ring-1 ring-white/10" />
           <span>{APP_NAME}</span>
           <span className="rounded-full bg-gold-500 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-night-900">
             {t("admin")}

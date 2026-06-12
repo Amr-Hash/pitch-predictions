@@ -252,7 +252,8 @@ class ApiError extends Error {
 async function request<T>(
   path: string,
   options: RequestInit = {},
-  token?: string | null
+  token?: string | null,
+  allowRefresh = true
 ): Promise<T> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -261,6 +262,15 @@ async function request<T>(
   if (token) headers.Authorization = `Bearer ${token}`;
 
   const res = await fetch(`${API_URL}${path}`, { ...options, headers });
+
+  if (res.status === 401 && token && allowRefresh && !path.includes("/auth/refresh")) {
+    const { refreshAccessToken } = await import("./session");
+    const newAccess = await refreshAccessToken();
+    if (newAccess) {
+      return request<T>(path, options, newAccess, false);
+    }
+  }
+
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     const message =
@@ -298,10 +308,10 @@ export const api = {
     }),
 
   refresh: (refresh: string) =>
-    request<{ access: string }>("/api/auth/refresh", {
+    request<{ access: string; refresh?: string }>("/api/auth/refresh", {
       method: "POST",
       body: JSON.stringify({ refresh }),
-    }),
+    }, null, false),
 
   logout: (refresh: string, token: string) =>
     request("/api/auth/logout", {

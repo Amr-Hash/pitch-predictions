@@ -7,6 +7,7 @@ import { APP_NAME, APP_NAME_LATIN } from "@/lib/brand";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { AdminNavbar } from "@/components/AdminNavbar";
+import { Logo } from "@/components/Logo";
 import { NotificationBell } from "@/components/NotificationBell";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { TournamentSwitcher } from "@/components/TournamentSwitcher";
@@ -62,9 +63,7 @@ export function Navbar() {
             href={user ? "/dashboard" : "/"}
             className="flex items-center gap-2 text-xl font-extrabold text-white"
           >
-            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-pitch-500 to-gold-400 text-lg shadow-md">
-              ⚽
-            </span>
+            <Logo size={36} className="rounded-full shadow-md ring-1 ring-white/10" priority />
             <span>{APP_NAME}</span>
             <span className="hidden text-sm font-medium text-white/50 sm:inline">{APP_NAME_LATIN}</span>
           </Link>

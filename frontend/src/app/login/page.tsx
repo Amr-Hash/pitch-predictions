@@ -6,6 +6,7 @@ import { FormEvent, Suspense, useEffect, useState } from "react";
 import { postAuthRedirect, authLinkWithNext } from "@/lib/authRedirect";
 import { useAuth } from "@/lib/auth";
 import { useT } from "@/lib/i18n";
+import { getStoredEmail } from "@/lib/session";
 
 function LoginForm() {
   const { login, user } = useAuth();
@@ -16,8 +17,14 @@ function LoginForm() {
   const t = useT();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const savedEmail = getStoredEmail();
+    if (savedEmail) setEmail(savedEmail);
+  }, []);
 
   useEffect(() => {
     if (user) router.replace(postAuthRedirect(user, next));
@@ -28,7 +35,7 @@ function LoginForm() {
     setError("");
     setLoading(true);
     try {
-      const me = await login(email, password);
+      const me = await login(email, password, rememberMe);
       router.push(postAuthRedirect(me, next));
     } catch (err) {
       setError(err instanceof Error ? err.message : t("loginFailed"));
@@ -86,6 +93,15 @@ function LoginForm() {
                 required
               />
             </div>
+            <label className="flex cursor-pointer items-center gap-2 text-sm text-night-700">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300 text-royal-600 focus:ring-royal-400"
+              />
+              {t("rememberMe")}
+            </label>
             <button type="submit" className="btn-primary w-full" disabled={loading}>
               {loading ? t("loggingIn") : t("login")}
             </button>

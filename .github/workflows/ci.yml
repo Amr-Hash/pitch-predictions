@@ -115,13 +115,7 @@ jobs:
           VERCEL_ORG_ID: ${{ env.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ env.VERCEL_BACKEND_PROJECT_ID }}
           PRODUCTION_ALIAS: alhabeed-api.vercel.app
-        run: |
-          if [ -z "$VERCEL_TOKEN" ]; then
-            echo "::warning::VERCEL_TOKEN secret is not configured — skipping backend deploy."
-            echo "Add VERCEL_TOKEN in GitHub → Settings → Secrets and variables → Actions, then re-run the workflow."
-            exit 0
-          fi
-          bash ../.github/scripts/vercel-deploy.sh
+        run: bash ../.github/scripts/vercel-deploy.sh
 
   deploy-frontend:
     name: Deploy frontend to Vercel
@@ -145,10 +139,4 @@ jobs:
           VERCEL_ORG_ID: ${{ env.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ env.VERCEL_FRONTEND_PROJECT_ID }}
           PRODUCTION_ALIAS: alhabeed.vercel.app
-        run: |
-          if [ -z "$VERCEL_TOKEN" ]; then
-            echo "::warning::VERCEL_TOKEN secret is not configured — skipping frontend deploy."
-            echo "Add VERCEL_TOKEN in GitHub → Settings → Secrets and variables → Actions, then re-run the workflow."
-            exit 0
-          fi
-          bash ../.github/scripts/vercel-deploy.sh
+        run: bash ../.github/scripts/vercel-deploy.sh

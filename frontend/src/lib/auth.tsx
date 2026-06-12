@@ -1,9 +1,17 @@
 "use client";
 
-import Cookies from "js-cookie";
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { api, User } from "./api";
 import { cacheStaffStatus, clearStaffCache, clearUserSessionData, isStaff } from "./staff";
+import {
+  clearStoredTokens,
+  getAccessToken,
+  getRefreshToken,
+  onSessionTokenRefreshed,
+  refreshAccessToken,
+  storeEmail,
+  storeTokens,
+} from "./session";
 
 const TOURNAMENT_STORAGE_KEY = "selected_tournament_id";
 
@@ -11,7 +19,7 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<User>;
+  login: (email: string, password: string, rememberMe?: boolean) => Promise<User>;
   register: (username: string, email: string, password: string) => Promise<User>;
   logout: () => Promise<void>;
 }
@@ -34,41 +42,67 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setToken(accessToken);
       return me;
     } catch {
-      Cookies.remove("access_token");
-      Cookies.remove("refresh_token");
-      clearStaffCache();
-      setUser(null);
-      setToken(null);
       return null;
     }
   }, []);
 
-  useEffect(() => {
-    const access = Cookies.get("access_token");
-    if (access) {
-      loadUser(access).finally(() => setLoading(false));
-    } else {
-      setLoading(false);
-    }
-  }, [loadUser]);
+  const clearSession = useCallback(() => {
+    clearStoredTokens();
+    clearStaffCache();
+    setUser(null);
+    setToken(null);
+  }, []);
 
-  const login = async (email: string, password: string) => {
+  const restoreSession = useCallback(async () => {
+    let access = getAccessToken();
+
+    if (access) {
+      const me = await loadUser(access);
+      if (me) return;
+    }
+
+    if (getRefreshToken()) {
+      const refreshed = await refreshAccessToken();
+      if (refreshed) {
+        const me = await loadUser(refreshed);
+        if (me) return;
+      }
+    }
+
+    clearSession();
+  }, [clearSession, loadUser]);
+
+  useEffect(() => {
+    onSessionTokenRefreshed((access) => {
+      setToken(access);
+    });
+    return () => onSessionTokenRefreshed(null);
+  }, []);
+
+  useEffect(() => {
+    restoreSession().finally(() => setLoading(false));
+  }, [restoreSession]);
+
+  const login = async (email: string, password: string, rememberMe = true) => {
     const tokens = await api.login(email, password);
-    Cookies.set("access_token", tokens.access, { expires: 1 });
-    Cookies.set("refresh_token", tokens.refresh, { expires: 7 });
+    storeTokens(tokens.access, tokens.refresh, rememberMe);
+    storeEmail(email);
     const me = await loadUser(tokens.access);
-    if (!me) throw new Error("Login failed");
+    if (!me) {
+      clearSession();
+      throw new Error("Login failed");
+    }
     return me;
   };
 
   const register = async (username: string, email: string, password: string) => {
     await api.register({ username, email, password, password_confirm: password });
-    return login(email, password);
+    return login(email, password, true);
   };
 
   const logout = async () => {
-    const refresh = Cookies.get("refresh_token");
-    const access = Cookies.get("access_token");
+    const refresh = getRefreshToken();
+    const access = getAccessToken();
     if (refresh && access) {
       try {
         await api.logout(refresh, access);
@@ -76,11 +110,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         /* ignore */
       }
     }
-    Cookies.remove("access_token");
-    Cookies.remove("refresh_token");
     clearUserSessionData();
-    setUser(null);
-    setToken(null);
+    clearSession();
   };
 
   return (

@@ -17,6 +17,10 @@ const outfit = Outfit({
 export const metadata: Metadata = {
   title: `${APP_NAME} | ${APP_NAME_LATIN}`,
   description: APP_TAGLINE,
+  icons: {
+    icon: [{ url: "/logo.svg", type: "image/svg+xml" }],
+    apple: [{ url: "/logo.png", type: "image/png" }],
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
