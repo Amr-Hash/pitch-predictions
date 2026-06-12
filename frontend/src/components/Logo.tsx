@@ -13,16 +13,14 @@ export function Logo({
   className = "",
   priority = false,
 }: LogoProps) {
-  const src = variant === "hero" ? "/logo.png" : "/logo.svg";
-
   return (
     <Image
-      src={src}
+      src="/logo.svg"
       alt=""
       width={size}
       height={size}
       priority={priority}
-      className={`shrink-0 ${className}`}
+      className={`shrink-0 ${variant === "hero" ? "drop-shadow-xl" : ""} ${className}`.trim()}
       aria-hidden
     />
   );

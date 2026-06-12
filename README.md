@@ -85,12 +85,19 @@ docker compose exec backend python manage.py seed_data
 **Admin account** (seeded automatically on deploy):
 - `admin@alhabeed.com` or username `admin` / password `admin12345`
 
-To remove legacy demo data from an existing database:
+To remove legacy demo/test data from an existing database:
 
 ```bash
 cd backend
+python manage.py purge_demo_data --dry-run   # preview
 python manage.py purge_demo_data
 ```
+
+Removes **Demo Test Cup** (كأس التجربة), **Demo Predictors**, and users:
+`demo`, `testuser`, `test309`, `signupfix`, `admin_worldcup_legacy`, `demo_worldcup_legacy`
+(plus `demo@alhabeed.com`, `demo@worldcup.com`, `admin@worldcup.com`). The real admin (`admin@alhabeed.com`) is kept.
+
+This runs automatically on each backend deploy (`build.py` after migrations).
 
 ## Local Development (without Docker)
 

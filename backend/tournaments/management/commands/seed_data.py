@@ -34,16 +34,6 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         self.stdout.write("Seeding database...")
 
-        legacy_accounts = [
-            ("admin@worldcup.com", "admin_worldcup_legacy"),
-            ("demo@worldcup.com", "demo_worldcup_legacy"),
-        ]
-        for email, legacy_username in legacy_accounts:
-            User.objects.filter(email=email).update(
-                is_active=False,
-                username=legacy_username,
-            )
-
         admin, _ = User.objects.get_or_create(
             email="admin@alhabeed.com",
             defaults={"username": "admin", "is_staff": True, "is_superuser": True},

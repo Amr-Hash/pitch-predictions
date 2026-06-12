@@ -1,38 +1,44 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" role="img" aria-label="alhabeeda">
   <defs>
-    <linearGradient id="ring" x1="8" y1="8" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+    <linearGradient id="bg" x1="10" y1="6" x2="54" y2="58" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#152A45"/>
+      <stop offset="1" stop-color="#060F1F"/>
+    </linearGradient>
+    <linearGradient id="stripe" x1="0" y1="32" x2="64" y2="32" gradientUnits="userSpaceOnUse">
       <stop stop-color="#059669"/>
-      <stop offset="0.38" stop-color="#F59E0B"/>
-      <stop offset="0.72" stop-color="#3B82F6"/>
+      <stop offset="0.35" stop-color="#F59E0B"/>
+      <stop offset="0.65" stop-color="#3B82F6"/>
       <stop offset="1" stop-color="#F97316"/>
     </linearGradient>
-    <linearGradient id="ball" x1="20" y1="18" x2="44" y2="46" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#34D399"/>
-      <stop offset="0.55" stop-color="#10B981"/>
+    <linearGradient id="ball" x1="22" y1="16" x2="42" y2="40" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#6EE7B7"/>
+      <stop offset="0.45" stop-color="#10B981"/>
       <stop offset="1" stop-color="#047857"/>
     </linearGradient>
-    <linearGradient id="crown" x1="24" y1="14" x2="40" y2="24" gradientUnits="userSpaceOnUse">
+    <linearGradient id="gold" x1="28" y1="8" x2="36" y2="16" gradientUnits="userSpaceOnUse">
       <stop stop-color="#FDE68A"/>
-      <stop offset="1" stop-color="#F59E0B"/>
+      <stop offset="1" stop-color="#D97706"/>
     </linearGradient>
-    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="1" stdDeviation="1.2" flood-color="#0C1B33" flood-opacity="0.28"/>
+    <filter id="soft" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="1.2" stdDeviation="1.2" flood-color="#000" flood-opacity="0.3"/>
     </filter>
   </defs>
 
-  <circle cx="32" cy="32" r="29" fill="#0C1B33"/>
-  <circle cx="32" cy="32" r="29" stroke="url(#ring)" stroke-width="3"/>
+  <circle cx="32" cy="32" r="31" fill="url(#bg)"/>
+  <circle cx="32" cy="32" r="28.5" stroke="url(#stripe)" stroke-width="2.25"/>
 
-  <g filter="url(#shadow)">
-    <circle cx="32" cy="34" r="15" fill="url(#ball)"/>
-    <path d="M32 21.5 37.8 25.2 36.1 32 32 35.2 27.9 32 26.2 25.2Z" fill="#ECFDF5" opacity="0.95"/>
-    <path d="M32 35.2 36.1 32 39.8 34.8 38.5 40.2 32 42.8 25.5 40.2 24.2 34.8 27.9 32Z" fill="#D1FAE5" opacity="0.9"/>
-    <path d="M26.2 25.2 32 21.5 25.5 23.8 24.2 29.2Z" fill="#A7F3C9" opacity="0.75"/>
-    <path d="M37.8 25.2 39.8 29.2 38.5 34.8 36.1 32Z" fill="#6EE7B7" opacity="0.75"/>
-    <path d="M24.2 34.8 25.5 40.2 32 42.8 27.9 32Z" fill="#34D399" opacity="0.65"/>
-    <path d="M39.8 34.8 32 42.8 38.5 40.2Z" fill="#10B981" opacity="0.65"/>
+  <g filter="url(#soft)">
+    <circle cx="32" cy="28" r="13.5" fill="url(#ball)"/>
+    <path d="M32 16.5 37.2 20 35.5 26.5 28.5 26.5 26.8 20Z" fill="#F0FDF4"/>
+    <path d="M26.8 20 28.5 26.5 24.2 30.8 20.8 26.2Z" fill="#D1FAE5" opacity="0.92"/>
+    <path d="M37.2 20 43.2 26.2 39.8 30.8 35.5 26.5Z" fill="#A7F3C9" opacity="0.88"/>
+    <path d="M24.2 30.8 28.5 26.5 35.5 26.5 39.8 30.8 32 37Z" fill="#6EE7B7" opacity="0.78"/>
+    <path d="M39.8 30.8 32 37 43.2 26.2Z" fill="#34D399" opacity="0.62"/>
   </g>
 
-  <path d="M22 17.5 27 14.5 32 16.5 37 14.5 42 17.5 40 21.5 32 19.5 24 21.5Z" fill="url(#crown)"/>
-  <path d="M27 14.5 28.5 18.5M37 14.5 35.5 18.5" stroke="#B45309" stroke-width="1.2" stroke-linecap="round"/>
+  <rect x="17.5" y="46" width="6.5" height="8" rx="1.25" fill="#059669"/>
+  <rect x="28.75" y="41.5" width="6.5" height="12.5" rx="1.25" fill="#F59E0B"/>
+  <rect x="40" y="44" width="6.5" height="10" rx="1.25" fill="#3B82F6"/>
+
+  <path d="M32 8 33.4 11.9 37.6 12.1 34.3 14.5 35.4 18.5 32 16.3 28.6 18.5 29.7 14.5 26.4 12.1 30.6 11.9Z" fill="url(#gold)"/>
 </svg>

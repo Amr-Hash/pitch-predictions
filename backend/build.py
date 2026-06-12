@@ -7,6 +7,10 @@ def main():
     if os.environ.get("DATABASE_URL"):
         subprocess.check_call([sys.executable, "manage.py", "migrate", "--noinput"])
         subprocess.check_call(
+            [sys.executable, "manage.py", "purge_demo_data"],
+            stderr=subprocess.STDOUT,
+        )
+        subprocess.check_call(
             [sys.executable, "manage.py", "sync_wc2026_kickoffs"],
             stderr=subprocess.STDOUT,
         )
