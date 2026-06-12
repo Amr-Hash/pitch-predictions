@@ -246,18 +246,25 @@ Access Django admin at `https://your-app.onrender.com/admin/` to manage tourname
 
 ## CI/CD
 
-GitHub Actions (`.github/workflows/ci.yml`) runs on every push and pull request:
+GitHub Actions runs on every push and pull request:
 
-**On pull requests and pushes (tests only):**
+**CI/CD** (`.github/workflows/ci.yml`) — required on every push/PR:
 1. Backend tests with 80% coverage threshold
 2. Frontend lint, tests, and production build
-3. Docker image builds for both services
 
-**On push to `main`/`master` (after tests pass):**
-1. Deploy backend to Vercel and alias `alhabeed-api.vercel.app` to the new deployment
-2. Deploy frontend to Vercel and alias `alhabeed.vercel.app` to the new deployment
+**Deploy** (`.github/workflows/deploy.yml`) — runs after CI succeeds on `main`/`master`, or manually via **Actions → Deploy → Run workflow**:
+1. Deploy backend to Vercel and alias `alhabeed-api.vercel.app`
+2. Deploy frontend to Vercel and alias `alhabeed.vercel.app`
 
-If `VERCEL_TOKEN` is missing, deploy jobs **fail** (the workflow does not report a false green deploy). Tests on pull requests still run without deploying.
+If `VERCEL_TOKEN` is missing or expired, **CI still passes** but deploy fails. Refresh the token with:
+
+```bash
+# Option A: sync from local Vercel CLI login (if it uses a classic token)
+node scripts/sync-vercel-ci-secret.mjs
+
+# Option B: paste a new classic token from https://vercel.com/account/tokens
+VERCEL_TOKEN=<token> node scripts/sync-vercel-ci-secret.mjs
+```
 
 After each deploy, CI verifies that `alhabeed-api.vercel.app` and `alhabeed.vercel.app` serve the **same git commit** as the push (`/api/health` and `/api/build-info` return `git_sha`).
 
@@ -272,12 +279,12 @@ Add this secret in **GitHub → Repository → Settings → Secrets and variable
 Project and team IDs are already configured in the workflow file. No other secrets are required for deployment.
 
 ```bash
-# After creating the token locally:
-gh secret set VERCEL_TOKEN
+# After creating a classic token at https://vercel.com/account/tokens:
+VERCEL_TOKEN=<token> node scripts/sync-vercel-ci-secret.mjs
 ```
 
-Pull requests run tests only — production deploys happen when code is merged to `main`.
-You can also trigger deploy manually from **Actions → CI/CD → Run workflow**.
+Pull requests run tests only — production deploys run from the **Deploy** workflow after CI passes on `main`.
+You can also trigger deploy manually from **Actions → Deploy → Run workflow**.
 
 ### World Cup live score sync (API-Football)
 

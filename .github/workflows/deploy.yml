@@ -1,0 +1,100 @@
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: [CI/CD]
+    types: [completed]
+    branches: [main, master]
+  workflow_dispatch:
+
+env:
+  VERCEL_ORG_ID: team_4Xmlf7t3YpurUX6c1nZH0ra0
+  VERCEL_FRONTEND_PROJECT_ID: prj_uvzwNOMdzKBrd2IsQ0MCrQUtHc5K
+  VERCEL_BACKEND_PROJECT_ID: prj_FRxuskySw6XocyTyrftLpgZw2baf
+
+jobs:
+  deploy-backend:
+    name: Deploy backend to Vercel
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push')
+    concurrency:
+      group: deploy-backend-production
+      cancel-in-progress: true
+    environment:
+      name: production-backend
+      url: https://alhabeed-api.vercel.app
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Validate Vercel token
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "::error::VERCEL_TOKEN is not set. Run: node scripts/sync-vercel-ci-secret.mjs"
+            exit 1
+          fi
+          npx vercel@latest whoami --token "$VERCEL_TOKEN" --scope amr-hashem
+
+      - name: Deploy Django API and update live alias
+        working-directory: backend
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ env.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ env.VERCEL_BACKEND_PROJECT_ID }}
+          PRODUCTION_ALIAS: alhabeed-api.vercel.app
+          GITHUB_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+        run: bash ../.github/scripts/vercel-deploy.sh
+
+  deploy-frontend:
+    name: Deploy frontend to Vercel
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push')
+    concurrency:
+      group: deploy-frontend-production
+      cancel-in-progress: true
+    environment:
+      name: production-frontend
+      url: https://alhabeed.vercel.app
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Validate Vercel token
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "::error::VERCEL_TOKEN is not set. Run: node scripts/sync-vercel-ci-secret.mjs"
+            exit 1
+          fi
+          npx vercel@latest whoami --token "$VERCEL_TOKEN" --scope amr-hashem
+
+      - name: Deploy Next.js app and update live alias
+        working-directory: frontend
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ env.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ env.VERCEL_FRONTEND_PROJECT_ID }}
+          PRODUCTION_ALIAS: alhabeed.vercel.app
+          GITHUB_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+        run: bash ../.github/scripts/vercel-deploy.sh
