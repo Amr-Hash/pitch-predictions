@@ -255,6 +255,20 @@ class GroupViewSet(viewsets.ModelViewSet):
         base["points_awarded"] = pred.points_awarded
         return base
 
+    @action(detail=True, methods=["post"], url_path="leave")
+    def leave(self, request, pk=None):
+        group = self.get_object()
+        try:
+            membership = group.memberships.get(user=request.user)
+        except GroupMember.DoesNotExist:
+            raise PermissionDenied("You are not a member of this group.")
+        if membership.user_id == group.created_by_id:
+            raise ValidationError(
+                {"detail": "Group creators cannot leave this group."}
+            )
+        membership.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
     @action(
         detail=True,
         methods=["delete"],
@@ -267,7 +281,7 @@ class GroupViewSet(viewsets.ModelViewSet):
             membership = group.memberships.get(pk=member_id)
         except GroupMember.DoesNotExist:
             raise ValidationError({"detail": "Member not found."})
-        if membership.user == group.created_by:
+        if membership.user_id == group.created_by_id:
             raise ValidationError({"detail": "Cannot remove the group creator."})
         membership.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)

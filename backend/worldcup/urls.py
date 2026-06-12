@@ -27,4 +27,6 @@ urlpatterns = [
     path("api/leaderboards/", include("predictions.leaderboard_urls")),
     path("api/leaderboards", include("predictions.leaderboard_urls")),
     path("api/dashboard", DashboardView.as_view(), name="dashboard"),
+    path("api/notifications/", include("notifications.urls")),
+    path("api/notifications", include("notifications.urls")),
 ]

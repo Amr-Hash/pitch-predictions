@@ -7,6 +7,7 @@ import { APP_NAME, APP_NAME_LATIN } from "@/lib/brand";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { AdminNavbar } from "@/components/AdminNavbar";
+import { NotificationBell } from "@/components/NotificationBell";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { TournamentSwitcher } from "@/components/TournamentSwitcher";
 import { isStaff, isStaffAllowedPath } from "@/lib/staff";
@@ -95,6 +96,10 @@ export function Navbar() {
                 >
                   {t("standings")}
                 </Link>
+                <Link href="/scoring" className={navLinkClass(pathname === "/scoring")}>
+                  {t("scoringNav")}
+                </Link>
+                <NotificationBell />
                 <span className="hidden text-sm text-white/60 sm:inline">{user.username}</span>
                 <button onClick={logout} className="btn-ghost-nav">
                   {t("logout")}

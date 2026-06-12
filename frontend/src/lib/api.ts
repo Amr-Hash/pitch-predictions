@@ -42,6 +42,8 @@ export interface Group {
   id: number;
   name: string;
   description: string;
+  created_by: number;
+  created_by_username?: string;
   invite_code: string;
   invite_link: string;
   member_count: number;
@@ -174,6 +176,58 @@ export interface Dashboard {
   current_rank: number | null;
 }
 
+export interface NotificationGroupRank {
+  group_id: number;
+  group_name: string;
+  rank: number | null;
+  previous_rank: number | null;
+}
+
+export interface NotificationPodiumEntry {
+  rank: number;
+  user_id: number;
+  username: string;
+  total_points: number;
+}
+
+export interface MatchResultNotificationPayload {
+  match_id: number;
+  tournament_id: number;
+  home_team: string;
+  away_team: string;
+  home_team_ar?: string;
+  away_team_ar?: string;
+  home_score: number;
+  away_score: number;
+  predicted_home_score: number;
+  predicted_away_score: number;
+  points_awarded: number;
+  global_rank: number | null;
+  previous_global_rank: number | null;
+  groups: NotificationGroupRank[];
+}
+
+export interface GroupPodiumNotificationPayload {
+  group_id: number;
+  group_name: string;
+  tournament_id: number;
+  match_id: number;
+  podium: NotificationPodiumEntry[];
+}
+
+export interface AppNotification {
+  id: number;
+  notification_type: "match_result" | "group_podium";
+  payload: MatchResultNotificationPayload | GroupPodiumNotificationPayload;
+  is_read: boolean;
+  created_at: string;
+}
+
+export interface NotificationListResponse {
+  unread_count: number;
+  results: AppNotification[];
+}
+
 export interface Tournament {
   id: number;
   name: string;
@@ -231,6 +285,18 @@ export const api = {
       body: JSON.stringify({ email, password }),
     }),
 
+  requestPasswordReset: (email: string) =>
+    request<{ detail: string }>("/api/auth/password-reset", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    }),
+
+  confirmPasswordReset: (data: { uid: string; token: string; new_password: string }) =>
+    request<{ detail: string }>("/api/auth/password-reset/confirm", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
   refresh: (refresh: string) =>
     request<{ access: string }>("/api/auth/refresh", {
       method: "POST",
@@ -265,6 +331,12 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ invite_code }),
     }, token),
+
+  leaveGroup: (token: string, groupId: number) =>
+    request<void>(`/api/groups/${groupId}/leave`, { method: "POST" }, token),
+
+  removeGroupMember: (token: string, groupId: number, memberId: number) =>
+    request<void>(`/api/groups/${groupId}/members/${memberId}`, { method: "DELETE" }, token),
 
   getTournaments: (token: string) =>
     request<{ results?: Tournament[] } | Tournament[]>("/api/tournaments", {}, token),
@@ -521,6 +593,28 @@ export const api = {
 
   adminGetGroup: (token: string, id: number) =>
     request<AdminGroup>(`/api/groups/admin/groups/${id}`, {}, token),
+
+  getNotifications: (token: string, params?: { limit?: number; unread?: boolean }) => {
+    const search = new URLSearchParams();
+    if (params?.limit) search.set("limit", String(params.limit));
+    if (params?.unread) search.set("unread", "1");
+    const query = search.toString();
+    return request<NotificationListResponse>(
+      `/api/notifications${query ? `?${query}` : ""}`,
+      {},
+      token
+    );
+  },
+
+  markNotificationRead: (token: string, id: number) =>
+    request<AppNotification>(`/api/notifications/${id}/read`, { method: "POST" }, token),
+
+  markAllNotificationsRead: (token: string) =>
+    request<{ detail: string; updated: number }>(
+      "/api/notifications/mark-all-read",
+      { method: "POST" },
+      token
+    ),
 };
 
 export function unwrapList<T>(data: { results?: T[] } | T[]): T[] {

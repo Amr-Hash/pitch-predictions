@@ -240,8 +240,10 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on every push and pull request:
 3. Docker image builds for both services
 
 **On push to `main`/`master` (after tests pass):**
-1. Deploy backend to Vercel (`alhabeed-api`)
-2. Deploy frontend to Vercel (`alhabeed`)
+1. Deploy backend to Vercel and alias `alhabeed-api.vercel.app` to the new deployment
+2. Deploy frontend to Vercel and alias `alhabeed.vercel.app` to the new deployment
+
+If `VERCEL_TOKEN` is missing, tests still pass and a notice job explains that deploy was skipped.
 
 ### One-time GitHub secret setup
 
@@ -253,7 +255,13 @@ Add this secret in **GitHub → Repository → Settings → Secrets and variable
 
 Project and team IDs are already configured in the workflow file. No other secrets are required for deployment.
 
+```bash
+# After creating the token locally:
+gh secret set VERCEL_TOKEN
+```
+
 Pull requests run tests only — production deploys happen when code is merged to `main`.
+You can also trigger deploy manually from **Actions → CI/CD → Run workflow**.
 
 ## Project Structure
 

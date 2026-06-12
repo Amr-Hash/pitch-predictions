@@ -12,6 +12,7 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const next = searchParams.get("next");
+  const resetSuccess = searchParams.get("reset") === "1";
   const t = useT();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -46,6 +47,11 @@ function LoginForm() {
           <p className="mt-1 text-sm text-white/80">{t("taglineExtra")}</p>
         </div>
         <div className="auth-card-body">
+          {resetSuccess && (
+            <div className="mb-4 rounded-xl border border-pitch-200 bg-pitch-50 px-4 py-3 text-sm text-pitch-800">
+              {t("passwordResetSuccess")}
+            </div>
+          )}
           {error && (
             <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
               {error}
@@ -63,7 +69,15 @@ function LoginForm() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-bold text-night-700">{t("password")}</label>
+              <div className="mb-1 flex items-center justify-between">
+                <label className="text-sm font-bold text-night-700">{t("password")}</label>
+                <Link
+                  href="/forgot-password"
+                  className="text-xs font-bold text-royal-600 hover:underline"
+                >
+                  {t("forgotPassword")}
+                </Link>
+              </div>
               <input
                 type="password"
                 className="input"

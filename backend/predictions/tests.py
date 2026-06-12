@@ -583,6 +583,43 @@ class GroupMemberViewsTests(TestCase):
         response = self.client.get(f"/api/groups/{self.group.id}/predictions")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
+    def test_admin_can_remove_member(self):
+        other_membership = self.group.memberships.get(user=self.other)
+        response = self.client.delete(
+            f"/api/groups/{self.group.id}/members/{other_membership.id}"
+        )
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(self.group.memberships.filter(user=self.other).exists())
+
+    def test_cannot_remove_group_creator(self):
+        creator_membership = self.group.memberships.get(user=self.user)
+        response = self.client.delete(
+            f"/api/groups/{self.group.id}/members/{creator_membership.id}"
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_non_admin_cannot_remove_member(self):
+        other_membership = self.group.memberships.get(user=self.other)
+        self.client.force_authenticate(user=self.other)
+        response = self.client.delete(
+            f"/api/groups/{self.group.id}/members/{other_membership.id}"
+        )
+        self.assertIn(
+            response.status_code,
+            (status.HTTP_403_FORBIDDEN, status.HTTP_404_NOT_FOUND),
+        )
+
+    def test_member_can_leave_group(self):
+        self.client.force_authenticate(user=self.other)
+        response = self.client.post(f"/api/groups/{self.group.id}/leave")
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(self.group.memberships.filter(user=self.other).exists())
+
+    def test_creator_cannot_leave_group(self):
+        response = self.client.post(f"/api/groups/{self.group.id}/leave")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertTrue(self.group.memberships.filter(user=self.user).exists())
+
 
 class LeaderboardTests(TestCase):
     def setUp(self):
@@ -629,3 +666,139 @@ class LeaderboardTests(TestCase):
         response = self.client.get("/api/leaderboards/global")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(len(response.data) >= 1)
+
+
+class NotificationTests(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create_user(
+            username="notifadmin",
+            email="notifadmin@example.com",
+            password="pass12345",
+            is_staff=True,
+        )
+        self.user = User.objects.create_user(
+            username="notifuser", email="notifuser@example.com", password="pass12345"
+        )
+        self.other = User.objects.create_user(
+            username="otheruser", email="other@example.com", password="pass12345"
+        )
+        self.spectator = User.objects.create_user(
+            username="spectator", email="spectator@example.com", password="pass12345"
+        )
+        self.home = Team.objects.create(name="Home", code="NH")
+        self.away = Team.objects.create(name="Away", code="NA")
+        self.tournament = Tournament.objects.create(
+            name="Cup",
+            year=2026,
+            start_date=timezone.now().date(),
+            end_date=timezone.now().date() + timedelta(days=30),
+        )
+        self.stage = Stage.objects.create(
+            tournament=self.tournament,
+            name="Day 1",
+            order=1,
+            stage_type=Stage.StageType.GROUP,
+        )
+        self.group = Group.objects.create(name="Notif Group", created_by=self.user)
+        for member in (self.user, self.other, self.spectator):
+            GroupMember.objects.create(
+                group=self.group,
+                user=member,
+                role=GroupMember.Role.ADMIN if member == self.user else GroupMember.Role.MEMBER,
+            )
+        self.match = Match.objects.create(
+            tournament=self.tournament,
+            stage=self.stage,
+            home_team=self.home,
+            away_team=self.away,
+            kickoff_time=timezone.now() - timedelta(hours=2),
+        )
+        Prediction.objects.create(
+            user=self.user,
+            match=self.match,
+            predicted_home_score=2,
+            predicted_away_score=1,
+        )
+        Prediction.objects.create(
+            user=self.other,
+            match=self.match,
+            predicted_home_score=0,
+            predicted_away_score=1,
+        )
+        self.admin_client = APIClient()
+        self.admin_client.force_authenticate(user=self.admin)
+        self.user_client = APIClient()
+        self.user_client.force_authenticate(user=self.user)
+
+    def test_match_finish_creates_match_result_notification(self):
+        response = self.admin_client.patch(
+            f"/api/tournaments/admin/matches/{self.match.id}",
+            {
+                "status": Match.Status.FINISHED,
+                "home_score": 2,
+                "away_score": 1,
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        from notifications.models import Notification
+
+        notification = Notification.objects.get(
+            user=self.user,
+            notification_type=Notification.Type.MATCH_RESULT,
+        )
+        self.assertFalse(notification.is_read)
+        self.assertEqual(notification.payload["points_awarded"], 5)
+        self.assertEqual(notification.payload["home_score"], 2)
+        self.assertEqual(notification.payload["global_rank"], 1)
+
+    def test_podium_change_notifies_all_group_members(self):
+        self.admin_client.patch(
+            f"/api/tournaments/admin/matches/{self.match.id}",
+            {
+                "status": Match.Status.FINISHED,
+                "home_score": 2,
+                "away_score": 1,
+            },
+            format="json",
+        )
+
+        from notifications.models import Notification
+
+        podium_notifications = Notification.objects.filter(
+            notification_type=Notification.Type.GROUP_PODIUM,
+            payload__group_id=self.group.id,
+        )
+        self.assertEqual(podium_notifications.count(), 3)
+        self.assertTrue(
+            podium_notifications.filter(user=self.spectator).exists()
+        )
+
+    def test_notification_mark_read_and_mark_all(self):
+        self.admin_client.patch(
+            f"/api/tournaments/admin/matches/{self.match.id}",
+            {
+                "status": Match.Status.FINISHED,
+                "home_score": 2,
+                "away_score": 1,
+            },
+            format="json",
+        )
+
+        list_response = self.user_client.get("/api/notifications")
+        self.assertEqual(list_response.status_code, status.HTTP_200_OK)
+        self.assertGreater(list_response.data["unread_count"], 0)
+        notification_id = list_response.data["results"][0]["id"]
+
+        read_response = self.user_client.post(
+            f"/api/notifications/{notification_id}/read"
+        )
+        self.assertEqual(read_response.status_code, status.HTTP_200_OK)
+        self.assertTrue(read_response.data["is_read"])
+
+        mark_all = self.user_client.post("/api/notifications/mark-all-read")
+        self.assertEqual(mark_all.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            self.user_client.get("/api/notifications").data["unread_count"], 0
+        )

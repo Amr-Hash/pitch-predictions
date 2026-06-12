@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     "groups",
     "tournaments",
     "predictions",
+    "notifications",
 ]
 
 MIDDLEWARE = [
@@ -168,10 +169,17 @@ SPECTACULAR_SETTINGS = {
     "SERVE_INCLUDE_SCHEMA": False,
 }
 
+FRONTEND_URL = config(
+    "FRONTEND_URL",
+    default="https://alhabeed.vercel.app" if IS_VERCEL else "http://localhost:3000",
+).rstrip("/")
+
 EMAIL_BACKEND = config(
     "EMAIL_BACKEND",
     default="django.core.mail.backends.console.EmailBackend",
 )
+
+DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="noreply@alhabeed.app")
 
 # Predictions lock when kickoff_time is reached (0 = at kickoff, not before).
 PREDICTION_LOCK_HOURS = 0

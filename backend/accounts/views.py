@@ -98,13 +98,19 @@ class PasswordResetRequestView(APIView):
                 {"detail": "If an account exists, a reset email has been sent."},
                 status=status.HTTP_200_OK,
             )
+        from django.conf import settings
+
         uid = urlsafe_base64_encode(force_bytes(user.pk))
         token = default_token_generator.make_token(user)
-        reset_link = f"{request.build_absolute_uri('/reset-password')}?uid={uid}&token={token}"
+        reset_link = f"{settings.FRONTEND_URL}/reset-password?uid={uid}&token={token}"
         send_mail(
             subject="Password Reset Request",
-            message=f"Use this link to reset your password: {reset_link}",
-            from_email=None,
+            message=(
+                f"Use this link to reset your password (valid for a limited time):\n\n"
+                f"{reset_link}\n\n"
+                f"If you did not request this, you can ignore this email."
+            ),
+            from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=[email],
         )
         return Response(

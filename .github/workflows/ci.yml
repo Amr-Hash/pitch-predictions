@@ -5,6 +5,7 @@ on:
     branches: [main, master]
   pull_request:
     branches: [main, master]
+  workflow_dispatch:
 
 env:
   VERCEL_ORG_ID: team_4Xmlf7t3YpurUX6c1nZH0ra0
@@ -72,7 +73,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: frontend
-        run: npm install
+        run: npm ci
 
       - name: Lint
         working-directory: frontend
@@ -96,7 +97,10 @@ jobs:
     name: Deploy backend to Vercel
     runs-on: ubuntu-latest
     needs: [backend-tests, frontend-tests]
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    if: >
+      github.event_name != 'pull_request' &&
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') &&
+      secrets.VERCEL_TOKEN != ''
     concurrency:
       group: deploy-backend-production
       cancel-in-progress: true
@@ -107,19 +111,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Deploy Django API to Vercel
+      - name: Deploy Django API and update live alias
         working-directory: backend
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ env.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ env.VERCEL_BACKEND_PROJECT_ID }}
-        run: npx vercel@latest deploy --prod --yes --token "$VERCEL_TOKEN"
+          PRODUCTION_ALIAS: alhabeed-api.vercel.app
+        run: bash ../.github/scripts/vercel-deploy.sh
 
   deploy-frontend:
     name: Deploy frontend to Vercel
     runs-on: ubuntu-latest
     needs: [backend-tests, frontend-tests, deploy-backend]
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    if: >
+      github.event_name != 'pull_request' &&
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') &&
+      secrets.VERCEL_TOKEN != ''
     concurrency:
       group: deploy-frontend-production
       cancel-in-progress: true
@@ -130,10 +138,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Deploy Next.js app to Vercel
+      - name: Deploy Next.js app and update live alias
         working-directory: frontend
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ env.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ env.VERCEL_FRONTEND_PROJECT_ID }}
-        run: npx vercel@latest deploy --prod --yes --token "$VERCEL_TOKEN"
+          PRODUCTION_ALIAS: alhabeed.vercel.app
+        run: bash ../.github/scripts/vercel-deploy.sh
+
+  deploy-skipped-notice:
+    name: Deploy skipped (no Vercel token)
+    runs-on: ubuntu-latest
+    needs: [backend-tests, frontend-tests]
+    if: >
+      github.event_name != 'pull_request' &&
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') &&
+      secrets.VERCEL_TOKEN == ''
+    steps:
+      - name: Explain skipped deployment
+        run: |
+          echo "::warning::VERCEL_TOKEN secret is not configured — tests passed but production was not deployed."
+          echo "Add VERCEL_TOKEN in GitHub → Settings → Secrets and variables → Actions, then re-run the workflow."

@@ -171,7 +171,7 @@ function DashboardContent() {
         )}
       </section>
 
-      <section>
+      <section className="mb-8">
         <h2 className="section-heading-fan mb-4 text-base normal-case tracking-normal">{t("upcomingMatches")}</h2>
         {hasUpcoming ? (
           <div className="grid gap-4 sm:grid-cols-2">
@@ -187,6 +187,19 @@ function DashboardContent() {
             action={{ label: t("viewMatches"), href: "/matches" }}
           />
         )}
+      </section>
+
+      <section>
+        <Link
+          href="/scoring"
+          className="card card-hover flex flex-wrap items-center justify-between gap-3 border-l-4 border-l-gold-500 bg-gradient-to-r from-gold-50/80 to-white p-5"
+        >
+          <div>
+            <h2 className="font-display text-lg font-extrabold text-night-900">{t("howScoringWorks")}</h2>
+            <p className="mt-1 text-sm text-gray-600">{t("scoringIntro")}</p>
+          </div>
+          <span className="font-bold text-royal-600">{t("learnMore")} →</span>
+        </Link>
       </section>
     </div>
   );

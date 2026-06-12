@@ -8,6 +8,7 @@ import { isStaff } from "@/lib/staff";
 import { useTournament } from "@/lib/tournament";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
+import { ScoringRulesSection } from "@/components/ScoringRulesSection";
 import { useT } from "@/lib/i18n";
 
 export default function HomeContent() {
@@ -92,40 +93,7 @@ export default function HomeContent() {
         </div>
       )}
 
-      <section className="mt-16 w-full max-w-4xl text-left">
-        <h2 className="mb-2 text-center font-display text-2xl font-extrabold text-night-900">
-          {t("howScoringWorks")}
-        </h2>
-        <p className="mb-6 text-center text-sm text-gray-500">{t("scoringIntro")}</p>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <ScoreRule points={5} title={t("exactScore")} description={t("exactScoreDesc")} />
-          <ScoreRule points={3} title={t("correctOutcome")} description={t("correctOutcomeDesc")} />
-          <ScoreRule points={1} title={t("correctGoalDiff")} description={t("correctGoalDiffDesc")} />
-          <ScoreRule points={5} title={t("knockoutBonus")} description={t("knockoutBonusDesc")} />
-        </div>
-      </section>
-    </div>
-  );
-}
-
-function ScoreRule({
-  points,
-  title,
-  description,
-}: {
-  points: number;
-  title: string;
-  description: string;
-}) {
-  return (
-    <div className="card card-hover">
-      <div className="mb-2 flex items-center gap-3">
-        <span className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-gold-400 to-fan-500 text-lg font-extrabold text-white shadow">
-          {points}
-        </span>
-        <h3 className="font-bold text-night-900">{title}</h3>
-      </div>
-      <p className="text-sm text-gray-600">{description}</p>
+      <ScoringRulesSection className="mt-16 w-full max-w-4xl text-left" />
     </div>
   );
 }

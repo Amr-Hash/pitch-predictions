@@ -119,6 +119,21 @@ class LogoutTests(TestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    def test_password_reset_confirm(self):
+        from django.contrib.auth.tokens import default_token_generator
+        from django.utils.encoding import force_bytes
+        from django.utils.http import urlsafe_base64_encode
+
+        uid = urlsafe_base64_encode(force_bytes(self.user.pk))
+        token = default_token_generator.make_token(self.user)
+        response = self.client.post(
+            "/api/auth/password-reset/confirm",
+            {"uid": uid, "token": token, "new_password": "newpass12345"},
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password("newpass12345"))
+
     def test_logout_blacklists_token(self):
         login = self.client.post(
             "/api/auth/login",

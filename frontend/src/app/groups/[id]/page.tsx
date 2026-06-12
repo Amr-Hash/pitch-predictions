@@ -40,7 +40,10 @@ function GroupDetailContent() {
   const [predictionsData, setPredictionsData] = useState<GroupPredictionsResponse | null>(null);
   const [tab, setTab] = useState<Tab>("overview");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(true);
+  const [memberActionId, setMemberActionId] = useState<number | null>(null);
+  const [leaving, setLeaving] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -48,7 +51,7 @@ function GroupDetailContent() {
     }
   }, [authLoading, user, router, groupId]);
 
-  useEffect(() => {
+  const loadGroupData = () => {
     if (!token || !groupId) return;
     setLoading(true);
     setError("");
@@ -64,7 +67,9 @@ function GroupDetailContent() {
     ])
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [token, groupId, t]);
+  };
+
+  useEffect(loadGroupData, [token, groupId, t]);
 
   useEffect(() => {
     if (!token || !groupId || !selectedTournament) return;
@@ -81,6 +86,43 @@ function GroupDetailContent() {
   if (authLoading || !user) return <div>{t("loading")}</div>;
 
   const myEntry = leaderboard.find((entry) => entry.user_id === user.id);
+  const isCreator = group?.created_by === user.id;
+
+  const handleLeaveGroup = async () => {
+    if (!token || !group) return;
+    if (isCreator) {
+      setError(t("creatorCannotLeave"));
+      return;
+    }
+    if (!window.confirm(t("leaveGroupConfirm"))) return;
+    setLeaving(true);
+    setError("");
+    setSuccess("");
+    try {
+      await api.leaveGroup(token, group.id);
+      router.push("/groups");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("tryAgain"));
+      setLeaving(false);
+    }
+  };
+
+  const handleRemoveMember = async (member: GroupMember) => {
+    if (!token || !group) return;
+    if (!window.confirm(t("removeMemberConfirm", { name: member.username }))) return;
+    setMemberActionId(member.id);
+    setError("");
+    setSuccess("");
+    try {
+      await api.removeGroupMember(token, group.id, member.id);
+      setMembers((prev) => prev.filter((m) => m.id !== member.id));
+      setSuccess(t("memberRemoved"));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("tryAgain"));
+    } finally {
+      setMemberActionId(null);
+    }
+  };
 
   return (
     <RequireTournament>
@@ -91,10 +133,20 @@ function GroupDetailContent() {
 
         {loading ? (
           <p className="text-gray-500">{t("loading")}</p>
-        ) : error ? (
+        ) : error && !group ? (
           <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">{error}</div>
         ) : group ? (
           <>
+            {error && (
+              <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {error}
+              </div>
+            )}
+            {success && (
+              <div className="mb-4 rounded-xl border border-pitch-200 bg-pitch-50 px-4 py-3 text-sm text-pitch-800">
+                {success}
+              </div>
+            )}
             <div className="league-hero mb-6">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
@@ -116,12 +168,24 @@ function GroupDetailContent() {
                     </p>
                   )}
                 </div>
-                <Link
-                  href="/matches"
-                  className="rounded-full bg-white px-5 py-2 text-sm font-bold text-royal-700 shadow transition hover:bg-gold-100"
-                >
-                  {t("makePredictions")}
-                </Link>
+                <div className="flex flex-wrap gap-2">
+                  <Link
+                    href="/matches"
+                    className="rounded-full bg-white px-5 py-2 text-sm font-bold text-royal-700 shadow transition hover:bg-gold-100"
+                  >
+                    {t("makePredictions")}
+                  </Link>
+                  {!isCreator && (
+                    <button
+                      type="button"
+                      onClick={handleLeaveGroup}
+                      disabled={leaving}
+                      className="rounded-full border-2 border-white/40 bg-white/10 px-5 py-2 text-sm font-bold text-white backdrop-blur transition hover:bg-white/20 disabled:opacity-60"
+                    >
+                      {leaving ? t("loading") : t("leaveGroup")}
+                    </button>
+                  )}
+                </div>
               </div>
               <GroupInviteShare
                 inviteCode={group.invite_code}
@@ -198,22 +262,63 @@ function GroupDetailContent() {
                       <th className="px-4 py-3">{t("username")}</th>
                       <th className="px-4 py-3">{t("role")}</th>
                       <th className="px-4 py-3">{t("joined")}</th>
+                      {group.is_admin && (
+                        <th className="px-4 py-3 text-right">{t("actions")}</th>
+                      )}
                     </tr>
                   </thead>
                   <tbody>
-                    {members.map((member) => (
-                      <tr key={member.id} className="border-b border-gray-100 last:border-0">
-                        <td className="px-4 py-3 font-bold text-night-900">{member.username}</td>
-                        <td className="px-4 py-3 capitalize">
-                          {member.role === "admin" ? t("groupAdmin") : t("groupMember")}
-                        </td>
-                        <td className="px-4 py-3 text-gray-500">
-                          {new Date(member.joined_at).toLocaleDateString(
-                            locale === "ar" ? "ar-EG" : undefined
+                    {members.map((member) => {
+                      const isMemberCreator = member.user === group.created_by;
+                      const canRemove =
+                        group.is_admin && !isMemberCreator && member.user !== user.id;
+                      return (
+                        <tr key={member.id} className="border-b border-gray-100 last:border-0">
+                          <td className="px-4 py-3 font-bold text-night-900">
+                            {member.username}
+                            {member.user === user.id && (
+                              <span className="ml-1 text-xs font-normal text-gray-500">
+                                ({t("you")})
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 capitalize">
+                            {isMemberCreator ? (
+                              <span className="rounded-full bg-gold-100 px-2 py-0.5 text-xs font-bold text-gold-800">
+                                {t("groupCreator")}
+                              </span>
+                            ) : member.role === "admin" ? (
+                              t("groupAdmin")
+                            ) : (
+                              t("groupMember")
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-gray-500">
+                            {new Date(member.joined_at).toLocaleDateString(
+                              locale === "ar" ? "ar-EG" : undefined
+                            )}
+                          </td>
+                          {group.is_admin && (
+                            <td className="px-4 py-3 text-right">
+                              {canRemove ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveMember(member)}
+                                  disabled={memberActionId === member.id}
+                                  className="rounded-lg border border-red-200 bg-red-50 px-3 py-1 text-xs font-bold text-red-700 transition hover:bg-red-100 disabled:opacity-60"
+                                >
+                                  {memberActionId === member.id
+                                    ? t("loading")
+                                    : t("removeMember")}
+                                </button>
+                              ) : (
+                                <span className="text-xs text-gray-400">—</span>
+                              )}
+                            </td>
                           )}
-                        </td>
-                      </tr>
-                    ))}
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
