@@ -615,6 +615,25 @@ class LiveScoreStatusTests(TestCase):
         self.assertEqual(tournament["matches"]["mapped_fixtures"], 1)
         self.assertEqual(tournament["health"], "ready")
 
+    def test_overview_tolerates_naive_kickoff_times(self):
+        from datetime import datetime
+
+        Match.objects.create(
+            tournament=self.tournament,
+            stage=self.stage,
+            home_team=self.home,
+            away_team=self.away,
+            kickoff_time=datetime(2026, 6, 12, 18, 0, 0),
+            status=Match.Status.SCHEDULED,
+            external_fixture_id="",
+        )
+        self.client.force_authenticate(user=self.admin)
+        with patch.dict(os.environ, {"API_FOOTBALL_KEY": "test-key"}, clear=False):
+            response = self.client.get(
+                "/api/tournaments/admin/tournaments/live-score-overview"
+            )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
     @patch.dict(
         os.environ,
         {"LIVE_SCORE_SYNC_START": "not-a-date", "API_FOOTBALL_KEY": "test-key"},

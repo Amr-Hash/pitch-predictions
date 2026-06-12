@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import logging
 import os
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone as dt_timezone
 from typing import Any
 
 import requests
@@ -47,6 +47,13 @@ API_FOOTBALL_STATUS = {
     "AET": Match.Status.FINISHED,
     "PEN": Match.Status.FINISHED,
 }
+
+
+def ensure_aware_datetime(value: datetime) -> datetime:
+    """Normalize kickoff (and similar) datetimes to timezone-aware UTC."""
+    if timezone.is_aware(value):
+        return value
+    return timezone.make_aware(value, dt_timezone.utc)
 
 
 def parse_sync_bound(raw: str) -> date | None:

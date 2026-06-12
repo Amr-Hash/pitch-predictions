@@ -62,9 +62,11 @@ class Command(BaseCommand):
                 kickoff_raw = fixture.get("date")
                 if not kickoff_raw:
                     continue
-                kickoff = datetime.fromisoformat(kickoff_raw.replace("Z", "+00:00"))
-                if timezone.is_naive(kickoff):
-                    kickoff = timezone.make_aware(kickoff, timezone.utc)
+                from tournaments.services.live_scores import ensure_aware_datetime
+
+                kickoff = ensure_aware_datetime(
+                    datetime.fromisoformat(kickoff_raw.replace("Z", "+00:00"))
+                )
                 if abs(kickoff - match.kickoff_time) > KICKOFF_TOLERANCE:
                     continue
 

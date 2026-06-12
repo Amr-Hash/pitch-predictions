@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import os
-from datetime import datetime
 from typing import Any
 
 from django.db.models import Count, Q
@@ -11,15 +10,10 @@ from tournaments.models import Match, Tournament
 from tournaments.services.live_scores import (
     SYNC_WINDOW_AFTER,
     SYNC_WINDOW_BEFORE,
+    ensure_aware_datetime,
     is_sync_window_open,
     parse_sync_bound,
 )
-
-
-def _aware_kickoff(kickoff_time: datetime) -> datetime:
-    if timezone.is_aware(kickoff_time):
-        return kickoff_time
-    return timezone.make_aware(kickoff_time, timezone.utc)
 
 
 def get_global_live_score_environment() -> dict[str, Any]:
@@ -102,7 +96,9 @@ def get_tournament_live_score_status(
         if match.status == Match.Status.LIVE:
             sync_window_matches += 1
             continue
-        kickoff = _aware_kickoff(match.kickoff_time)
+        if not match.kickoff_time:
+            continue
+        kickoff = ensure_aware_datetime(match.kickoff_time)
         window_start = kickoff - SYNC_WINDOW_BEFORE
         window_end = kickoff + SYNC_WINDOW_AFTER
         if window_start <= now <= window_end:

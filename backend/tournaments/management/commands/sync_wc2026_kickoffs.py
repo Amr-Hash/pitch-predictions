@@ -4,13 +4,14 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.utils import timezone
 
+from tournaments.services.live_scores import ensure_aware_datetime
+
 from tournaments.models import Match, Tournament
 from tournaments.wc2026_data import WC2026_GROUP_MATCHES, WC2026_TOURNAMENT
 
 
 def parse_kickoff(iso: str):
-    dt = datetime.fromisoformat(iso.replace("Z", "+00:00"))
-    return dt if timezone.is_aware(dt) else timezone.make_aware(dt, timezone.utc)
+    return ensure_aware_datetime(datetime.fromisoformat(iso.replace("Z", "+00:00")))
 
 
 class Command(BaseCommand):
