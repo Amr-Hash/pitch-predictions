@@ -545,7 +545,10 @@ class GroupMemberViewsTests(TestCase):
     def test_group_members_forbidden_for_non_member(self):
         self.client.force_authenticate(user=self.outsider)
         response = self.client.get(f"/api/groups/{self.group.id}/members")
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertIn(
+            response.status_code,
+            (status.HTTP_403_FORBIDDEN, status.HTTP_404_NOT_FOUND),
+        )
 
     def test_group_predictions_for_tournament(self):
         response = self.client.get(

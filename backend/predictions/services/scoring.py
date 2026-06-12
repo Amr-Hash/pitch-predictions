@@ -75,6 +75,16 @@ def calculate_prediction_points(prediction, match):
                 breakdown.goal_difference_points = 3
             return breakdown
 
+    if is_knockout and pred_draw and not actual_draw:
+        advancing_team_id = _get_advancing_team_id(match)
+        if (
+            prediction.predicted_winner_team_id
+            and advancing_team_id
+            and prediction.predicted_winner_team_id == advancing_team_id
+        ):
+            breakdown.winner_bonus_points = 1
+        return breakdown
+
     if pred_home == actual_home and pred_away == actual_away:
         breakdown.exact_score_points = 5
     elif (pred_home - pred_away) == (actual_home - actual_away):
