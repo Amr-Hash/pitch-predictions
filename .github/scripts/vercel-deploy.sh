@@ -32,6 +32,9 @@ DEPLOY_LOG="$(mktemp)"
 trap 'rm -f "$DEPLOY_LOG"' EXIT
 
 if ! npx vercel@latest "${DEPLOY_ARGS[@]}" 2>&1 | tee "$DEPLOY_LOG"; then
+  if grep -q "token provided via \`--token\` argument is not valid" "$DEPLOY_LOG"; then
+    echo "::error::VERCEL_TOKEN is invalid or expired. Create a new token at https://vercel.com/account/tokens and update the GitHub Actions secret VERCEL_TOKEN, then re-run the workflow."
+  fi
   echo "Vercel deploy failed."
   exit 1
 fi
