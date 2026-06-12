@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from django.contrib.auth import get_user_model
+from django.db.models import Q
 
 from tournaments.models import StandingRuleSet, Tournament, TournamentSubscription
 
@@ -12,7 +13,9 @@ def get_default_world_cup_tournament() -> Tournament | None:
         Tournament.objects.filter(
             is_active=True,
             is_archived=False,
-            standing_rule_set__competition_type=StandingRuleSet.CompetitionType.WORLD_CUP,
+        ).filter(
+            Q(competition_type=StandingRuleSet.CompetitionType.WORLD_CUP)
+            | Q(standing_rule_set__competition_type=StandingRuleSet.CompetitionType.WORLD_CUP)
         )
         .order_by("-year", "-id")
         .first()

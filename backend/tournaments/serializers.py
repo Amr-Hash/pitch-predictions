@@ -1,9 +1,7 @@
 from rest_framework import serializers
 
-from tournaments.services.standing_rule_sets import (
-    WC_RULESET_SLUG,
-    apply_engine_defaults_to_ruleset,
-)
+from tournaments.services.standing_rule_sets import apply_engine_defaults_to_ruleset
+from tournaments.services.tournament_defaults import apply_competition_type_defaults
 
 from .models import CupGroup, CupGroupTeam, Match, Stage, StandingRuleSet, Team, Tournament
 
@@ -289,9 +287,12 @@ class TournamentRulesMixin:
                 )
         attrs["standing_rules"] = ruleset.engine
         attrs["qualifiers_per_group"] = ruleset.qualifiers_per_group
+        if not attrs.get("competition_type"):
+            attrs["competition_type"] = ruleset.competition_type
         return attrs
 
     def validate(self, attrs):
+        attrs = apply_competition_type_defaults(attrs, instance=self.instance)
         attrs = self._sync_rules_from_set(attrs)
         return super().validate(attrs)
 
@@ -307,6 +308,7 @@ class TournamentListSerializer(serializers.ModelSerializer):
             "id",
             "name",
             "name_ar",
+            "competition_type",
             "year",
             "start_date",
             "end_date",
@@ -333,6 +335,7 @@ class TournamentDetailSerializer(serializers.ModelSerializer):
             "id",
             "name",
             "name_ar",
+            "competition_type",
             "year",
             "start_date",
             "end_date",
@@ -355,6 +358,7 @@ class TournamentCreateSerializer(TournamentRulesMixin, serializers.ModelSerializ
             "id",
             "name",
             "name_ar",
+            "competition_type",
             "year",
             "start_date",
             "end_date",
@@ -369,12 +373,6 @@ class TournamentCreateSerializer(TournamentRulesMixin, serializers.ModelSerializ
         read_only_fields = ("id",)
 
     def validate(self, attrs):
-        if not attrs.get("standing_rule_set") and not attrs.get("standing_rules"):
-            default = StandingRuleSet.objects.filter(
-                slug=WC_RULESET_SLUG, is_active=True
-            ).first()
-            if default:
-                attrs["standing_rule_set"] = default
         if attrs.get("standing_rule_set") and attrs.get("standing_rules"):
             attrs.pop("standing_rules", None)
         if attrs.get("standing_rule_set") and attrs.get("qualifiers_per_group"):

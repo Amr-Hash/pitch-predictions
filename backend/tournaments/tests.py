@@ -482,6 +482,29 @@ class StandingRuleSetApiTests(TestCase):
         self.assertEqual(response.data["standing_rules"], "fifa_world_cup")
         self.assertEqual(response.data["qualifiers_per_group"], 2)
 
+    def test_tournament_create_with_competition_type_defaults(self):
+        from tournaments.services.standing_rule_sets import sync_builtin_rule_sets
+
+        sync_builtin_rule_sets()
+        self.client.force_authenticate(user=self.admin)
+        response = self.client.post(
+            "/api/tournaments/admin/tournaments",
+            {
+                "name": "World Cup 2034",
+                "competition_type": "world_cup",
+                "year": 2034,
+                "start_date": "2034-06-01",
+                "end_date": "2034-07-15",
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["competition_type"], "world_cup")
+        self.assertEqual(response.data["standing_rules"], "fifa_world_cup")
+        self.assertEqual(response.data["live_score_provider"], "api_football")
+        self.assertEqual(response.data["live_score_config"]["league_id"], 1)
+        self.assertEqual(response.data["live_score_config"]["season"], 2034)
+
 
 class LiveScoreStatusTests(TestCase):
     def setUp(self):

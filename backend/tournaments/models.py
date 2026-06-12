@@ -68,6 +68,12 @@ class Tournament(models.Model):
 
     name = models.CharField(max_length=200)
     name_ar = models.CharField(max_length=200, blank=True, default="")
+    competition_type = models.CharField(
+        max_length=32,
+        choices=StandingRuleSet.CompetitionType.choices,
+        default=StandingRuleSet.CompetitionType.WORLD_CUP,
+        help_text="Competition format (World Cup, Champions League, etc.).",
+    )
     year = models.PositiveIntegerField()
     start_date = models.DateField()
     end_date = models.DateField()

@@ -34,6 +34,12 @@ const STATUS_KEYS: Record<string, MessageKey> = {
   finished: "statusFinished",
 };
 
+const COMPETITION_TYPE_KEYS: Record<string, MessageKey> = {
+  world_cup: "adminRuleTypeWorldCup",
+  champions_league: "adminRuleTypeChampionsLeague",
+  other: "adminRuleTypeOther",
+};
+
 function pickCurrentStage(stages: Stage[], matches: Match[]): number | null {
   if (!stages.length) return null;
   const sorted = [...stages].sort((a, b) => a.order - b.order);
@@ -389,6 +395,12 @@ export function TournamentHub({ tournamentId }: { tournamentId: number }) {
           <div>
             <h1 className="admin-page-title">{bilingualAdminLabel(tournament)}</h1>
             <p className="text-gray-600">
+              {tournament.competition_type &&
+                COMPETITION_TYPE_KEYS[tournament.competition_type] && (
+                  <span className="mr-2 rounded-full bg-gold-100 px-2 py-0.5 text-xs font-semibold text-gold-900">
+                    {t(COMPETITION_TYPE_KEYS[tournament.competition_type])}
+                  </span>
+                )}
               {tournament.year} · {tournament.start_date} → {tournament.end_date}
               {tournament.is_active === false && (
                 <span className="ml-2 rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-700">

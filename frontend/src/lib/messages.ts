@@ -294,6 +294,9 @@ export const messages = {
     adminManageTournament: "Manage tournament",
     adminAllTournaments: "All tournaments",
     adminTournamentsDesc: "Create competitions and control whether users can see them.",
+    adminTournamentType: "Competition type",
+    adminTournamentTypeHint:
+      "Sets default standing rules and live score source (e.g. World Cup → 48-team rules + API-Football).",
     adminAddTournament: "Add tournament",
     adminEditTournament: "Edit tournament",
     adminTeamsDesc: "Add and edit teams used in tournaments and matches.",
@@ -786,6 +789,9 @@ export const messages = {
     adminManageTournament: "إدارة البطولة",
     adminAllTournaments: "كل البطولات",
     adminTournamentsDesc: "أنشئ البطولات وتحكم في ظهورها للمستخدمين.",
+    adminTournamentType: "نوع البطولة",
+    adminTournamentTypeHint:
+      "يحدد قواعد الترتيب ومصدر النتائج المباشرة افتراضياً (مثل كأس العالم → 48 منتخباً + API-Football).",
     adminAddTournament: "إضافة بطولة",
     adminEditTournament: "تعديل البطولة",
     adminTeamsDesc: "أضف وعدّل الفرق المستخدمة في البطولات والمباريات.",

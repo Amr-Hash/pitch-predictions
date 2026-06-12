@@ -39,6 +39,7 @@ class TournamentSubscriptionTests(TestCase):
             year=2026,
             start_date=timezone.now().date(),
             end_date=timezone.now().date() + timedelta(days=30),
+            competition_type=StandingRuleSet.CompetitionType.WORLD_CUP,
             standing_rule_set=self.ruleset,
             standing_rules=Tournament.StandingRules.FIFA_WORLD_CUP,
             is_active=True,
@@ -48,6 +49,8 @@ class TournamentSubscriptionTests(TestCase):
             year=2027,
             start_date=timezone.now().date(),
             end_date=timezone.now().date() + timedelta(days=30),
+            competition_type=StandingRuleSet.CompetitionType.OTHER,
+            standing_rules=Tournament.StandingRules.SIMPLE,
             is_active=True,
         )
 

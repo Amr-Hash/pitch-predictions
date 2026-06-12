@@ -6,10 +6,18 @@ import { api, StandingRuleSet, Tournament, unwrapList } from "@/lib/api";
 import { bilingualAdminLabel } from "@/lib/adminDisplay";
 import { useAuth } from "@/lib/auth";
 import { useT } from "@/lib/i18n";
+import type { MessageKey } from "@/lib/messages";
+
+const COMPETITION_TYPE_KEYS: Record<string, MessageKey> = {
+  world_cup: "adminRuleTypeWorldCup",
+  champions_league: "adminRuleTypeChampionsLeague",
+  other: "adminRuleTypeOther",
+};
 
 const emptyForm = {
   name: "",
   name_ar: "",
+  competition_type: "world_cup",
   year: new Date().getFullYear(),
   start_date: "",
   end_date: "",
@@ -18,10 +26,30 @@ const emptyForm = {
   qualifiers_per_group: 2,
   is_active: true,
   is_archived: false,
-  live_score_provider: "manual",
-  live_score_league_id: "",
-  live_score_season: "",
+  live_score_provider: "api_football",
+  live_score_league_id: "1",
+  live_score_season: String(new Date().getFullYear()),
 };
+
+function applyCompetitionTypeDefaults(
+  type: string,
+  year: number,
+  ruleSets: StandingRuleSet[],
+  current: typeof emptyForm
+): typeof emptyForm {
+  const ruleset = ruleSets.find((rules) => rules.competition_type === type);
+  const isWorldCup = type === "world_cup";
+  return {
+    ...current,
+    competition_type: type,
+    standing_rule_set_id: ruleset ? String(ruleset.id) : "",
+    standing_rules: ruleset?.engine ?? current.standing_rules,
+    qualifiers_per_group: ruleset?.qualifiers_per_group ?? current.qualifiers_per_group,
+    live_score_provider: isWorldCup ? "api_football" : "manual",
+    live_score_league_id: isWorldCup ? "1" : "",
+    live_score_season: isWorldCup ? String(year) : "",
+  };
+}
 
 export default function AdminTournamentsPage() {
   const { token } = useAuth();
@@ -67,6 +95,7 @@ export default function AdminTournamentsPage() {
     return {
       name: form.name,
       name_ar: form.name_ar,
+      competition_type: form.competition_type,
       year: form.year,
       start_date: form.start_date,
       end_date: form.end_date,
@@ -141,6 +170,7 @@ export default function AdminTournamentsPage() {
     setForm({
       name: tournament.name,
       name_ar: tournament.name_ar || "",
+      competition_type: tournament.competition_type || "world_cup",
       year: tournament.year,
       start_date: tournament.start_date,
       end_date: tournament.end_date,
@@ -183,6 +213,24 @@ export default function AdminTournamentsPage() {
           {editingId ? t("adminEditTournament") : t("adminAddTournament")}
         </h2>
         <div className="grid gap-4 sm:grid-cols-2">
+          <div className="sm:col-span-2">
+            <label className="mb-1 block text-sm font-medium">{t("adminTournamentType")}</label>
+            <select
+              className="input"
+              value={form.competition_type}
+              onChange={(e) =>
+                setForm(applyCompetitionTypeDefaults(e.target.value, form.year, ruleSets, form))
+              }
+              required
+            >
+              {Object.entries(COMPETITION_TYPE_KEYS).map(([value, labelKey]) => (
+                <option key={value} value={value}>
+                  {t(labelKey)}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-gray-500">{t("adminTournamentTypeHint")}</p>
+          </div>
           <div>
             <label className="mb-1 block text-sm font-medium">{t("fieldName")}</label>
             <input
@@ -207,7 +255,14 @@ export default function AdminTournamentsPage() {
               className="input"
               type="number"
               value={form.year}
-              onChange={(e) => setForm({ ...form, year: Number(e.target.value) })}
+              onChange={(e) => {
+                const year = Number(e.target.value);
+                setForm(
+                  form.competition_type === "world_cup"
+                    ? { ...form, year, live_score_season: String(year) }
+                    : { ...form, year }
+                );
+              }}
               required
             />
           </div>
@@ -249,11 +304,13 @@ export default function AdminTournamentsPage() {
               required
             >
               <option value="">{t("adminSelectStandingRuleSet")}</option>
-              {ruleSets.map((rules) => (
-                <option key={rules.id} value={rules.id}>
-                  {rules.name} ({rules.version})
-                </option>
-              ))}
+              {ruleSets
+                .filter((rules) => rules.competition_type === form.competition_type)
+                .map((rules) => (
+                  <option key={rules.id} value={rules.id}>
+                    {rules.name} ({rules.version})
+                  </option>
+                ))}
             </select>
             <p className="mt-1 text-xs text-gray-500">
               {t("adminStandingRuleSetHint")}{" "}
@@ -358,6 +415,12 @@ export default function AdminTournamentsPage() {
                 <span className="text-gray-400">({tournament.year})</span>
               </h3>
               <p className="text-sm text-gray-500">
+                {tournament.competition_type &&
+                  COMPETITION_TYPE_KEYS[tournament.competition_type] && (
+                    <>
+                      {t(COMPETITION_TYPE_KEYS[tournament.competition_type])} ·{" "}
+                    </>
+                  )}
                 {tournament.start_date} → {tournament.end_date} · {tournament.match_count ?? 0}{" "}
                 {t("matches").toLowerCase()}
                 {tournament.standing_rule_set && (

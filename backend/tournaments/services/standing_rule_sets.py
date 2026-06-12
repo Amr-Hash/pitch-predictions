@@ -167,6 +167,9 @@ def sync_world_cup_tournaments() -> int:
         year=WC2026_TOURNAMENT["year"],
     ):
         save_fields: list[str] = []
+        if tournament.competition_type != StandingRuleSet.CompetitionType.WORLD_CUP:
+            tournament.competition_type = StandingRuleSet.CompetitionType.WORLD_CUP
+            save_fields.append("competition_type")
         if tournament.standing_rule_set_id != ruleset.id:
             tournament.standing_rule_set = ruleset
             tournament.standing_rules = ruleset.engine

@@ -4,9 +4,30 @@ from django.db import migrations, models
 
 
 def subscribe_existing_users_to_world_cup(apps, schema_editor):
-    from tournaments.services.subscriptions import subscribe_all_users_to_default_world_cup
+    Tournament = apps.get_model("tournaments", "Tournament")
+    TournamentSubscription = apps.get_model("tournaments", "TournamentSubscription")
+    User = apps.get_model(settings.AUTH_USER_MODEL)
 
-    subscribe_all_users_to_default_world_cup()
+    tournament = (
+        Tournament.objects.filter(
+            is_active=True,
+            is_archived=False,
+            standing_rule_set__competition_type="world_cup",
+        )
+        .order_by("-year", "-id")
+        .first()
+    )
+    if not tournament:
+        tournament = (
+            Tournament.objects.filter(is_active=True, is_archived=False)
+            .order_by("-year", "-id")
+            .first()
+        )
+    if not tournament:
+        return
+
+    for user in User.objects.filter(is_active=True, is_staff=False):
+        TournamentSubscription.objects.get_or_create(user_id=user.id, tournament_id=tournament.id)
 
 
 class Migration(migrations.Migration):

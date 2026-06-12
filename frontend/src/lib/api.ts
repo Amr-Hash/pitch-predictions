@@ -401,6 +401,7 @@ export interface Tournament {
   id: number;
   name: string;
   name_ar?: string;
+  competition_type?: "world_cup" | "champions_league" | "other";
   year: number;
   start_date: string;
   end_date: string;
