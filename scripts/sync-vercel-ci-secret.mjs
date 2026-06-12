@@ -14,13 +14,25 @@ import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
+function authFileCandidates() {
+  const home = homedir();
+  const paths = [join(home, ".vercel", "auth.json")];
+  if (process.env.APPDATA) {
+    paths.push(join(process.env.APPDATA, "com.vercel.cli", "auth.json"));
+  }
+  if (process.env.LOCALAPPDATA) {
+    paths.push(join(process.env.LOCALAPPDATA, "com.vercel.cli", "auth.json"));
+  }
+  return paths;
+}
+
 function resolveToken() {
   if (process.env.VERCEL_TOKEN?.trim()) {
     return process.env.VERCEL_TOKEN.trim();
   }
 
-  const authPath = join(homedir(), ".vercel", "auth.json");
-  if (!existsSync(authPath)) {
+  const authPath = authFileCandidates().find((path) => existsSync(path));
+  if (!authPath) {
     console.error(
       "No VERCEL_TOKEN in environment and no ~/.vercel/auth.json found.\n" +
         "Create a classic token at https://vercel.com/account/tokens then run:\n" +
