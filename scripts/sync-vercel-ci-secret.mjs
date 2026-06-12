@@ -19,6 +19,7 @@ function authFileCandidates() {
   const paths = [join(home, ".vercel", "auth.json")];
   if (process.env.APPDATA) {
     paths.push(join(process.env.APPDATA, "com.vercel.cli", "auth.json"));
+    paths.push(join(process.env.APPDATA, "xdg.data", "com.vercel.cli", "auth.json"));
   }
   if (process.env.LOCALAPPDATA) {
     paths.push(join(process.env.LOCALAPPDATA, "com.vercel.cli", "auth.json"));

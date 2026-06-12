@@ -9,6 +9,7 @@ on:
 
 env:
   VERCEL_ORG_ID: team_4Xmlf7t3YpurUX6c1nZH0ra0
+  VERCEL_TEAM_SLUG: amr-hashem
   VERCEL_FRONTEND_PROJECT_ID: prj_uvzwNOMdzKBrd2IsQ0MCrQUtHc5K
   VERCEL_BACKEND_PROJECT_ID: prj_FRxuskySw6XocyTyrftLpgZw2baf
 
@@ -39,12 +40,9 @@ jobs:
       - name: Validate Vercel token
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-        run: |
-          if [ -z "$VERCEL_TOKEN" ]; then
-            echo "::error::VERCEL_TOKEN is not set. Run: node scripts/sync-vercel-ci-secret.mjs"
-            exit 1
-          fi
-          npx vercel@latest whoami --token "$VERCEL_TOKEN" --scope amr-hashem
+          VERCEL_ORG_ID: ${{ env.VERCEL_ORG_ID }}
+          VERCEL_TEAM_SLUG: ${{ env.VERCEL_TEAM_SLUG }}
+        run: bash ../.github/scripts/vercel-validate-token.sh
 
       - name: Deploy Django API and update live alias
         working-directory: backend
@@ -82,12 +80,9 @@ jobs:
       - name: Validate Vercel token
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-        run: |
-          if [ -z "$VERCEL_TOKEN" ]; then
-            echo "::error::VERCEL_TOKEN is not set. Run: node scripts/sync-vercel-ci-secret.mjs"
-            exit 1
-          fi
-          npx vercel@latest whoami --token "$VERCEL_TOKEN" --scope amr-hashem
+          VERCEL_ORG_ID: ${{ env.VERCEL_ORG_ID }}
+          VERCEL_TEAM_SLUG: ${{ env.VERCEL_TEAM_SLUG }}
+        run: bash ../.github/scripts/vercel-validate-token.sh
 
       - name: Deploy Next.js app and update live alias
         working-directory: frontend
