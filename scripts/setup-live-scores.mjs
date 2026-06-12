@@ -8,7 +8,7 @@
  *
  * Usage:
  *   node scripts/setup-live-scores.mjs
- *   VERCEL_TOKEN=<classic-token> node scripts/setup-live-scores.mjs
+ *   API_FOOTBALL_KEY=<key> VERCEL_TOKEN=<token> node scripts/setup-live-scores.mjs
  */
 import { randomBytes } from "node:crypto";
 import { spawnSync } from "node:child_process";
@@ -114,9 +114,17 @@ async function main() {
     for (const item of ENV_VARS) {
       await upsertVercelEnv(item.key, item.value);
     }
-    console.log("Vercel env updated. Redeploy backend so runtime picks up CRON_SECRET.");
-    run("gh", ["workflow", "run", "Deploy", "--repo", "Amr-Hash/alhabeed"]);
-    console.log("Triggered Deploy workflow.");
+    const apiFootballKey = process.env.API_FOOTBALL_KEY?.trim();
+    if (apiFootballKey) {
+      await upsertVercelEnv("API_FOOTBALL_KEY", apiFootballKey);
+      console.log("Set API_FOOTBALL_KEY on Vercel.");
+    } else {
+      console.warn("API_FOOTBALL_KEY not provided — mapping will fail until you set it on Vercel.");
+    }
+    console.log("Vercel env updated. Redeploy backend so runtime picks up new env.");
+    run("gh", ["workflow", "run", "Setup Live Scores", "--repo", "Amr-Hash/alhabeed"]);
+    console.log("Triggered Setup Live Scores workflow (deploy + map).");
+    return;
   } else {
     console.log("\nAdd these on Vercel → alhabeed-api → Environment Variables, then redeploy:");
     console.log(`  CRON_SECRET=${cronSecret}`);
@@ -125,30 +133,11 @@ async function main() {
     }
     console.log("\nAlso ensure API_FOOTBALL_KEY is set on Vercel.");
     console.log("Then run: gh workflow run Deploy --repo Amr-Hash/alhabeed");
-    console.log("Or re-run: VERCEL_TOKEN=<token> node scripts/setup-live-scores.mjs");
+    console.log("Or re-run: API_FOOTBALL_KEY=<key> VERCEL_TOKEN=<token> node scripts/setup-live-scores.mjs");
     return;
   }
 
-  console.log("\nWaiting 90s for deploy to finish...");
-  await new Promise((resolve) => setTimeout(resolve, 90000));
-
-  console.log("Mapping WC 2026 fixtures on production...");
-  const mapResult = await callProduction("/api/cron/map-wc2026-fixtures", cronSecret, {
-    method: "POST",
-  });
-  console.log(`Map response (${mapResult.status}):`, JSON.stringify(mapResult.data, null, 2));
-
-  if (!mapResult.ok) {
-    console.error(
-      "Mapping failed. Ensure API_FOOTBALL_KEY is on Vercel and the backend redeploy finished."
-    );
-    process.exit(1);
-  }
-
-  console.log("Triggering live score sync...");
-  const syncResult = await callProduction("/api/cron/sync-live-scores", cronSecret);
-  console.log(`Sync response (${syncResult.status}):`, JSON.stringify(syncResult.data, null, 2));
-  console.log("\nLive score setup complete.");
+  console.log("\nSetup triggered on GitHub Actions. Watch: Actions → Setup Live Scores");
 }
 
 main().catch((error) => {

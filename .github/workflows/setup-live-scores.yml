@@ -17,6 +17,7 @@ jobs:
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
         run: node scripts/sync-vercel-live-score-env.mjs
 
       - name: Deploy backend so CRON_SECRET is live

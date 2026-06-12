@@ -68,17 +68,22 @@ async function main() {
     `/v9/projects/${VERCEL_PROJECT_ID}/env?teamId=${VERCEL_TEAM_ID}`
   );
   const keys = new Set((existing?.envs || []).map((item) => item.key));
-  if (!keys.has("API_FOOTBALL_KEY")) {
+
+  await upsertEnv("CRON_SECRET", cronSecret);
+  for (const item of ENV_VARS) {
+    await upsertEnv(item.key, item.value);
+  }
+
+  const apiFootballKey = process.env.API_FOOTBALL_KEY?.trim();
+  if (apiFootballKey) {
+    await upsertEnv("API_FOOTBALL_KEY", apiFootballKey);
+  } else if (!keys.has("API_FOOTBALL_KEY")) {
     console.warn(
       "WARNING: API_FOOTBALL_KEY is not set on Vercel alhabeed-api. " +
         "Fixture mapping and live sync will fail until you add it."
     );
   }
 
-  await upsertEnv("CRON_SECRET", cronSecret);
-  for (const item of ENV_VARS) {
-    await upsertEnv(item.key, item.value);
-  }
   console.log("Live score env vars synced to Vercel alhabeed-api.");
 }
 
