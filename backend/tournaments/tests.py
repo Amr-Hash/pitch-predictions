@@ -21,8 +21,18 @@ from tournaments.models import (
 from tournaments.services.standing_rules import get_rule_metadata
 from tournaments.services.live_scores import (
     apply_live_match_update,
+    ensure_aware_datetime,
     sync_tournament_live_scores,
 )
+from tournaments.services.team_eligibility import (
+    apply_team_eligibility_defaults,
+    default_team_eligibility_for_competition,
+    eligible_teams_for_tournament,
+    ineligibility_reason,
+    team_eligible_for_tournament,
+    validate_team_ids_for_tournament,
+)
+from tournaments.services.team_geography import geography_for_team_code
 
 User = get_user_model()
 
@@ -771,3 +781,143 @@ class LiveScoreSyncTests(TestCase):
         self.match.refresh_from_db()
         self.assertEqual(self.match.status, Match.Status.FINISHED)
         self.assertGreater(self.prediction.points_awarded, 0)
+
+
+class TeamEligibilityServiceTests(TestCase):
+    def setUp(self):
+        self.national_eg = Team.objects.create(
+            name="Egypt",
+            code="EGY",
+            team_type=Team.TeamType.NATIONAL,
+            country_code="eg",
+            continent="africa",
+        )
+        self.national_fr = Team.objects.create(
+            name="France",
+            code="FRA",
+            team_type=Team.TeamType.NATIONAL,
+            country_code="fr",
+            continent="europe",
+        )
+        self.club = Team.objects.create(
+            name="Test FC",
+            code="TFC",
+            team_type=Team.TeamType.CLUB,
+            country_code="eg",
+            continent="africa",
+            division="Egyptian League",
+        )
+        self.club_eu = Team.objects.create(
+            name="Euro FC",
+            code="EFC",
+            team_type=Team.TeamType.CLUB,
+            country_code="de",
+            continent="europe",
+            division="Bundesliga",
+        )
+        self.world_cup = Tournament.objects.create(
+            name="WC",
+            year=2030,
+            start_date=timezone.now().date(),
+            end_date=timezone.now().date() + timedelta(days=30),
+            competition_type="world_cup",
+            allowed_team_type=Tournament.AllowedTeamType.NATIONAL,
+            team_scope=Tournament.TeamScope.WORLDWIDE,
+        )
+        self.ucl = Tournament.objects.create(
+            name="UCL",
+            year=2030,
+            start_date=timezone.now().date(),
+            end_date=timezone.now().date() + timedelta(days=30),
+            competition_type="champions_league",
+            allowed_team_type=Tournament.AllowedTeamType.CLUB,
+            team_scope=Tournament.TeamScope.CONTINENT,
+            allowed_continent="europe",
+        )
+
+    def test_default_eligibility_by_competition_type(self):
+        wc = default_team_eligibility_for_competition("world_cup")
+        self.assertEqual(wc["allowed_team_type"], Tournament.AllowedTeamType.NATIONAL)
+        self.assertEqual(wc["team_scope"], Tournament.TeamScope.WORLDWIDE)
+
+        ucl = default_team_eligibility_for_competition("champions_league")
+        self.assertEqual(ucl["allowed_team_type"], Tournament.AllowedTeamType.CLUB)
+        self.assertEqual(ucl["allowed_continent"], "europe")
+
+        other = default_team_eligibility_for_competition("other")
+        self.assertEqual(other["allowed_team_type"], Tournament.AllowedTeamType.ANY)
+
+    def test_apply_team_eligibility_defaults_on_create(self):
+        attrs = apply_team_eligibility_defaults(
+            {"competition_type": "world_cup"},
+            instance=None,
+        )
+        self.assertEqual(attrs["allowed_team_type"], Tournament.AllowedTeamType.NATIONAL)
+
+    def test_team_eligibility_rules(self):
+        self.assertTrue(team_eligible_for_tournament(self.national_eg, self.world_cup))
+        self.assertFalse(team_eligible_for_tournament(self.club, self.world_cup))
+        self.assertIn("national teams", ineligibility_reason(self.club, self.world_cup).lower())
+
+        self.assertTrue(team_eligible_for_tournament(self.club_eu, self.ucl))
+        self.assertFalse(team_eligible_for_tournament(self.club, self.ucl))
+        self.assertIn("continent", ineligibility_reason(self.club, self.ucl).lower())
+
+    def test_validate_team_ids_for_tournament(self):
+        with self.assertRaises(ValueError) as missing:
+            validate_team_ids_for_tournament([99999], self.world_cup)
+        self.assertIn("Unknown team", str(missing.exception))
+
+        with self.assertRaises(ValueError) as ineligible:
+            validate_team_ids_for_tournament([self.club.id], self.world_cup)
+        self.assertIn(self.club.code, str(ineligible.exception))
+
+    def test_eligible_teams_queryset_filters(self):
+        ids = set(eligible_teams_for_tournament(self.world_cup).values_list("id", flat=True))
+        self.assertIn(self.national_eg.id, ids)
+        self.assertNotIn(self.club.id, ids)
+
+        ucl_ids = set(eligible_teams_for_tournament(self.ucl).values_list("id", flat=True))
+        self.assertNotIn(self.national_eg.id, ucl_ids)
+
+    def test_country_and_division_scope(self):
+        country_cup = Tournament.objects.create(
+            name="Egy Cup",
+            year=2031,
+            start_date=timezone.now().date(),
+            end_date=timezone.now().date() + timedelta(days=30),
+            allowed_team_type=Tournament.AllowedTeamType.ANY,
+            team_scope=Tournament.TeamScope.COUNTRY,
+            allowed_country_code="EG",
+        )
+        self.assertTrue(team_eligible_for_tournament(self.national_eg, country_cup))
+        self.assertFalse(team_eligible_for_tournament(self.national_fr, country_cup))
+
+        league = Tournament.objects.create(
+            name="Egy League",
+            year=2031,
+            start_date=timezone.now().date(),
+            end_date=timezone.now().date() + timedelta(days=30),
+            allowed_team_type=Tournament.AllowedTeamType.CLUB,
+            team_scope=Tournament.TeamScope.DIVISION,
+            allowed_division="Egyptian League",
+        )
+        self.assertTrue(team_eligible_for_tournament(self.club, league))
+        self.club.division = "Other"
+        self.club.save(update_fields=["division"])
+        self.assertIn("division", ineligibility_reason(self.club, league).lower())
+
+    def test_geography_for_unknown_team_code(self):
+        geo = geography_for_team_code("XYZ", "us")
+        self.assertEqual(geo["country_code"], "us")
+        self.assertEqual(geo["continent"], "")
+
+    def test_ensure_aware_datetime(self):
+        from datetime import datetime, timezone as dt_timezone
+
+        naive = datetime(2026, 6, 12, 18, 0, 0)
+        aware = ensure_aware_datetime(naive)
+        self.assertTrue(timezone.is_aware(aware))
+
+        already = datetime(2026, 6, 12, 18, 0, 0, tzinfo=dt_timezone.utc)
+        self.assertIs(ensure_aware_datetime(already), already)
