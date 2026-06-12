@@ -354,35 +354,6 @@ class AdminMatchViewSet(viewsets.ModelViewSet):
         )
 
 
-@api_view(["POST"])
-@permission_classes([permissions.AllowAny])
-def api_football_webhook(request):
-    """
-    Optional push endpoint for API-Football (or a proxy cron).
-    Set API_FOOTBALL_WEBHOOK_SECRET and send it as X-Webhook-Secret.
-    """
-    secret = os.environ.get("API_FOOTBALL_WEBHOOK_SECRET", "").strip()
-    if not secret or request.headers.get("X-Webhook-Secret") != secret:
-        return Response({"detail": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
-
-    from tournaments.services.live_scores import sync_tournament_live_scores
-
-    tournament_id = request.data.get("tournament_id")
-    if not tournament_id:
-        return Response(
-            {"detail": "tournament_id is required."},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    try:
-        tournament = Tournament.objects.get(pk=tournament_id)
-    except Tournament.DoesNotExist:
-        return Response({"detail": "Tournament not found."}, status=status.HTTP_404_NOT_FOUND)
-
-    result = sync_tournament_live_scores(tournament)
-    return Response({"tournament_id": tournament.id, **result})
-
-
 def _authorize_cron_request(request) -> bool:
     secret = os.environ.get("CRON_SECRET", "").strip()
     if not secret:
@@ -413,22 +384,3 @@ def cron_sync_live_scores(request):
 
     tournaments = sync_all_configured_tournaments()
     return Response({"tournaments": tournaments})
-
-
-@api_view(["GET", "POST"])
-@authentication_classes([])
-@permission_classes([permissions.AllowAny])
-def cron_map_wc2026_fixtures(request):
-    """
-    Map WC 2026 group fixtures to API-Football IDs on production.
-    Authorization: Bearer <CRON_SECRET>
-    """
-    if not _authorize_cron_request(request):
-        return Response({"detail": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
-
-    from tournaments.services.wc2026_fixture_mapping import map_wc2026_group_fixtures
-
-    dry_run = request.query_params.get("dry_run", "").lower() in {"1", "true", "yes"}
-    result = map_wc2026_group_fixtures(dry_run=dry_run)
-    status_code = status.HTTP_200_OK if result.get("ok") else status.HTTP_400_BAD_REQUEST
-    return Response(result, status=status_code)

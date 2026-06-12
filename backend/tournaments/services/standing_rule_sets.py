@@ -150,7 +150,7 @@ def sync_builtin_rule_sets() -> int:
 
 
 def sync_world_cup_tournaments() -> int:
-    """Ensure FIFA World Cup tournaments use 48-team rules and API-Football live scores."""
+    """Ensure FIFA World Cup tournaments use 48-team rules and scraping live scores."""
     from tournaments.services.team_eligibility import default_team_eligibility_for_competition
     from tournaments.wc2026_data import WC2026_TOURNAMENT
 
@@ -161,7 +161,7 @@ def sync_world_cup_tournaments() -> int:
     if not ruleset:
         return 0
 
-    live_config = {"league_id": 1, "season": 2026}
+    live_config: dict = {}
     eligibility = default_team_eligibility_for_competition(
         StandingRuleSet.CompetitionType.WORLD_CUP
     )
@@ -188,8 +188,8 @@ def sync_world_cup_tournaments() -> int:
             save_fields.extend(
                 ["standing_rule_set", "standing_rules", "qualifiers_per_group"]
             )
-        if tournament.live_score_provider != Tournament.LiveScoreProvider.API_FOOTBALL:
-            tournament.live_score_provider = Tournament.LiveScoreProvider.API_FOOTBALL
+        if tournament.live_score_provider != Tournament.LiveScoreProvider.SCRAPING:
+            tournament.live_score_provider = Tournament.LiveScoreProvider.SCRAPING
             save_fields.append("live_score_provider")
         if tournament.live_score_config != live_config:
             tournament.live_score_config = live_config

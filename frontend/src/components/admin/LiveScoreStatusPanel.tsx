@@ -15,17 +15,12 @@ import type { MessageKey } from "@/lib/messages";
 
 const PROVIDER_KEYS: Record<string, MessageKey> = {
   manual: "adminLiveScoreManual",
-  api_football: "adminLiveScoreApiFootball",
-  sportmonks: "adminLiveScoreSportmonks",
+  scraping: "adminLiveScoreScraping",
 };
 
 const ISSUE_KEYS: Record<string, MessageKey> = {
-  missing_api_key: "adminLiveScoreIssueMissingApiKey",
-  missing_config: "adminLiveScoreIssueMissingConfig",
-  unmapped_fixtures: "adminLiveScoreIssueUnmapped",
-  api_season_not_on_plan: "adminLiveScoreIssueSeasonNotOnPlan",
+  missing_scrape_url: "adminLiveScoreIssueMissingScrapeUrl",
   outside_sync_window: "adminLiveScoreIssueOutsideWindow",
-  provider_not_implemented: "adminLiveScoreIssueNotImplemented",
 };
 
 const HEALTH_KEYS: Record<string, MessageKey> = {
@@ -37,7 +32,6 @@ const HEALTH_KEYS: Record<string, MessageKey> = {
 
 const CRON_SCHEDULE_KEYS: Record<string, MessageKey> = {
   every_15_minutes: "adminLiveScoreCronEvery15",
-  every_5_minutes: "adminLiveScoreCronEvery5",
 };
 
 function HealthBadge({ health }: { health: string }) {
@@ -92,14 +86,6 @@ function EnvironmentCard({ environment }: { environment: LiveScoreEnvironment })
   return (
     <div className="admin-card space-y-3">
       <h3 className="font-semibold text-pitch-900">{t("adminLiveScoreEnvironment")}</h3>
-      <EnvRow
-        label={t("adminLiveScoreApiFootballKey")}
-        ok={environment.api_football_key_configured}
-      />
-      <EnvRow
-        label={t("adminLiveScoreSportmonksKey")}
-        ok={environment.sportmonks_key_configured}
-      />
       <EnvRow label={t("adminLiveScoreCronSecret")} ok={environment.cron_secret_configured} />
       <EnvRow
         label={t("adminLiveScoreSyncWindow")}
@@ -112,6 +98,11 @@ function EnvironmentCard({ environment }: { environment: LiveScoreEnvironment })
         detail={t(
           CRON_SCHEDULE_KEYS[environment.cron_schedule] ?? "adminLiveScoreCronEvery15",
         )}
+      />
+      <EnvRow
+        label={t("adminLiveScoreScrapeUrl")}
+        ok={environment.scrape_url_configured}
+        detail={environment.default_scrape_url}
       />
     </div>
   );
@@ -133,13 +124,6 @@ function TournamentStatusCard({
   const { locale } = useLocale();
   const t = useT();
   const providerKey = PROVIDER_KEYS[status.live_score_provider] ?? "adminLiveScoreManual";
-  const config = status.live_score_config;
-  const configBits: string[] = [];
-  if (config.league_id != null) configBits.push(`${t("adminLiveScoreLeagueId")}: ${config.league_id}`);
-  if (config.season != null) configBits.push(`${t("adminLiveScoreSeason")}: ${config.season}`);
-  if (config.season_id != null) {
-    configBits.push(`${t("adminLiveScoreSeasonId")}: ${config.season_id}`);
-  }
 
   return (
     <div className="admin-card space-y-4">
@@ -153,7 +137,9 @@ function TournamentStatusCard({
           </h3>
           <p className="mt-1 text-sm text-gray-600">
             {t(providerKey)}
-            {configBits.length ? ` · ${configBits.join(" · ")}` : ""}
+            {status.scores_url ? (
+              <span className="block truncate text-xs text-gray-500">{status.scores_url}</span>
+            ) : null}
           </p>
         </div>
         <HealthBadge health={status.health} />
@@ -162,22 +148,18 @@ function TournamentStatusCard({
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Stat label={t("adminLiveScoreMatchesTotal")} value={status.matches.total} />
         <Stat label={t("statusLive")} value={status.matches.live} highlight />
-        <Stat label={t("adminLiveScoreMapped")} value={status.matches.mapped_fixtures} />
+        <Stat label={t("statusFinished")} value={status.matches.finished} />
         <Stat
-          label={t("adminLiveScoreUnmapped")}
-          value={status.matches.unmapped_active}
-          warn={status.matches.unmapped_active > 0}
+          label={t("adminLiveScoreInWindowLabel")}
+          value={status.matches.in_sync_window}
+          highlight={status.matches.in_sync_window > 0}
         />
       </div>
-
-      <p className="text-sm text-gray-600">
-        {t("adminLiveScoreInWindow", { count: status.matches.in_sync_window })}
-      </p>
 
       {status.issues.length > 0 && (
         <ul className="space-y-1 rounded-lg bg-amber-50 p-3 text-sm text-amber-950">
           {status.issues.map((issue) => (
-            <li key={issue}>• {t(ISSUE_KEYS[issue] ?? "adminLiveScoreIssueMissingConfig")}</li>
+            <li key={issue}>• {t(ISSUE_KEYS[issue] ?? "adminLiveScoreIssueOutsideWindow")}</li>
           ))}
         </ul>
       )}
@@ -193,7 +175,7 @@ function TournamentStatusCard({
       )}
 
       <div className="flex flex-wrap gap-2">
-        {onSync && status.live_score_provider !== "manual" && (
+        {onSync && status.live_score_provider === "scraping" && (
           <button
             type="button"
             className="btn-primary text-sm"
@@ -215,24 +197,6 @@ function TournamentStatusCard({
           {t("adminEditDetails")}
         </Link>
       </div>
-
-      {status.unmapped_matches && status.unmapped_matches.length > 0 && (
-        <div>
-          <h4 className="mb-2 text-sm font-semibold text-gray-800">
-            {t("adminLiveScoreUnmappedList")}
-          </h4>
-          <ul className="max-h-48 space-y-1 overflow-y-auto text-sm text-gray-700">
-            {status.unmapped_matches.map((match) => (
-              <li key={match.id}>
-                {match.home_team} vs {match.away_team}
-                {match.kickoff_time
-                  ? ` · ${new Date(match.kickoff_time).toLocaleString()}`
-                  : null}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
     </div>
   );
 }

@@ -3,8 +3,7 @@ Live score ingestion for tournaments.
 
 Providers:
 - manual: admin enters live/final scores in the dashboard.
-- api_football: poll API-Football (api-sports.io) — set API_FOOTBALL_KEY in env.
-- sportmonks: poll SportMonks — set SPORTMONKS_API_KEY in env.
+- scraping: poll a public scores page (no API key).
 
 Prediction points are only awarded when a match moves to FINISHED (see scoring.py).
 """
@@ -12,7 +11,6 @@ Prediction points are only awarded when a match moves to FINISHED (see scoring.p
 from __future__ import annotations
 
 import logging
-import os
 from datetime import date, datetime, timedelta
 from typing import Any
 
@@ -21,33 +19,17 @@ from django.db import transaction
 from django.utils import timezone
 
 from tournaments.models import Match, Tournament
-from tournaments.services.api_football_client import fetch_fixtures_by_ids
 from tournaments.services.datetime_utils import ensure_aware_datetime
+from tournaments.services.score_scraper import (
+    fetch_scraped_scores,
+    find_scraped_score_for_match,
+    resolve_scores_url,
+)
 
 logger = logging.getLogger(__name__)
 
-API_FOOTBALL_BASE = "https://v3.football.api-sports.io"
-SPORTMONKS_BASE = "https://api.sportmonks.com/v3/football"
-
 SYNC_WINDOW_BEFORE = timedelta(minutes=15)
 SYNC_WINDOW_AFTER = timedelta(hours=3)
-
-# API-Football short status → our Match.Status
-API_FOOTBALL_STATUS = {
-    "NS": Match.Status.SCHEDULED,
-    "TBD": Match.Status.SCHEDULED,
-    "PST": Match.Status.SCHEDULED,
-    "1H": Match.Status.LIVE,
-    "HT": Match.Status.LIVE,
-    "2H": Match.Status.LIVE,
-    "ET": Match.Status.LIVE,
-    "BT": Match.Status.LIVE,
-    "P": Match.Status.LIVE,
-    "LIVE": Match.Status.LIVE,
-    "FT": Match.Status.FINISHED,
-    "AET": Match.Status.FINISHED,
-    "PEN": Match.Status.FINISHED,
-}
 
 
 def parse_sync_bound(raw: str) -> date | None:
@@ -64,6 +46,8 @@ def parse_sync_bound(raw: str) -> date | None:
 
 def is_sync_window_open() -> bool:
     """Optional date gate via LIVE_SCORE_SYNC_START / LIVE_SCORE_SYNC_END env."""
+    import os
+
     start = parse_sync_bound(os.environ.get("LIVE_SCORE_SYNC_START", ""))
     end = parse_sync_bound(os.environ.get("LIVE_SCORE_SYNC_END", ""))
     if not start and not end:
@@ -118,14 +102,11 @@ def sync_all_configured_tournaments() -> list[dict[str, Any]]:
 
 
 def sync_tournament_live_scores(tournament: Tournament) -> dict[str, Any]:
-    provider = tournament.live_score_provider
-    if provider == Tournament.LiveScoreProvider.MANUAL:
+    if tournament.live_score_provider == Tournament.LiveScoreProvider.MANUAL:
         return {"updated": 0, "skipped": 0}
-    if provider == Tournament.LiveScoreProvider.API_FOOTBALL:
-        return _sync_api_football(tournament)
-    if provider == Tournament.LiveScoreProvider.SPORTMONKS:
-        return _sync_sportmonks(tournament)
-    return {"updated": 0, "skipped": 0}
+    if tournament.live_score_provider == Tournament.LiveScoreProvider.SCRAPING:
+        return _sync_scraping(tournament)
+    return {"updated": 0, "skipped": 0, "error": "unknown_provider"}
 
 
 def _match_in_sync_window(match: Match, now: datetime) -> bool:
@@ -139,124 +120,59 @@ def _match_in_sync_window(match: Match, now: datetime) -> bool:
     return start <= now <= end
 
 
-def _sync_api_football(tournament: Tournament) -> dict[str, Any]:
-    api_key = os.environ.get("API_FOOTBALL_KEY", "").strip()
-    if not api_key:
-        logger.warning("API_FOOTBALL_KEY is not set; skipping tournament %s", tournament.id)
-        return {"updated": 0, "skipped": 0, "error": "missing_api_key"}
-
+def _sync_scraping(tournament: Tournament) -> dict[str, Any]:
     config = tournament.live_score_config or {}
-    league_id = config.get("league_id")
-    season = config.get("season")
-    if not league_id or not season:
-        logger.warning(
-            "Tournament %s missing live_score_config.league_id/season", tournament.id
-        )
-        return {"updated": 0, "skipped": 0, "error": "missing_config"}
-
+    scores_url = resolve_scores_url(config)
     now = timezone.now()
+
     try:
         matches = list(
             Match.objects.filter(tournament=tournament)
             .exclude(status=Match.Status.FINISHED)
             .select_related("home_team", "away_team")
         )
-        fixture_ids: list[str] = []
-        matches_by_external_id: dict[str, Match] = {}
-        skipped = 0
+        active_matches = [match for match in matches if _match_in_sync_window(match, now)]
+        skipped = len(matches) - len(active_matches)
+        if not active_matches:
+            return {"updated": 0, "skipped": skipped}
 
-        for match in matches:
-            ext_id = (match.external_fixture_id or "").strip()
-            if not ext_id:
-                skipped += 1
-                continue
-            if not _match_in_sync_window(match, now):
-                skipped += 1
-                continue
-            if ext_id not in matches_by_external_id:
-                fixture_ids.append(ext_id)
-                matches_by_external_id[ext_id] = match
-
-        if not fixture_ids:
-            return {"updated": 0, "skipped": skipped, "api_requests": 0}
-
-        payloads, api_requests = fetch_fixtures_by_ids(fixture_ids)
+        scraped_rows = fetch_scraped_scores(scores_url)
     except (requests.RequestException, ValueError) as exc:
-        logger.exception("API-Football request failed: %s", exc)
-        return {"updated": 0, "skipped": 0, "error": "request_failed"}
-
-    by_external_id = {
-        str(item["fixture"]["id"]): item
-        for item in payloads
-        if item.get("fixture", {}).get("id")
-    }
+        logger.exception("Score scrape failed for tournament %s: %s", tournament.id, exc)
+        return {"updated": 0, "skipped": 0, "error": "scrape_failed"}
 
     updated = 0
-
     with transaction.atomic():
-        for ext_id, match in matches_by_external_id.items():
-            payload = by_external_id.get(ext_id)
-            if not payload:
+        for match in active_matches:
+            scraped = find_scraped_score_for_match(match, scraped_rows)
+            if not scraped:
                 skipped += 1
                 continue
-            if _apply_api_football_payload(match, payload):
-                updated += 1
+            if scraped.home_score is None or scraped.away_score is None:
+                if scraped.status == Match.Status.SCHEDULED:
+                    skipped += 1
+                    continue
+                home_score = scraped.home_score if scraped.home_score is not None else 0
+                away_score = scraped.away_score if scraped.away_score is not None else 0
             else:
-                skipped += 1
+                home_score = scraped.home_score
+                away_score = scraped.away_score
 
-    return {"updated": updated, "skipped": skipped, "api_requests": api_requests}
+            winner_team_id = None
+            if scraped.status == Match.Status.FINISHED and match.is_knockout:
+                if home_score > away_score:
+                    winner_team_id = match.home_team_id
+                elif away_score > home_score:
+                    winner_team_id = match.away_team_id
 
+            apply_live_match_update(
+                match,
+                status=scraped.status,
+                home_score=home_score,
+                away_score=away_score,
+                winner_team_id=winner_team_id,
+                finalize=scraped.status == Match.Status.FINISHED,
+            )
+            updated += 1
 
-def _apply_api_football_payload(match: Match, payload: dict[str, Any]) -> bool:
-    fixture = payload.get("fixture") or {}
-    goals = payload.get("goals") or {}
-    teams = payload.get("teams") or {}
-    short = (fixture.get("status") or {}).get("short") or "NS"
-    status = API_FOOTBALL_STATUS.get(short, Match.Status.SCHEDULED)
-
-    home_score = goals.get("home")
-    away_score = goals.get("away")
-    if home_score is None or away_score is None:
-        if status != Match.Status.SCHEDULED:
-            home_score = home_score if home_score is not None else 0
-            away_score = away_score if away_score is not None else 0
-        else:
-            return False
-
-    winner_team_id = None
-    if status == Match.Status.FINISHED and match.is_knockout and home_score == away_score:
-        winner_side = (teams.get("home") or {}).get("winner"), (teams.get("away") or {}).get(
-            "winner"
-        )
-        if winner_side[0]:
-            winner_team_id = match.home_team_id
-        elif winner_side[1]:
-            winner_team_id = match.away_team_id
-
-    apply_live_match_update(
-        match,
-        status=status,
-        home_score=int(home_score),
-        away_score=int(away_score),
-        winner_team_id=winner_team_id,
-        finalize=status == Match.Status.FINISHED,
-    )
-    return True
-
-
-def _sync_sportmonks(tournament: Tournament) -> dict[str, Any]:
-    api_key = os.environ.get("SPORTMONKS_API_KEY", "").strip()
-    if not api_key:
-        logger.warning("SPORTMONKS_API_KEY is not set; skipping tournament %s", tournament.id)
-        return {"updated": 0, "skipped": 0, "error": "missing_api_key"}
-
-    config = tournament.live_score_config or {}
-    season_id = config.get("season_id")
-    if not season_id:
-        logger.warning("Tournament %s missing live_score_config.season_id", tournament.id)
-        return {"updated": 0, "skipped": 0, "error": "missing_config"}
-
-    logger.info(
-        "SportMonks sync stub for tournament %s (season_id=%s)", tournament.id, season_id
-    )
-    return {"updated": 0, "skipped": 0, "error": "sportmonks_not_implemented"}
+    return {"updated": updated, "skipped": skipped, "scraped_matches": len(scraped_rows)}

@@ -335,13 +335,13 @@ export interface NotificationListResponse {
 }
 
 export interface LiveScoreEnvironment {
-  api_football_key_configured: boolean;
-  sportmonks_key_configured: boolean;
   cron_secret_configured: boolean;
   sync_window_open: boolean;
   sync_window_start: string | null;
   sync_window_end: string | null;
   cron_schedule: string;
+  default_scrape_url: string;
+  scrape_url_configured: boolean;
 }
 
 export interface LiveScoreMatchStats {
@@ -349,17 +349,7 @@ export interface LiveScoreMatchStats {
   scheduled: number;
   live: number;
   finished: number;
-  mapped_fixtures: number;
-  unmapped_active: number;
   in_sync_window: number;
-}
-
-export interface LiveScoreUnmappedMatch {
-  id: number;
-  home_team: string;
-  away_team: string;
-  kickoff_time: string | null;
-  status: string;
 }
 
 export interface TournamentLiveScoreStatus {
@@ -369,12 +359,12 @@ export interface TournamentLiveScoreStatus {
   year: number;
   is_active: boolean;
   is_archived: boolean;
-  live_score_provider: "manual" | "api_football" | "sportmonks";
-  live_score_config: { league_id?: number; season?: number; season_id?: number };
+  live_score_provider: "manual" | "scraping";
+  live_score_config: { scores_url?: string };
+  scores_url?: string | null;
   health: "ready" | "warning" | "error" | "manual";
   issues: string[];
   matches: LiveScoreMatchStats;
-  unmapped_matches?: LiveScoreUnmappedMatch[];
 }
 
 export interface LiveScoreOverview {
@@ -419,8 +409,8 @@ export interface Tournament {
   qualifiers_per_group?: number;
   is_active?: boolean;
   is_archived?: boolean;
-  live_score_provider?: "manual" | "api_football" | "sportmonks";
-  live_score_config?: { league_id?: number; season?: number; season_id?: number };
+  live_score_provider?: "manual" | "scraping";
+  live_score_config?: { scores_url?: string };
   stage_count?: number;
   match_count?: number;
   is_subscribed?: boolean;

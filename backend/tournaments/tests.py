@@ -582,9 +582,8 @@ class StandingRuleSetApiTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data["competition_type"], "world_cup")
         self.assertEqual(response.data["standing_rules"], "fifa_world_cup")
-        self.assertEqual(response.data["live_score_provider"], "api_football")
-        self.assertEqual(response.data["live_score_config"]["league_id"], 1)
-        self.assertEqual(response.data["live_score_config"]["season"], 2034)
+        self.assertEqual(response.data["live_score_provider"], "scraping")
+        self.assertEqual(response.data["live_score_config"], {})
 
 
 class LiveScoreStatusTests(TestCase):
@@ -596,15 +595,15 @@ class LiveScoreStatusTests(TestCase):
             password="pass12345",
             is_staff=True,
         )
-        self.home = Team.objects.create(name="Egypt", code="EGS")
-        self.away = Team.objects.create(name="Morocco", code="MRS")
+        self.home = Team.objects.create(name="Egypt", code="EGY")
+        self.away = Team.objects.create(name="Morocco", code="MAR")
         self.tournament = Tournament.objects.create(
             name="Status Cup",
             year=2026,
             start_date=timezone.now().date(),
             end_date=timezone.now().date() + timedelta(days=30),
-            live_score_provider=Tournament.LiveScoreProvider.API_FOOTBALL,
-            live_score_config={"league_id": 1, "season": 2026},
+            live_score_provider=Tournament.LiveScoreProvider.SCRAPING,
+            live_score_config={},
         )
         self.stage = Stage.objects.create(
             tournament=self.tournament,
@@ -619,16 +618,7 @@ class LiveScoreStatusTests(TestCase):
             away_team=self.away,
             kickoff_time=timezone.now(),
             status=Match.Status.SCHEDULED,
-            external_fixture_id="12345",
         )
-        self.season_access_patcher = patch(
-            "tournaments.services.api_football_client.check_season_access",
-            return_value={"ok": True, "message": None},
-        )
-        self.season_access_patcher.start()
-
-    def tearDown(self):
-        self.season_access_patcher.stop()
 
     def test_overview_requires_staff(self):
         response = self.client.get(
@@ -636,18 +626,17 @@ class LiveScoreStatusTests(TestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
-    @patch.dict(os.environ, {"API_FOOTBALL_KEY": "test-key"}, clear=False)
     def test_overview_returns_environment_and_tournament_status(self):
         self.client.force_authenticate(user=self.admin)
         response = self.client.get(
             "/api/tournaments/admin/tournaments/live-score-overview"
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertTrue(response.data["environment"]["api_football_key_configured"])
+        self.assertTrue(response.data["environment"]["cron_secret_configured"] is False)
+        self.assertTrue(response.data["environment"]["scrape_url_configured"])
         self.assertEqual(response.data["summary"]["tournament_count"], 1)
         tournament = response.data["tournaments"][0]
         self.assertEqual(tournament["tournament_id"], self.tournament.id)
-        self.assertEqual(tournament["matches"]["mapped_fixtures"], 1)
         self.assertEqual(tournament["health"], "ready")
 
     def test_overview_tolerates_naive_kickoff_times(self):
@@ -660,18 +649,16 @@ class LiveScoreStatusTests(TestCase):
             away_team=self.away,
             kickoff_time=datetime(2026, 6, 12, 18, 0, 0),
             status=Match.Status.SCHEDULED,
-            external_fixture_id="",
         )
         self.client.force_authenticate(user=self.admin)
-        with patch.dict(os.environ, {"API_FOOTBALL_KEY": "test-key"}, clear=False):
-            response = self.client.get(
-                "/api/tournaments/admin/tournaments/live-score-overview"
-            )
+        response = self.client.get(
+            "/api/tournaments/admin/tournaments/live-score-overview"
+        )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     @patch.dict(
         os.environ,
-        {"LIVE_SCORE_SYNC_START": "not-a-date", "API_FOOTBALL_KEY": "test-key"},
+        {"LIVE_SCORE_SYNC_START": "not-a-date"},
         clear=False,
     )
     def test_overview_tolerates_invalid_sync_window_env(self):
@@ -682,17 +669,6 @@ class LiveScoreStatusTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(response.data["environment"]["sync_window_open"])
 
-    @patch.dict(os.environ, {"API_FOOTBALL_KEY": ""}, clear=False)
-    def test_detail_flags_missing_api_key(self):
-        self.client.force_authenticate(user=self.admin)
-        response = self.client.get(
-            f"/api/tournaments/admin/tournaments/{self.tournament.id}/live-score-status"
-        )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn("missing_api_key", response.data["tournament"]["issues"])
-        self.assertEqual(response.data["tournament"]["health"], "error")
-
-    @patch.dict(os.environ, {"API_FOOTBALL_KEY": "test-key"}, clear=False)
     def test_overview_tolerates_non_dict_live_score_config(self):
         self.tournament.live_score_config = "not-a-config"
         self.tournament.save(update_fields=["live_score_config"])
@@ -703,61 +679,12 @@ class LiveScoreStatusTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         tournament = response.data["tournaments"][0]
         self.assertEqual(tournament["live_score_config"], {})
-        self.assertIn("missing_config", tournament["issues"])
 
-    @patch.dict(os.environ, {"API_FOOTBALL_KEY": "test-key"}, clear=False)
-    def test_detail_flags_season_not_on_plan_instead_of_unmapped(self):
-        Match.objects.create(
-            tournament=self.tournament,
-            stage=self.stage,
-            home_team=self.home,
-            away_team=self.away,
-            kickoff_time=timezone.now() + timedelta(hours=1),
-            status=Match.Status.SCHEDULED,
-            external_fixture_id="",
-        )
-        with patch(
-            "tournaments.services.api_football_client.check_season_access",
-            return_value={"ok": False, "message": "Free plans do not have access to this season"},
-        ):
-            self.client.force_authenticate(user=self.admin)
-            response = self.client.get(
-                f"/api/tournaments/admin/tournaments/{self.tournament.id}/live-score-status"
-            )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        issues = response.data["tournament"]["issues"]
-        self.assertIn("api_season_not_on_plan", issues)
-        self.assertNotIn("unmapped_fixtures", issues)
-        self.assertEqual(response.data["tournament"]["health"], "error")
-
-    @patch.dict(os.environ, {"API_FOOTBALL_KEY": "test-key"}, clear=False)
     def test_kickoff_isoformat_handles_none(self):
         from tournaments.services.live_score_status import kickoff_isoformat
 
         self.assertIsNone(kickoff_isoformat(None))
 
-    @patch.dict(os.environ, {"API_FOOTBALL_KEY": "test-key"}, clear=False)
-    def test_detailed_status_naive_kickoff_on_unmapped_match(self):
-        from datetime import datetime
-
-        Match.objects.create(
-            tournament=self.tournament,
-            stage=self.stage,
-            home_team=self.home,
-            away_team=self.away,
-            kickoff_time=datetime(2026, 6, 12, 18, 0, 0),
-            status=Match.Status.SCHEDULED,
-            external_fixture_id="",
-        )
-        self.client.force_authenticate(user=self.admin)
-        response = self.client.get(
-            f"/api/tournaments/admin/tournaments/{self.tournament.id}/live-score-status"
-        )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        unmapped = response.data["tournament"]["unmapped_matches"]
-        self.assertTrue(any(row["kickoff_time"] for row in unmapped))
-
-    @patch.dict(os.environ, {"API_FOOTBALL_KEY": "test-key"}, clear=False)
     def test_overview_isolates_per_tournament_failure(self):
         Tournament.objects.create(
             name="Bad Cup",
@@ -791,61 +718,84 @@ class LiveScoreStatusTests(TestCase):
         self.assertIn("status_build_failed", bad_row["issues"])
 
 
-class ApiFootballClientTests(TestCase):
-    def setUp(self):
-        from tournaments.services import api_football_client as client
-
-        client._season_access_cache.clear()
-
-    @patch.dict(os.environ, {"API_FOOTBALL_KEY": "test-key"}, clear=False)
-    @patch("tournaments.services.api_football_client.requests.get")
-    def test_check_season_access_returns_ok_when_no_errors(self, mock_get):
-        from tournaments.services.api_football_client import check_season_access
+class ScoreScraperTests(TestCase):
+    @patch("tournaments.services.score_scraper.requests.get")
+    def test_fetch_scraped_scores_parses_json(self, mock_get):
+        from tournaments.services.score_scraper import fetch_scraped_scores
 
         mock_response = Mock()
         mock_response.raise_for_status = Mock()
-        mock_response.json.return_value = {"response": [], "errors": {}}
-        mock_get.return_value = mock_response
-
-        result = check_season_access(1, 2026)
-
-        self.assertTrue(result["ok"])
-        self.assertIsNone(result["message"])
-        mock_get.assert_called_once()
-
-    @patch.dict(os.environ, {"API_FOOTBALL_KEY": "test-key"}, clear=False)
-    @patch("tournaments.services.api_football_client.requests.get")
-    def test_check_season_access_returns_plan_error(self, mock_get):
-        from tournaments.services.api_football_client import check_season_access
-
-        mock_response = Mock()
-        mock_response.raise_for_status = Mock()
+        mock_response.headers = {"Content-Type": "application/json"}
         mock_response.json.return_value = {
-            "errors": {"plan": "Free plans do not have access to this season"},
+            "results": [
+                {
+                    "homeTeam": {"name": "Egypt", "countryCode": "EGY"},
+                    "awayTeam": {"name": "Morocco", "countryCode": "MAR"},
+                    "homeTeamScore": 2,
+                    "awayTeamScore": 1,
+                    "matchStatus": "finished",
+                }
+            ]
         }
         mock_get.return_value = mock_response
 
-        result = check_season_access(1, 2026)
+        rows = fetch_scraped_scores("https://example.com/scores.json")
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0].home_code, "EGY")
+        self.assertEqual(rows[0].away_code, "MAR")
+        self.assertEqual(rows[0].home_score, 2)
+        self.assertEqual(rows[0].status, Match.Status.FINISHED)
 
-        self.assertFalse(result["ok"])
-        self.assertIn("Free plans", result["message"])
+    @patch("tournaments.services.score_scraper.requests.get")
+    def test_find_scraped_score_for_match(self, mock_get):
+        from tournaments.services.score_scraper import (
+            fetch_scraped_scores,
+            find_scraped_score_for_match,
+        )
 
-    @patch.dict(os.environ, {"API_FOOTBALL_KEY": "test-key"}, clear=False)
-    @patch("tournaments.services.api_football_client.requests.get")
-    def test_check_season_access_uses_cache(self, mock_get):
-        from tournaments.services.api_football_client import check_season_access
+        home = Team.objects.create(name="Egypt", code="EGY")
+        away = Team.objects.create(name="Morocco", code="MAR")
+        tournament = Tournament.objects.create(
+            name="Cup",
+            year=2026,
+            start_date=timezone.now().date(),
+            end_date=timezone.now().date() + timedelta(days=30),
+        )
+        stage = Stage.objects.create(
+            tournament=tournament,
+            name="MD1",
+            order=1,
+            stage_type=Stage.StageType.GROUP,
+        )
+        match = Match.objects.create(
+            tournament=tournament,
+            stage=stage,
+            home_team=home,
+            away_team=away,
+            kickoff_time=timezone.now(),
+            status=Match.Status.SCHEDULED,
+        )
 
         mock_response = Mock()
         mock_response.raise_for_status = Mock()
-        mock_response.json.return_value = {"response": [], "errors": {}}
+        mock_response.headers = {"Content-Type": "application/json"}
+        mock_response.json.return_value = {
+            "results": [
+                {
+                    "homeTeam": {"name": "Egypt", "countryCode": "EGY"},
+                    "awayTeam": {"name": "Morocco", "countryCode": "MAR"},
+                    "homeTeamScore": 1,
+                    "awayTeamScore": 0,
+                    "matchStatus": "live",
+                }
+            ]
+        }
         mock_get.return_value = mock_response
 
-        first = check_season_access(1, 2026)
-        second = check_season_access(1, 2026)
-
-        self.assertTrue(first["ok"])
-        self.assertEqual(first, second)
-        mock_get.assert_called_once()
+        scraped = fetch_scraped_scores("https://example.com/scores.json")
+        found = find_scraped_score_for_match(match, scraped)
+        self.assertIsNotNone(found)
+        self.assertEqual(found.home_score, 1)
 
 
 class LiveScoreSyncTests(TestCase):
@@ -858,8 +808,8 @@ class LiveScoreSyncTests(TestCase):
             year=2026,
             start_date=timezone.now().date(),
             end_date=timezone.now().date() + timedelta(days=30),
-            live_score_provider=Tournament.LiveScoreProvider.API_FOOTBALL,
-            live_score_config={"league_id": 1, "season": 2026},
+            live_score_provider=Tournament.LiveScoreProvider.SCRAPING,
+            live_score_config={},
         )
         self.stage = Stage.objects.create(
             tournament=self.tournament,
@@ -877,7 +827,6 @@ class LiveScoreSyncTests(TestCase):
             away_team=self.away,
             kickoff_time=timezone.now(),
             status=Match.Status.SCHEDULED,
-            external_fixture_id="999001",
         )
         self.user = User.objects.create_user(
             username="predictor",
@@ -891,12 +840,19 @@ class LiveScoreSyncTests(TestCase):
             predicted_away_score=1,
         )
 
-    def _fixture_payload(self, *, short_status: str, home: int, away: int) -> dict:
-        return {
-            "fixture": {"id": 999001, "status": {"short": short_status}},
-            "goals": {"home": home, "away": away},
-            "teams": {"home": {"winner": None}, "away": {"winner": None}},
-        }
+    def _scraped_row(self, *, status: str, home: int, away: int):
+        from tournaments.services.score_scraper import ScrapedScore
+
+        return ScrapedScore(
+            home_code="EGY",
+            away_code="MAR",
+            home_name="Egypt",
+            away_name="Morocco",
+            home_score=home,
+            away_score=away,
+            status=status,
+            match_date=None,
+        )
 
     @override_settings()
     def test_cron_endpoint_rejects_missing_secret(self):
@@ -909,26 +865,13 @@ class LiveScoreSyncTests(TestCase):
         "tournaments.services.live_scores.sync_all_configured_tournaments",
         return_value=[{"tournament_id": 1, "updated": 0, "skipped": 0}],
     )
-    def test_cron_endpoint_accepts_bearer_secret(self, _mock_sync):
+    def test_cron_endpoint_accepts_header_secret(self, _mock_sync):
         response = self.client.get(
             "/api/cron/sync-live-scores",
             HTTP_X_CRON_SECRET="test-cron-secret",
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn("tournaments", response.data)
-
-    @patch.dict(os.environ, {"CRON_SECRET": "test-cron-secret"})
-    @patch(
-        "tournaments.services.wc2026_fixture_mapping.map_wc2026_group_fixtures",
-        return_value={"ok": True, "mapped": 72, "unmatched": 0, "ambiguous": 0},
-    )
-    def test_cron_map_wc2026_fixtures(self, _mock_map):
-        response = self.client.post(
-            "/api/cron/map-wc2026-fixtures",
-            HTTP_AUTHORIZATION="Bearer test-cron-secret",
-        )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertTrue(response.data["ok"])
 
     @patch.dict(os.environ, {"CRON_SECRET": "test-cron-secret"})
     def test_cron_sync_accepts_bearer_secret(self):
@@ -965,22 +908,21 @@ class LiveScoreSyncTests(TestCase):
         self.assertEqual(self.match.status, Match.Status.FINISHED)
         self.assertGreater(self.prediction.points_awarded, 0)
 
-    @patch.dict(os.environ, {"API_FOOTBALL_KEY": "test-key"}, clear=False)
-    @patch("tournaments.services.live_scores.fetch_fixtures_by_ids")
-    def test_api_football_sync_live_does_not_award_points(self, mock_fetch):
-        mock_fetch.return_value = ([self._fixture_payload(short_status="2H", home=1, away=0)], 1)
+    @patch("tournaments.services.live_scores.fetch_scraped_scores")
+    def test_scraping_sync_live_does_not_award_points(self, mock_fetch):
+        mock_fetch.return_value = [self._scraped_row(status=Match.Status.LIVE, home=1, away=0)]
         result = sync_tournament_live_scores(self.tournament)
         self.assertEqual(result["updated"], 1)
-        self.assertEqual(result["api_requests"], 1)
         self.prediction.refresh_from_db()
         self.match.refresh_from_db()
         self.assertEqual(self.match.status, Match.Status.LIVE)
         self.assertEqual(self.prediction.points_awarded, 0)
 
-    @patch.dict(os.environ, {"API_FOOTBALL_KEY": "test-key"}, clear=False)
-    @patch("tournaments.services.live_scores.fetch_fixtures_by_ids")
-    def test_api_football_sync_finished_awards_points(self, mock_fetch):
-        mock_fetch.return_value = ([self._fixture_payload(short_status="FT", home=2, away=1)], 1)
+    @patch("tournaments.services.live_scores.fetch_scraped_scores")
+    def test_scraping_sync_finished_awards_points(self, mock_fetch):
+        mock_fetch.return_value = [
+            self._scraped_row(status=Match.Status.FINISHED, home=2, away=1)
+        ]
         result = sync_tournament_live_scores(self.tournament)
         self.assertEqual(result["updated"], 1)
         self.prediction.refresh_from_db()
@@ -988,18 +930,15 @@ class LiveScoreSyncTests(TestCase):
         self.assertEqual(self.match.status, Match.Status.FINISHED)
         self.assertGreater(self.prediction.points_awarded, 0)
 
-    @patch.dict(os.environ, {"API_FOOTBALL_KEY": "test-key"}, clear=False)
-    @patch("tournaments.services.live_scores.fetch_fixtures_by_ids")
-    def test_api_football_sync_skips_api_outside_match_window(self, mock_fetch):
+    @patch("tournaments.services.live_scores.fetch_scraped_scores")
+    def test_scraping_sync_skips_outside_match_window(self, mock_fetch):
         self.match.kickoff_time = timezone.now() + timedelta(days=2)
         self.match.save(update_fields=["kickoff_time"])
         result = sync_tournament_live_scores(self.tournament)
         mock_fetch.assert_not_called()
-        self.assertEqual(result["api_requests"], 0)
         self.assertEqual(result["updated"], 0)
 
-    @patch.dict(os.environ, {"API_FOOTBALL_KEY": "test-key"}, clear=False)
-    @patch("tournaments.services.live_scores.fetch_fixtures_by_ids", return_value=([], 0))
+    @patch("tournaments.services.live_scores.fetch_scraped_scores", return_value=[])
     def test_admin_sync_tolerates_naive_kickoff(self, _mock_fetch):
         from datetime import datetime
 

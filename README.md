@@ -286,27 +286,22 @@ VERCEL_TOKEN=<token> node scripts/sync-vercel-ci-secret.mjs
 Pull requests run tests only — production deploys run from the **Deploy** workflow after CI passes on `main`.
 You can also trigger deploy manually from **Actions → Deploy → Run workflow**.
 
-### World Cup live score sync (API-Football)
+### World Cup live score sync (web scraping)
 
-**Account:** Register free at [dashboard.api-football.com](https://dashboard.api-football.com/) (no credit card). Copy your API key into `API_FOOTBALL_KEY`. The free plan allows **100 requests/day** across all endpoints — see [API-Football documentation](https://www.api-football.com/documentation-v3).
+Live scores can be **manual** (admin enters results) or **scraping** (automatic from a public scores page). No API keys required.
 
 Add these environment variables on the **alhabeed-api** Vercel project:
 
 | Variable | Purpose |
 |----------|---------|
-| `API_FOOTBALL_KEY` | Key from your API-Football dashboard |
 | `CRON_SECRET` | Random secret; cron jobs send `Authorization: Bearer …` |
+| `LIVE_SCORE_SCRAPE_URL` | Optional override for the default FIFA scores calendar URL |
 | `LIVE_SCORE_SYNC_START` | Optional; ISO date e.g. `2026-06-11` |
 | `LIVE_SCORE_SYNC_END` | Optional; ISO date e.g. `2026-07-19` (full tournament) |
 
-**API usage:** Live sync fetches only fixtures in the active match window (15 min before kickoff → 3 hours after), batched up to 20 IDs per request. When no matches are in window, **zero** API calls are made. Cron runs every **15 minutes** (≤96 runs/day; typically 1 request per run during live play). One-time fixture mapping uses a few paginated season requests — run once via **Setup Live Scores**, not on every poll.
+**How it works:** The sync job runs every **15 minutes** via GitHub Actions. For each tournament set to **Web scraping**, it fetches the configured scores page and matches results to your fixtures by team name/code (15 min before kickoff → 3 hours after). **Match Reminders** runs every 5 minutes (push only).
 
-After deploy:
-
-1. Run `node scripts/setup-live-scores.mjs` (sets `CRON_SECRET` on GitHub; with `VERCEL_TOKEN` also syncs Vercel and maps fixtures).
-2. Or use **Actions → Setup Live Scores → Run workflow** (uses `VERCEL_TOKEN` + `CRON_SECRET` from GitHub secrets, syncs Vercel env, redeploys API, maps fixtures).
-3. **Live Score Sync** workflow calls `/api/cron/sync-live-scores` every 15 minutes. **Match Reminders** runs every 5 minutes (push only; no API-Football usage).
-4. Admin can still use **Sync live scores now** on the tournaments page.
+Per-tournament optional `scores_url` in admin overrides the server default. Admin can also use **Sync live scores now** on the tournaments page.
 
 Live scores update match `status` and display scores; prediction points are awarded only when a match reaches `finished`.
 

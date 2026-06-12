@@ -40,9 +40,8 @@ const emptyForm = {
   qualifiers_per_group: 2,
   is_active: true,
   is_archived: false,
-  live_score_provider: "api_football",
-  live_score_league_id: "1",
-  live_score_season: String(new Date().getFullYear()),
+  live_score_provider: "scraping",
+  live_score_scores_url: "",
 };
 
 function teamEligibilityForCompetitionType(type: string) {
@@ -88,9 +87,8 @@ function applyCompetitionTypeDefaults(
     standing_rule_set_id: ruleset ? String(ruleset.id) : "",
     standing_rules: ruleset?.engine ?? current.standing_rules,
     qualifiers_per_group: ruleset?.qualifiers_per_group ?? current.qualifiers_per_group,
-    live_score_provider: isWorldCup ? "api_football" : "manual",
-    live_score_league_id: isWorldCup ? "1" : "",
-    live_score_season: isWorldCup ? String(year) : "",
+    live_score_provider: isWorldCup ? "scraping" : "manual",
+    live_score_scores_url: "",
   };
 }
 
@@ -126,12 +124,9 @@ export default function AdminTournamentsPage() {
   }, [load]);
 
   function tournamentPayload() {
-    const config: Record<string, number> = {};
-    if (form.live_score_league_id) {
-      config.league_id = Number(form.live_score_league_id);
-    }
-    if (form.live_score_season) {
-      config.season = Number(form.live_score_season);
+    const config: Record<string, string> = {};
+    if (form.live_score_provider === "scraping" && form.live_score_scores_url.trim()) {
+      config.scores_url = form.live_score_scores_url.trim();
     }
     const selectedRuleSet = ruleSets.find(
       (rules) => String(rules.id) === String(form.standing_rule_set_id)
@@ -234,12 +229,7 @@ export default function AdminTournamentsPage() {
       is_active: tournament.is_active ?? true,
       is_archived: tournament.is_archived ?? false,
       live_score_provider: tournament.live_score_provider || "manual",
-      live_score_league_id: tournament.live_score_config?.league_id
-        ? String(tournament.live_score_config.league_id)
-        : "",
-      live_score_season: tournament.live_score_config?.season
-        ? String(tournament.live_score_config.season)
-        : "",
+      live_score_scores_url: tournament.live_score_config?.scores_url || "",
     });
   }
 
@@ -467,34 +457,21 @@ export default function AdminTournamentsPage() {
               onChange={(e) => setForm({ ...form, live_score_provider: e.target.value })}
             >
               <option value="manual">{t("adminLiveScoreManual")}</option>
-              <option value="api_football">{t("adminLiveScoreApiFootball")}</option>
-              <option value="sportmonks">{t("adminLiveScoreSportmonks")}</option>
+              <option value="scraping">{t("adminLiveScoreScraping")}</option>
             </select>
             <p className="mt-1 text-xs text-gray-500">{t("adminLiveScoreConfigHint")}</p>
           </div>
-          {form.live_score_provider !== "manual" && (
-            <>
-              <div>
-                <label className="mb-1 block text-sm font-medium">{t("adminLiveScoreLeagueId")}</label>
-                <input
-                  className="input"
-                  type="number"
-                  value={form.live_score_league_id}
-                  onChange={(e) => setForm({ ...form, live_score_league_id: e.target.value })}
-                  placeholder="1"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium">{t("adminLiveScoreSeason")}</label>
-                <input
-                  className="input"
-                  type="number"
-                  value={form.live_score_season}
-                  onChange={(e) => setForm({ ...form, live_score_season: e.target.value })}
-                  placeholder="2026"
-                />
-              </div>
-            </>
+          {form.live_score_provider === "scraping" && (
+            <div className="sm:col-span-2">
+              <label className="mb-1 block text-sm font-medium">{t("adminLiveScoreScoresUrl")}</label>
+              <input
+                className="input"
+                type="url"
+                value={form.live_score_scores_url}
+                onChange={(e) => setForm({ ...form, live_score_scores_url: e.target.value })}
+                placeholder="https://..."
+              />
+            </div>
           )}
         </div>
         <div className="flex flex-wrap gap-4">
@@ -582,7 +559,7 @@ export default function AdminTournamentsPage() {
               >
                 {tournament.is_active ? t("adminDeactivate") : t("adminActivate")}
               </button>
-              {tournament.live_score_provider && tournament.live_score_provider !== "manual" && (
+              {tournament.live_score_provider === "scraping" && (
                 <button
                   type="button"
                   className="btn-secondary text-sm"

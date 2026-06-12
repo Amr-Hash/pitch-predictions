@@ -5,7 +5,7 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from accounts.forms import AdminLoginForm
 from predictions.views import DashboardView
 from notifications.views import cron_send_match_reminders
-from tournaments.views import cron_map_wc2026_fixtures, cron_sync_live_scores
+from tournaments.views import cron_sync_live_scores
 
 from .health import health
 
@@ -14,11 +14,6 @@ admin.site.login_form = AdminLoginForm
 urlpatterns = [
     path("api/health", health, name="health"),
     path("api/cron/sync-live-scores", cron_sync_live_scores, name="cron-sync-live-scores"),
-    path(
-        "api/cron/map-wc2026-fixtures",
-        cron_map_wc2026_fixtures,
-        name="cron-map-wc2026-fixtures",
-    ),
     path(
         "api/cron/send-match-reminders",
         cron_send_match_reminders,

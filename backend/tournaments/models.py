@@ -72,8 +72,7 @@ class Tournament(models.Model):
 
     class LiveScoreProvider(models.TextChoices):
         MANUAL = "manual", "Manual (admin only)"
-        API_FOOTBALL = "api_football", "API-Football (api-sports.io)"
-        SPORTMONKS = "sportmonks", "SportMonks"
+        SCRAPING = "scraping", "Web scraping"
 
     name = models.CharField(max_length=200)
     name_ar = models.CharField(max_length=200, blank=True, default="")
@@ -148,7 +147,7 @@ class Tournament(models.Model):
     live_score_config = models.JSONField(
         default=dict,
         blank=True,
-        help_text="Provider settings such as league_id and season (API keys live in server env).",
+        help_text="Provider settings such as scores_url for scraping.",
     )
     created_at = models.DateTimeField(auto_now_add=True)
 

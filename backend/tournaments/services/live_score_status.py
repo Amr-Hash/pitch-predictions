@@ -4,7 +4,7 @@ import logging
 import os
 from typing import Any
 
-from django.db.models import Count, Q
+from django.db.models import Count
 from django.utils import timezone
 
 from tournaments.models import Match, Tournament
@@ -15,12 +15,12 @@ from tournaments.services.live_scores import (
     is_sync_window_open,
     parse_sync_bound,
 )
+from tournaments.services.score_scraper import resolve_scores_url
 
 logger = logging.getLogger(__name__)
 
 
 def safe_live_score_config(config: Any) -> dict[str, Any]:
-    """Return provider config as a dict; tolerate null or malformed JSON values."""
     if isinstance(config, dict):
         return config
     return {}
@@ -37,46 +37,29 @@ def get_global_live_score_environment() -> dict[str, Any]:
     end_raw = os.environ.get("LIVE_SCORE_SYNC_END", "").strip()
     start = parse_sync_bound(start_raw)
     end = parse_sync_bound(end_raw)
+    default_url = resolve_scores_url({})
     return {
-        "api_football_key_configured": bool(os.environ.get("API_FOOTBALL_KEY", "").strip()),
-        "sportmonks_key_configured": bool(os.environ.get("SPORTMONKS_API_KEY", "").strip()),
         "cron_secret_configured": bool(os.environ.get("CRON_SECRET", "").strip()),
         "sync_window_open": is_sync_window_open(),
         "sync_window_start": start.isoformat() if start else (start_raw or None),
         "sync_window_end": end.isoformat() if end else (end_raw or None),
         "cron_schedule": "every_15_minutes",
-        "api_football_free_daily_limit": 100,
+        "default_scrape_url": default_url,
+        "scrape_url_configured": bool(
+            os.environ.get("LIVE_SCORE_SCRAPE_URL", "").strip() or default_url
+        ),
     }
 
 
 def _config_issues(tournament: Tournament) -> list[str]:
-    provider = tournament.live_score_provider
-    if provider == Tournament.LiveScoreProvider.MANUAL:
+    if tournament.live_score_provider == Tournament.LiveScoreProvider.MANUAL:
         return []
 
-    config = safe_live_score_config(tournament.live_score_config)
     issues: list[str] = []
-
-    if provider == Tournament.LiveScoreProvider.API_FOOTBALL:
-        if not os.environ.get("API_FOOTBALL_KEY", "").strip():
-            issues.append("missing_api_key")
-        if not config.get("league_id") or not config.get("season"):
-            issues.append("missing_config")
-        elif os.environ.get("API_FOOTBALL_KEY", "").strip():
-            try:
-                from tournaments.services.api_football_client import check_season_access
-
-                access = check_season_access(int(config["league_id"]), int(config["season"]))
-                if not access.get("ok"):
-                    issues.append("api_season_not_on_plan")
-            except Exception:
-                logger.exception("Could not verify API-Football season access")
-    elif provider == Tournament.LiveScoreProvider.SPORTMONKS:
-        if not os.environ.get("SPORTMONKS_API_KEY", "").strip():
-            issues.append("missing_api_key")
-        if not config.get("season_id"):
-            issues.append("missing_config")
-        issues.append("provider_not_implemented")
+    config = safe_live_score_config(tournament.live_score_config)
+    if tournament.live_score_provider == Tournament.LiveScoreProvider.SCRAPING:
+        if not resolve_scores_url(config):
+            issues.append("missing_scrape_url")
 
     if not is_sync_window_open():
         issues.append("outside_sync_window")
@@ -84,23 +67,13 @@ def _config_issues(tournament: Tournament) -> list[str]:
     return issues
 
 
-def _health_status(tournament: Tournament, issues: list[str], unmapped_non_finished: int) -> str:
+def _health_status(tournament: Tournament, issues: list[str]) -> str:
     if tournament.live_score_provider == Tournament.LiveScoreProvider.MANUAL:
         return "manual"
-    blocking = {
-        issue
-        for issue in issues
-        if issue
-        in {
-            "missing_api_key",
-            "missing_config",
-            "provider_not_implemented",
-            "api_season_not_on_plan",
-        }
-    }
+    blocking = {issue for issue in issues if issue in {"missing_scrape_url"}}
     if blocking:
         return "error"
-    if unmapped_non_finished > 0 or "outside_sync_window" in issues:
+    if "outside_sync_window" in issues:
         return "warning"
     return "ready"
 
@@ -128,8 +101,6 @@ def _failed_tournament_status(tournament: Tournament, exc: Exception) -> dict[st
             "scheduled": 0,
             "live": 0,
             "finished": 0,
-            "mapped_fixtures": 0,
-            "unmapped_active": 0,
             "in_sync_window": 0,
         },
     }
@@ -147,11 +118,6 @@ def get_tournament_live_score_status(
         for row in matches.values("status").annotate(count=Count("id"))
     }
     total_matches = sum(status_counts.values())
-    mapped_matches = matches.exclude(external_fixture_id="").count()
-    unmapped_non_finished = matches.filter(
-        Q(external_fixture_id="") | Q(external_fixture_id__isnull=True),
-        status__in=[Match.Status.SCHEDULED, Match.Status.LIVE],
-    ).count()
 
     sync_window_matches = 0
     for match in matches.exclude(status=Match.Status.FINISHED).iterator():
@@ -167,12 +133,7 @@ def get_tournament_live_score_status(
             sync_window_matches += 1
 
     issues = _config_issues(tournament)
-    if (
-        tournament.live_score_provider != Tournament.LiveScoreProvider.MANUAL
-        and unmapped_non_finished > 0
-        and "api_season_not_on_plan" not in issues
-    ):
-        issues.append("unmapped_fixtures")
+    config = safe_live_score_config(tournament.live_score_config)
 
     payload: dict[str, Any] = {
         "tournament_id": tournament.id,
@@ -182,30 +143,26 @@ def get_tournament_live_score_status(
         "is_active": tournament.is_active,
         "is_archived": tournament.is_archived,
         "live_score_provider": tournament.live_score_provider,
-        "live_score_config": safe_live_score_config(tournament.live_score_config),
-        "health": _health_status(tournament, issues, unmapped_non_finished),
+        "live_score_config": config,
+        "scores_url": resolve_scores_url(config) if config or tournament.live_score_provider == Tournament.LiveScoreProvider.SCRAPING else None,
+        "health": _health_status(tournament, issues),
         "issues": issues,
         "matches": {
             "total": total_matches,
             "scheduled": status_counts.get(Match.Status.SCHEDULED, 0),
             "live": status_counts.get(Match.Status.LIVE, 0),
             "finished": status_counts.get(Match.Status.FINISHED, 0),
-            "mapped_fixtures": mapped_matches,
-            "unmapped_active": unmapped_non_finished,
             "in_sync_window": sync_window_matches,
         },
     }
 
-    if detailed:
-        unmapped = (
-            matches.filter(
-                Q(external_fixture_id="") | Q(external_fixture_id__isnull=True),
-                status__in=[Match.Status.SCHEDULED, Match.Status.LIVE],
-            )
+    if detailed and tournament.live_score_provider == Tournament.LiveScoreProvider.SCRAPING:
+        upcoming = (
+            matches.filter(status__in=[Match.Status.SCHEDULED, Match.Status.LIVE])
             .select_related("home_team", "away_team")
             .order_by("kickoff_time")[:25]
         )
-        payload["unmapped_matches"] = [
+        payload["upcoming_matches"] = [
             {
                 "id": match.id,
                 "home_team": match.home_team.name,
@@ -213,7 +170,7 @@ def get_tournament_live_score_status(
                 "kickoff_time": kickoff_isoformat(match.kickoff_time),
                 "status": match.status,
             }
-            for match in unmapped
+            for match in upcoming
         ]
 
     return payload

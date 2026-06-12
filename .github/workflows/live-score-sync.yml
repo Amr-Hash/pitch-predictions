@@ -1,9 +1,7 @@
 name: Live Score Sync
 
-# Free API-Football plan: 100 requests/day. Sync uses batched fixture IDs only
-# during match windows (0 API calls when no matches are active). Poll every 15
-# minutes → up to 96 cron runs/day, typically 1 API request per run when live.
-# Set CRON_SECRET in repo secrets (same value as alhabeed-api on Vercel).
+# Scrapes public score pages for tournaments set to "scraping" provider.
+# Runs every 15 minutes during the tournament window. Requires CRON_SECRET in repo secrets.
 on:
   schedule:
     - cron: "*/15 * * * *"

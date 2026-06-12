@@ -28,10 +28,9 @@ def default_live_score_for_competition_type(
     year: int | None = None,
 ) -> tuple[str, dict]:
     if competition_type == StandingRuleSet.CompetitionType.WORLD_CUP:
-        season = year or 2026
         return (
-            Tournament.LiveScoreProvider.API_FOOTBALL,
-            {"league_id": 1, "season": season},
+            Tournament.LiveScoreProvider.SCRAPING,
+            {},
         )
     return Tournament.LiveScoreProvider.MANUAL, {}
 

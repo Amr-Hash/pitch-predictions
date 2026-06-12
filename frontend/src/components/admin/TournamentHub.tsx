@@ -422,20 +422,13 @@ export function TournamentHub({ tournamentId }: { tournamentId: number }) {
               )}
               <span className="rounded-full bg-royal-50 px-2.5 py-1 font-medium text-royal-800">
                 {t("adminLiveScoreProvider")}:{" "}
-                {tournament.live_score_provider === "api_football"
-                  ? t("adminLiveScoreApiFootball")
-                  : tournament.live_score_provider === "sportmonks"
-                    ? t("adminLiveScoreSportmonks")
-                    : t("adminLiveScoreManual")}
-                {tournament.live_score_provider !== "manual" &&
-                tournament.live_score_config?.league_id ? (
-                  <>
-                    {" "}
-                    · {t("adminLiveScoreLeagueId")} {tournament.live_score_config.league_id}
-                    {tournament.live_score_config.season
-                      ? ` · ${t("adminLiveScoreSeason")} ${tournament.live_score_config.season}`
-                      : ""}
-                  </>
+                {tournament.live_score_provider === "scraping"
+                  ? t("adminLiveScoreScraping")
+                  : t("adminLiveScoreManual")}
+                {tournament.live_score_config?.scores_url ? (
+                  <span className="block truncate text-xs text-gray-500">
+                    {tournament.live_score_config.scores_url}
+                  </span>
                 ) : null}
               </span>
             </div>
