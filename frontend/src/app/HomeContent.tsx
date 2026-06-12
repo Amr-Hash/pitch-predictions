@@ -25,19 +25,6 @@ export default function HomeContent() {
     }
   }, [loading, user, router]);
 
-  useEffect(() => {
-    if (
-      !loading &&
-      !tournamentLoading &&
-      user &&
-      !isStaff(user) &&
-      selectedTournament &&
-      !pickingTournament
-    ) {
-      router.replace("/dashboard");
-    }
-  }, [loading, tournamentLoading, user, selectedTournament, pickingTournament, router]);
-
   const hasSubscriptions = tournaments.length > 0;
   const showPicker =
     !loading &&
@@ -75,7 +62,11 @@ export default function HomeContent() {
             </Link>
           </div>
         </div>
-      ) : null}
+      ) : (
+        <Link href="/dashboard" className="btn-primary text-lg">
+          {t("openDashboard")}
+        </Link>
+      )}
 
       {!user && (
         <div className="mt-16 grid w-full max-w-4xl gap-6 sm:grid-cols-3">

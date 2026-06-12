@@ -16,7 +16,7 @@ export function RequireTournament({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (authLoading || tournamentLoading) return;
     if (user && !selectedTournament && !error) {
-      router.replace("/");
+      router.replace("/?pick=1");
     }
   }, [authLoading, tournamentLoading, user, selectedTournament, error, router]);
 

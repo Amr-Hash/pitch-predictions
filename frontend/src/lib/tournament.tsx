@@ -39,10 +39,10 @@ interface TournamentContextType {
 const TournamentContext = createContext<TournamentContextType | null>(null);
 
 export function TournamentProvider({ children }: { children: React.ReactNode }) {
-  const { token, user } = useAuth();
+  const { token, user, loading: authLoading } = useAuth();
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const loadTournaments = useCallback(async (accessToken: string) => {
@@ -75,18 +75,21 @@ export function TournamentProvider({ children }: { children: React.ReactNode }) 
   }, []);
 
   useEffect(() => {
-    if (token && user && !isStaff(user)) {
-      loadTournaments(token);
-    } else {
-      setTournaments([]);
-      setSelectedTournament(null);
-      setError(null);
-      setLoading(false);
-      if (user && isStaff(user)) {
-        localStorage.removeItem(STORAGE_KEY);
-      }
+    if (authLoading) {
+      return;
     }
-  }, [token, user, loadTournaments]);
+    if (token && user && !isStaff(user)) {
+      void loadTournaments(token);
+      return;
+    }
+    setTournaments([]);
+    setSelectedTournament(null);
+    setError(null);
+    setLoading(false);
+    if (user && isStaff(user)) {
+      localStorage.removeItem(STORAGE_KEY);
+    }
+  }, [token, user, authLoading, loadTournaments]);
 
   const setSelectedTournamentId = useCallback(
     (id: number) => {
