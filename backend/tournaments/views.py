@@ -3,7 +3,7 @@ import os
 
 from django.db import models
 from rest_framework import permissions, status, viewsets
-from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.decorators import action, api_view, authentication_classes, permission_classes
 from rest_framework.response import Response
 
 from .models import (
@@ -399,6 +399,7 @@ def _authorize_cron_request(request) -> bool:
 
 
 @api_view(["GET", "POST"])
+@authentication_classes([])
 @permission_classes([permissions.AllowAny])
 def cron_sync_live_scores(request):
     """
@@ -415,6 +416,7 @@ def cron_sync_live_scores(request):
 
 
 @api_view(["GET", "POST"])
+@authentication_classes([])
 @permission_classes([permissions.AllowAny])
 def cron_map_wc2026_fixtures(request):
     """

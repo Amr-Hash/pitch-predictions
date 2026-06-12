@@ -1,5 +1,5 @@
 from rest_framework import permissions, status
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -110,6 +110,7 @@ class PushUnsubscribeView(APIView):
 
 
 @api_view(["GET", "POST"])
+@authentication_classes([])
 @permission_classes([permissions.AllowAny])
 def cron_send_match_reminders(request):
     """Cron entrypoint for 1-hour-before-kickoff Web Push reminders."""
