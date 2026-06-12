@@ -7,7 +7,7 @@ A full-stack football prediction platform where users compete by predicting matc
 - User registration, login, and password reset
 - Private prediction groups with invite codes/links
 - Stage-by-stage prediction locking and progression rules
-- Automatic scoring (exact score, goal difference, outcome, knockout winner bonus)
+- Automatic scoring (exact score, goal difference, outcome; knockout draws scored by advancing-team pick)
 - Group and global leaderboards
 - Admin panel for tournament, team, match, and result management
 - OpenAPI/Swagger documentation at `/api/docs/`
@@ -24,7 +24,7 @@ Knockout stages follow the expanded World Cup bracket:
 6. Third Place Match
 7. Final
 
-Stage progression rules apply in order: predictions for Round of 32 must be complete before Round of 16 unlocks.
+Stage progression rules apply in order: predictions for a round unlock after all games in the previous round have finished (users are not required to have predicted earlier rounds).
 
 ## Tech Stack
 

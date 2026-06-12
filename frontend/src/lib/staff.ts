@@ -26,13 +26,12 @@ export function clearStaffCache(): void {
 }
 
 export function isStaffSession(user: User | null | undefined, authLoading: boolean): boolean {
-  if (user) return isStaff(user);
-  if (authLoading) return getCachedStaffStatus();
-  return false;
+  if (authLoading || !user) return false;
+  return isStaff(user);
 }
 
 export function staffHomePath(user: User | null | undefined): string {
-  return isStaff(user) ? "/admin" : "/";
+  return isStaff(user) ? "/admin" : "/dashboard";
 }
 
 export function isStaffAllowedPath(pathname: string): boolean {

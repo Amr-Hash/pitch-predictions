@@ -153,13 +153,33 @@ class ScoringEngineTests(TestCase):
         result = calculate_prediction_points(pred, match)
         self.assertEqual(result.total_points, 0)
 
-    def test_knockout_winner_bonus(self):
+    def test_knockout_draw_correct_advancing_team(self):
         match = self._make_match(1, 1, knockout=True, winner=self.home)
         pred = self._make_prediction(match, 1, 1, winner=self.home)
         result = calculate_prediction_points(pred, match)
         self.assertEqual(result.exact_score_points, 5)
-        self.assertEqual(result.winner_bonus_points, 1)
-        self.assertEqual(result.total_points, 6)
+        self.assertEqual(result.winner_bonus_points, 0)
+        self.assertEqual(result.total_points, 5)
+
+    def test_knockout_draw_wrong_advancing_team_exact_score(self):
+        match = self._make_match(1, 1, knockout=True, winner=self.home)
+        pred = self._make_prediction(match, 1, 1, winner=self.away)
+        result = calculate_prediction_points(pred, match)
+        self.assertEqual(result.exact_score_points, 0)
+        self.assertEqual(result.goal_difference_points, 3)
+        self.assertEqual(result.total_points, 3)
+
+    def test_knockout_draw_correct_advancing_team_different_draw_score(self):
+        match = self._make_match(1, 1, knockout=True, winner=self.home)
+        pred = self._make_prediction(match, 0, 0, winner=self.home)
+        result = calculate_prediction_points(pred, match)
+        self.assertEqual(result.total_points, 5)
+
+    def test_knockout_draw_wrong_advancing_team_different_draw_score(self):
+        match = self._make_match(2, 2, knockout=True, winner=self.away)
+        pred = self._make_prediction(match, 0, 0, winner=self.home)
+        result = calculate_prediction_points(pred, match)
+        self.assertEqual(result.total_points, 3)
 
     def test_knockout_winner_point_when_score_wrong(self):
         match = self._make_match(2, 1, knockout=True)
@@ -180,14 +200,6 @@ class ScoringEngineTests(TestCase):
         pred = self._make_prediction(match, 0, 0, winner=self.home)
         result = calculate_prediction_points(pred, match)
         self.assertEqual(result.total_points, 1)
-
-    def test_knockout_wrong_advancing_team_on_tie_exact_score(self):
-        match = self._make_match(1, 1, knockout=True, winner=self.home)
-        pred = self._make_prediction(match, 1, 1, winner=self.away)
-        result = calculate_prediction_points(pred, match)
-        self.assertEqual(result.exact_score_points, 5)
-        self.assertEqual(result.winner_bonus_points, 0)
-        self.assertEqual(result.total_points, 5)
 
     def test_correct_outcome_only_when_goal_diff_differs(self):
         match = self._make_match(3, 1)
@@ -450,7 +462,8 @@ class StageProgressionTests(TestCase):
         self.client = APIClient()
         self.client.force_authenticate(user=self.user)
 
-    def test_stage_progression_blocks_next_stage(self):
+    def test_stage_completion_blocks_next_stage_until_games_finish(self):
+        self.assertTrue(self.match2.is_stage_locked)
         response = self.client.post(
             "/api/predictions/",
             {
@@ -460,13 +473,14 @@ class StageProgressionTests(TestCase):
             },
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("previous stage", str(response.data).lower())
+        self.assertIn("previous round", str(response.data).lower())
 
-    def test_stage_progression_allows_after_completion(self):
-        Prediction.objects.create(
-            user=self.user, match=self.match1,
-            predicted_home_score=1, predicted_away_score=0,
-        )
+    def test_stage_completion_allows_after_games_finish_without_prior_prediction(self):
+        self.match1.status = Match.Status.FINISHED
+        self.match1.home_score = 1
+        self.match1.away_score = 0
+        self.match1.save()
+        self.assertFalse(self.match2.is_stage_locked)
         response = self.client.post(
             "/api/predictions/",
             {

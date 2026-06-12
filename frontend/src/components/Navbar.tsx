@@ -2,42 +2,59 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { APP_NAME, APP_NAME_LATIN } from "@/lib/brand";
+import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { AdminNavbar } from "@/components/AdminNavbar";
 import { LanguageToggle } from "@/components/LanguageToggle";
-import { isStaffAllowedPath, isStaffSession } from "@/lib/staff";
+import { TournamentSwitcher } from "@/components/TournamentSwitcher";
+import { isStaff, isStaffAllowedPath } from "@/lib/staff";
 import { useTournament } from "@/lib/tournament";
-import { useLocale, useT } from "@/lib/i18n";
-import { tournamentLabel } from "@/lib/localize";
+import { useT } from "@/lib/i18n";
+
+function navLinkClass(active: boolean) {
+  return `text-sm font-medium transition ${
+    active ? "text-pitch-700" : "text-gray-600 hover:text-pitch-600"
+  }`;
+}
 
 export function Navbar() {
-  const { user, logout, loading } = useAuth();
+  const { user, token, logout, loading } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
-  const { selectedTournament, clearSelectedTournament } = useTournament();
-  const { locale } = useLocale();
+  const { selectedTournament } = useTournament();
   const t = useT();
+  const [pendingCount, setPendingCount] = useState(0);
 
-  const staffSession = isStaffSession(user, loading);
+  const showAdminNav =
+    !loading && Boolean(user && isStaff(user) && pathname.startsWith("/admin"));
 
   useEffect(() => {
-    if (!loading && staffSession && !isStaffAllowedPath(pathname)) {
+    if (!loading && user && isStaff(user) && !isStaffAllowedPath(pathname)) {
       router.replace("/admin");
     }
-  }, [loading, staffSession, pathname, router]);
+  }, [loading, user, pathname, router]);
 
-  if (staffSession) {
+  useEffect(() => {
+    if (!token || !selectedTournament) {
+      setPendingCount(0);
+      return;
+    }
+    api
+      .getDashboard(token, { tournament: selectedTournament.id })
+      .then((data) => setPendingCount(data.pending_count ?? data.pending_predictions.length))
+      .catch(() => setPendingCount(0));
+  }, [token, selectedTournament, pathname]);
+
+  if (showAdminNav) {
     return <AdminNavbar />;
   }
-
-  const showAppNav = Boolean(user && selectedTournament);
 
   return (
     <nav className="border-b border-gray-200 bg-white">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6 lg:px-8">
-        <Link href="/" className="flex items-center gap-2 text-xl font-bold text-pitch-700">
+        <Link href={user ? "/dashboard" : "/"} className="flex items-center gap-2 text-xl font-bold text-pitch-700">
           <span>⚽</span>
           <span>{APP_NAME}</span>
           <span className="hidden text-sm font-normal text-gray-400 sm:inline">{APP_NAME_LATIN}</span>
@@ -46,37 +63,27 @@ export function Navbar() {
           <LanguageToggle />
           {!loading && user ? (
             <>
-              {showAppNav ? (
-                <>
-                  <Link
-                    href="/"
-                    onClick={clearSelectedTournament}
-                    className="text-sm font-medium text-pitch-600 hover:underline"
-                  >
-                    {t("changeTournament")}
-                  </Link>
-                  <span className="hidden rounded-full bg-pitch-50 px-2 py-0.5 text-xs font-medium text-pitch-800 sm:inline">
-                    {tournamentLabel(selectedTournament!, locale)} {selectedTournament!.year}
+              <TournamentSwitcher />
+              <Link href="/dashboard" className={navLinkClass(pathname === "/dashboard")}>
+                {t("home")}
+              </Link>
+              <Link href="/matches" className={`relative ${navLinkClass(pathname.startsWith("/matches"))}`}>
+                {t("matches")}
+                {pendingCount > 0 && (
+                  <span className="ml-1 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-pitch-600 px-1.5 py-0.5 text-xs font-semibold text-white">
+                    {pendingCount > 9 ? "9+" : pendingCount}
                   </span>
-                  <Link href="/dashboard" className="text-sm font-medium text-gray-600 hover:text-pitch-600">
-                    {t("dashboard")}
-                  </Link>
-                  <Link href="/groups" className="text-sm font-medium text-gray-600 hover:text-pitch-600">
-                    {t("groups")}
-                  </Link>
-                  <Link href="/tournament-groups" className="text-sm font-medium text-gray-600 hover:text-pitch-600">
-                    {t("groupsAndTeams")}
-                  </Link>
-                  <Link href="/matches" className="text-sm font-medium text-gray-600 hover:text-pitch-600">
-                    {t("matches")}
-                  </Link>
-                  <Link href="/leaderboards" className="text-sm font-medium text-gray-600 hover:text-pitch-600">
-                    {t("leaderboards")}
-                  </Link>
-                </>
-              ) : (
-                <span className="text-sm text-gray-500">{t("selectTournamentHome")}</span>
-              )}
+                )}
+              </Link>
+              <Link href="/groups" className={navLinkClass(pathname.startsWith("/groups"))}>
+                {t("myGroups")}
+              </Link>
+              <Link
+                href="/tournament-groups"
+                className={navLinkClass(pathname.startsWith("/tournament-groups"))}
+              >
+                {t("standings")}
+              </Link>
               <span className="text-sm text-gray-500">{user.username}</span>
               <button onClick={logout} className="btn-secondary text-sm">
                 {t("logout")}

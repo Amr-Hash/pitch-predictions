@@ -64,8 +64,9 @@ function DashboardContent() {
     );
   }
 
+  const pendingCount = dashboard.pending_count ?? dashboard.pending_predictions.length;
   const hasGroups = dashboard.groups.length > 0;
-  const hasPending = dashboard.pending_predictions.length > 0;
+  const hasPending = pendingCount > 0;
   const hasUpcoming = dashboard.upcoming_matches.length > 0;
   const hasResults = dashboard.recent_results.length > 0;
   const tournamentName = tournamentLabel(selectedTournament!, locale);
@@ -87,13 +88,11 @@ function DashboardContent() {
             <p className="mt-1 text-xs text-gray-500">{t("earnPointsHint")}</p>
           )}
         </div>
-        <div className="card">
+        <Link href="/leaderboards" className="card transition hover:border-pitch-300 hover:shadow-md">
           <p className="text-sm text-gray-600">{t("globalRank")}</p>
           <p className="text-3xl font-bold">{dashboard.current_rank ?? "—"}</p>
-          {dashboard.current_rank == null && (
-            <p className="mt-1 text-xs text-gray-500">{t("noRankYet")}</p>
-          )}
-        </div>
+          <p className="mt-1 text-xs text-pitch-600">{t("viewGlobalLeaderboard")} →</p>
+        </Link>
         <div className="card">
           <p className="text-sm text-gray-600">{t("yourGroups")}</p>
           <p className="text-3xl font-bold">{dashboard.groups.length}</p>
@@ -103,15 +102,38 @@ function DashboardContent() {
         </div>
       </div>
 
-      <section className="mb-8">
-        <h2 className="mb-4 text-xl font-semibold">{t("pendingPredictions")}</h2>
-        {hasPending ? (
-          <div className="grid gap-4 sm:grid-cols-2">
-            {dashboard.pending_predictions.map((m) => (
-              <MatchCard key={m.id} match={m} prediction={predictionsByMatch[m.id]} showPredictLink />
-            ))}
+      {hasPending && (
+        <section className="mb-8">
+          <div className="card border-pitch-200 bg-gradient-to-br from-pitch-50 to-white">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-semibold text-pitch-900">
+                  {t("pendingCountHero", { count: pendingCount })}
+                </h2>
+                <p className="mt-1 text-sm text-gray-600">{t("pendingPredictions")}</p>
+              </div>
+              <Link href="/matches" className="btn-primary">
+                {t("predictNow")}
+              </Link>
+            </div>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              {dashboard.pending_predictions.map((m) => (
+                <MatchCard key={m.id} match={m} prediction={predictionsByMatch[m.id]} showPredictLink />
+              ))}
+            </div>
+            {pendingCount > dashboard.pending_predictions.length && (
+              <p className="mt-3 text-center text-sm text-gray-500">
+                <Link href="/matches" className="text-pitch-600 hover:underline">
+                  {t("browseMatches")} →
+                </Link>
+              </p>
+            )}
           </div>
-        ) : (
+        </section>
+      )}
+
+      {!hasPending && (
+        <section className="mb-8">
           <EmptyState
             icon="✅"
             title={t("allCaughtUp")}
@@ -122,23 +144,51 @@ function DashboardContent() {
                 : { label: t("joinGroup"), href: "/groups" }
             }
           />
-        )}
-      </section>
+        </section>
+      )}
 
       <section className="mb-8">
-        <h2 className="mb-4 text-xl font-semibold">{t("upcomingMatches")}</h2>
-        {hasUpcoming ? (
-          <div className="grid gap-4 sm:grid-cols-2">
-            {dashboard.upcoming_matches.map((m) => (
-              <MatchCard key={m.id} match={m} prediction={predictionsByMatch[m.id]} showPredictLink />
-            ))}
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-xl font-semibold">{t("yourGroups")}</h2>
+          <Link href="/groups" className="btn-secondary text-sm">
+            {t("manageGroups")}
+          </Link>
+        </div>
+        {hasGroups ? (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {dashboard.groups.map((g) => {
+              const gap = g.leader_points - g.total_points;
+              return (
+                <Link
+                  key={g.id}
+                  href={`/groups/${g.id}`}
+                  className="card block transition hover:border-pitch-300 hover:shadow-md"
+                >
+                  <h3 className="font-semibold">{g.name}</h3>
+                  <p className="mt-1 text-sm text-gray-500">
+                    {g.rank != null
+                      ? t("groupRank", { rank: g.rank, count: g.member_count })
+                      : t("groupMembersCount", { count: g.member_count })}
+                  </p>
+                  <p className="mt-2 text-2xl font-bold text-pitch-700">
+                    {g.total_points} <span className="text-sm font-normal text-gray-500">{t("points")}</span>
+                  </p>
+                  {gap > 0 && g.rank !== 1 && (
+                    <p className="mt-1 text-xs text-gray-500">
+                      {t("behindLeader", { points: gap })}
+                    </p>
+                  )}
+                  <p className="mt-3 text-sm font-medium text-pitch-600">{t("openGroup")} →</p>
+                </Link>
+              );
+            })}
           </div>
         ) : (
           <EmptyState
-            icon="📅"
-            title={t("noUpcomingMatches")}
-            description={t("noUpcomingMatchesDesc")}
-            action={{ label: t("viewMatches"), href: "/matches" }}
+            icon="👥"
+            title={t("noGroupsYet")}
+            description={t("noGroupsDesc")}
+            action={{ label: t("createOrJoinGroup"), href: "/groups" }}
           />
         )}
       </section>
@@ -157,44 +207,24 @@ function DashboardContent() {
             ))}
           </div>
         ) : (
-          <EmptyState
-            icon="🏁"
-            title={t("noResultsYet")}
-            description={t("noResultsDesc")}
-          />
+          <EmptyState icon="🏁" title={t("noResultsYet")} description={t("noResultsDesc")} />
         )}
       </section>
 
       <section>
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-xl font-semibold">{t("yourGroups")}</h2>
-          <Link href="/groups" className="btn-primary text-sm">
-            {t("manageGroups")}
-          </Link>
-        </div>
-        {hasGroups ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {dashboard.groups.map((g) => (
-              <div key={g.id} className="card">
-                <h3 className="font-semibold">{g.name}</h3>
-                <p className="mt-1 text-sm text-gray-500">
-                  {t("code")} {g.invite_code}
-                </p>
-                <Link
-                  href={`/leaderboards?group=${g.id}`}
-                  className="mt-3 inline-block text-sm text-pitch-600 hover:underline"
-                >
-                  {t("viewLeaderboard")}
-                </Link>
-              </div>
+        <h2 className="mb-4 text-xl font-semibold">{t("upcomingMatches")}</h2>
+        {hasUpcoming ? (
+          <div className="grid gap-4 sm:grid-cols-2">
+            {dashboard.upcoming_matches.map((m) => (
+              <MatchCard key={m.id} match={m} prediction={predictionsByMatch[m.id]} showPredictLink />
             ))}
           </div>
         ) : (
           <EmptyState
-            icon="👥"
-            title={t("noGroupsYet")}
-            description={t("noGroupsDesc")}
-            action={{ label: t("createOrJoinGroup"), href: "/groups" }}
+            icon="📅"
+            title={t("noUpcomingMatches")}
+            description={t("noUpcomingMatchesDesc")}
+            action={{ label: t("viewMatches"), href: "/matches" }}
           />
         )}
       </section>

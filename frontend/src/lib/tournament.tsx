@@ -13,6 +13,14 @@ import { isStaff } from "./staff";
 
 const STORAGE_KEY = "selected_tournament_id";
 
+function pickDefaultTournament(list: Tournament[]): Tournament | null {
+  const active = list.filter((t) => t.is_active !== false);
+  if (!active.length) return null;
+  const chosen = [...active].sort((a, b) => b.year - a.year || b.id - a.id)[0];
+  localStorage.setItem(STORAGE_KEY, String(chosen.id));
+  return chosen;
+}
+
 interface TournamentContextType {
   tournaments: Tournament[];
   selectedTournament: Tournament | null;
@@ -47,10 +55,10 @@ export function TournamentProvider({ children }: { children: React.ReactNode }) 
           setSelectedTournament(savedTournament);
         } else {
           localStorage.removeItem(STORAGE_KEY);
-          setSelectedTournament(null);
+          setSelectedTournament(pickDefaultTournament(list));
         }
       } else {
-        setSelectedTournament(null);
+        setSelectedTournament(pickDefaultTournament(list));
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load tournaments");

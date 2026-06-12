@@ -9,6 +9,7 @@ import {
   GroupMatchPredictions,
   GroupMember,
   GroupPredictionsResponse,
+  LeaderboardEntry,
   unwrapList,
 } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -18,7 +19,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { useLocale, useT } from "@/lib/i18n";
 import { matchContextLabel, teamLabel, tournamentLabel } from "@/lib/localize";
 
-type Tab = "members" | "predictions";
+type Tab = "overview" | "predictions" | "members";
 
 function formatPrediction(
   pred: GroupMatchPredictions["predictions"][0],
@@ -46,8 +47,9 @@ function GroupDetailContent() {
 
   const [group, setGroup] = useState<Group | null>(null);
   const [members, setMembers] = useState<GroupMember[]>([]);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [predictionsData, setPredictionsData] = useState<GroupPredictionsResponse | null>(null);
-  const [tab, setTab] = useState<Tab>("members");
+  const [tab, setTab] = useState<Tab>("overview");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
 
@@ -76,12 +78,18 @@ function GroupDetailContent() {
   useEffect(() => {
     if (!token || !groupId || !selectedTournament) return;
     api
+      .getGroupLeaderboard(token, groupId, selectedTournament.id)
+      .then(setLeaderboard)
+      .catch(() => setLeaderboard([]));
+    api
       .getGroupPredictions(token, groupId, selectedTournament.id)
       .then(setPredictionsData)
       .catch(() => setPredictionsData(null));
   }, [token, groupId, selectedTournament]);
 
   if (authLoading || !user) return <div>{t("loading")}</div>;
+
+  const myEntry = leaderboard.find((entry) => entry.user_id === user.id);
 
   return (
     <RequireTournament>
@@ -96,41 +104,130 @@ function GroupDetailContent() {
           <div className="rounded-lg bg-red-50 p-4 text-red-700">{error}</div>
         ) : group ? (
           <>
-            <h1 className="mb-1 text-3xl font-bold">{group.name}</h1>
-            {group.description && <p className="mb-2 text-gray-600">{group.description}</p>}
-            <p className="mb-6 text-sm text-gray-500">
-              {t("groupMembersCount", { count: members.length })}
-              {group.is_admin && (
-                <span className="ml-2 rounded bg-gold-400/20 px-2 py-0.5 text-xs font-medium text-gold-600">
-                  {t("groupAdmin")}
-                </span>
-              )}
-            </p>
+            <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <h1 className="mb-1 text-3xl font-bold">{group.name}</h1>
+                {group.description && <p className="mb-2 text-gray-600">{group.description}</p>}
+                <p className="text-sm text-gray-500">
+                  {t("groupMembersCount", { count: members.length })}
+                  {group.is_admin && (
+                    <span className="ml-2 rounded bg-gold-400/20 px-2 py-0.5 text-xs font-medium text-gold-600">
+                      {t("groupAdmin")}
+                    </span>
+                  )}
+                </p>
+                {selectedTournament && (
+                  <p className="mt-1 text-sm text-gray-500">
+                    {tournamentLabel(selectedTournament, locale)} {selectedTournament.year}
+                  </p>
+                )}
+              </div>
+              <Link href="/matches" className="btn-primary text-sm">
+                {t("makePredictions")}
+              </Link>
+            </div>
 
             <div className="mb-6 flex gap-2 border-b">
-              <button
-                type="button"
-                className={`border-b-2 px-4 py-2 text-sm font-medium ${
-                  tab === "members"
-                    ? "border-pitch-600 text-pitch-700"
-                    : "border-transparent text-gray-500 hover:text-gray-700"
-                }`}
-                onClick={() => setTab("members")}
-              >
-                {t("groupMembersTab")}
-              </button>
-              <button
-                type="button"
-                className={`border-b-2 px-4 py-2 text-sm font-medium ${
-                  tab === "predictions"
-                    ? "border-pitch-600 text-pitch-700"
-                    : "border-transparent text-gray-500 hover:text-gray-700"
-                }`}
-                onClick={() => setTab("predictions")}
-              >
-                {t("groupPredictionsTab")}
-              </button>
+              {(["overview", "predictions", "members"] as const).map((tabKey) => (
+                <button
+                  key={tabKey}
+                  type="button"
+                  className={`border-b-2 px-4 py-2 text-sm font-medium ${
+                    tab === tabKey
+                      ? "border-pitch-600 text-pitch-700"
+                      : "border-transparent text-gray-500 hover:text-gray-700"
+                  }`}
+                  onClick={() => setTab(tabKey)}
+                >
+                  {tabKey === "overview"
+                    ? t("groupOverviewTab")
+                    : tabKey === "predictions"
+                      ? t("groupPredictionsTab")
+                      : t("groupMembersTab")}
+                </button>
+              ))}
             </div>
+
+            {tab === "overview" && (
+              <>
+                {myEntry && (
+                  <div className="mb-4 grid gap-4 sm:grid-cols-3">
+                    <div className="card bg-pitch-50">
+                      <p className="text-sm text-gray-600">{t("rank")}</p>
+                      <p className="text-2xl font-bold">
+                        {myEntry.rank === 1
+                          ? "🥇"
+                          : myEntry.rank === 2
+                            ? "🥈"
+                            : myEntry.rank === 3
+                              ? "🥉"
+                              : myEntry.rank}
+                      </p>
+                    </div>
+                    <div className="card">
+                      <p className="text-sm text-gray-600">{t("points")}</p>
+                      <p className="text-2xl font-bold text-pitch-700">{myEntry.total_points}</p>
+                    </div>
+                    <div className="card">
+                      <p className="text-sm text-gray-600">{t("exact")}</p>
+                      <p className="text-2xl font-bold">{myEntry.exact_predictions}</p>
+                    </div>
+                  </div>
+                )}
+
+                {leaderboard.length === 0 ? (
+                  <EmptyState
+                    icon="📊"
+                    title={t("noRankingsYet")}
+                    description={t("noRankingsDesc")}
+                    action={{ label: t("makePredictions"), href: "/matches" }}
+                  />
+                ) : (
+                  <div className="card overflow-x-auto">
+                    <table className="w-full text-left text-sm">
+                      <thead>
+                        <tr className="border-b text-gray-500">
+                          <th className="pb-3 pr-4">{t("rank")}</th>
+                          <th className="pb-3 pr-4">{t("player")}</th>
+                          <th className="pb-3 pr-4">{t("points")}</th>
+                          <th className="pb-3 pr-4">{t("exact")}</th>
+                          <th className="pb-3">{t("outcomes")}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {leaderboard.map((entry) => (
+                          <tr
+                            key={`${entry.user_id}-${entry.rank}`}
+                            className={`border-b last:border-0 ${
+                              entry.user_id === user.id ? "bg-pitch-50/60" : ""
+                            }`}
+                          >
+                            <td className="py-3 pr-4">
+                              {entry.rank === 1
+                                ? "🥇"
+                                : entry.rank === 2
+                                  ? "🥈"
+                                  : entry.rank === 3
+                                    ? "🥉"
+                                    : entry.rank}
+                            </td>
+                            <td className="py-3 pr-4 font-medium">
+                              {entry.username}
+                              {entry.user_id === user.id && (
+                                <span className="ml-1 text-xs text-gray-500">({t("you")})</span>
+                              )}
+                            </td>
+                            <td className="py-3 pr-4 font-bold text-pitch-600">{entry.total_points}</td>
+                            <td className="py-3 pr-4">{entry.exact_predictions}</td>
+                            <td className="py-3">{entry.correct_outcomes}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </>
+            )}
 
             {tab === "members" && (
               <div className="card overflow-x-auto">

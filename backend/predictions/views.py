@@ -136,9 +136,7 @@ class DashboardView(APIView):
         tournament_id = request.query_params.get("tournament")
 
         groups = Group.objects.filter(memberships__user=user).distinct()
-        groups_data = [
-            {"id": g.id, "name": g.name, "invite_code": g.invite_code} for g in groups
-        ]
+        groups_data = self._get_group_summaries(user, tournament_id, groups)
 
         matches_qs = Match.objects.filter(status=Match.Status.SCHEDULED).select_related(
             "home_team", "away_team", "stage"
@@ -170,16 +168,57 @@ class DashboardView(APIView):
 
         from tournaments.serializers import MatchSerializer
 
+        pending_slice = pending[:10]
         return Response(
             {
                 "groups": groups_data,
                 "upcoming_matches": MatchSerializer(upcoming, many=True).data,
-                "pending_predictions": MatchSerializer(pending[:10], many=True).data,
+                "pending_predictions": MatchSerializer(pending_slice, many=True).data,
+                "pending_count": len(pending),
                 "recent_results": MatchSerializer(recent_results, many=True).data,
                 "total_points": total_points,
                 "current_rank": self._get_user_rank(user, tournament_id),
             }
         )
+
+    def _get_group_summaries(self, user, tournament_id, groups):
+        summaries = []
+        for group in groups:
+            member_ids = list(
+                GroupMember.objects.filter(group=group).values_list("user_id", flat=True)
+            )
+            predictions_qs = Prediction.objects.filter(user_id__in=member_ids)
+            if tournament_id:
+                predictions_qs = predictions_qs.filter(match__tournament_id=tournament_id)
+
+            leaderboard = []
+            for member_id in member_ids:
+                user_preds = predictions_qs.filter(user_id=member_id)
+                total = user_preds.aggregate(total=Sum("points_awarded"))["total"] or 0
+                leaderboard.append((member_id, total))
+            leaderboard.sort(key=lambda row: -row[1])
+
+            rank = None
+            points = 0
+            for index, (member_id, total) in enumerate(leaderboard, start=1):
+                if member_id == user.id:
+                    rank = index
+                    points = total
+                    break
+
+            leader_points = leaderboard[0][1] if leaderboard else 0
+            summaries.append(
+                {
+                    "id": group.id,
+                    "name": group.name,
+                    "invite_code": group.invite_code,
+                    "member_count": len(member_ids),
+                    "rank": rank,
+                    "total_points": points,
+                    "leader_points": leader_points,
+                }
+            )
+        return summaries
 
     def _get_user_rank(self, user, tournament_id):
         predictions_qs = Prediction.objects.all()

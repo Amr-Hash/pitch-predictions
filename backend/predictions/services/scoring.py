@@ -44,8 +44,11 @@ def calculate_prediction_points(prediction, match):
     """
     Calculate points for a prediction against a finished match.
     Only one of exact score, goal difference, or outcome is awarded.
-    Knockout advancing-team pick awards +1 (additive), including when the
-    score prediction was wrong.
+
+    Knockout draws (level after 90/extra time): if the user predicted a tie,
+    points depend on the advancing-team pick — 5 if correct, 3 if wrong — even
+    when the exact score was right. Otherwise a correct advancing pick on a
+    non-draw prediction earns +1 on top of score points.
     """
     breakdown = ScoreBreakdown()
 
@@ -59,6 +62,18 @@ def calculate_prediction_points(prediction, match):
     pred_away = prediction.predicted_away_score
     actual_home = match.home_score
     actual_away = match.away_score
+    is_knockout = match.stage.stage_type == Stage.StageType.KNOCKOUT
+    actual_draw = actual_home == actual_away
+    pred_draw = pred_home == pred_away
+
+    if is_knockout and actual_draw and pred_draw:
+        advancing_team_id = _get_advancing_team_id(match)
+        if advancing_team_id and prediction.predicted_winner_team_id:
+            if prediction.predicted_winner_team_id == advancing_team_id:
+                breakdown.exact_score_points = 5
+            else:
+                breakdown.goal_difference_points = 3
+            return breakdown
 
     if pred_home == actual_home and pred_away == actual_away:
         breakdown.exact_score_points = 5
@@ -67,8 +82,7 @@ def calculate_prediction_points(prediction, match):
     elif _get_outcome(pred_home, pred_away) == _get_outcome(actual_home, actual_away):
         breakdown.outcome_points = 1
 
-    is_knockout = match.stage.stage_type == Stage.StageType.KNOCKOUT
-    if is_knockout:
+    if is_knockout and not pred_draw:
         advancing_team_id = _get_advancing_team_id(match)
         if (
             prediction.predicted_winner_team_id

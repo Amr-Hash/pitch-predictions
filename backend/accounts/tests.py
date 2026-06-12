@@ -90,6 +90,7 @@ class DashboardTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn("groups", response.data)
         self.assertIn("total_points", response.data)
+        self.assertIn("pending_count", response.data)
 
     def test_dashboard_with_tournament_filter(self):
         response = self.client.get(f"/api/dashboard?tournament={self.tournament.id}")

@@ -27,8 +27,8 @@ export default function RegisterPage() {
     setError("");
     setLoading(true);
     try {
-      await register(username, email, password);
-      router.push("/");
+      const me = await register(username, email, password);
+      router.push(staffHomePath(me));
     } catch (err) {
       setError(err instanceof Error ? err.message : t("registrationFailed"));
     } finally {

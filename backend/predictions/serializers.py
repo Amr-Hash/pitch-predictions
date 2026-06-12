@@ -38,7 +38,6 @@ class PredictionSerializer(serializers.ModelSerializer):
         from .services.validators import (
             validate_knockout_winner,
             validate_prediction_lock,
-            validate_stage_progression,
         )
 
         request = self.context["request"]
@@ -57,7 +56,6 @@ class PredictionSerializer(serializers.ModelSerializer):
         )
 
         validate_prediction_lock(match)
-        validate_stage_progression(request.user, match)
         validate_knockout_winner(match, pred_home, pred_away, pred_winner)
         return attrs
 
@@ -87,7 +85,6 @@ class PredictionCreateUpdateSerializer(serializers.ModelSerializer):
         from .services.validators import (
             validate_knockout_winner,
             validate_prediction_lock,
-            validate_stage_progression,
         )
 
         request = self.context["request"]
@@ -106,7 +103,6 @@ class PredictionCreateUpdateSerializer(serializers.ModelSerializer):
         )
 
         validate_prediction_lock(match)
-        validate_stage_progression(request.user, match)
         validate_knockout_winner(match, pred_home, pred_away, pred_winner)
 
         if (

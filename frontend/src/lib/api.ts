@@ -141,10 +141,21 @@ export interface LeaderboardEntry {
   correct_outcomes: number;
 }
 
+export interface DashboardGroupSummary {
+  id: number;
+  name: string;
+  invite_code: string;
+  member_count: number;
+  rank: number | null;
+  total_points: number;
+  leader_points: number;
+}
+
 export interface Dashboard {
-  groups: { id: number; name: string; invite_code: string }[];
+  groups: DashboardGroupSummary[];
   upcoming_matches: Match[];
   pending_predictions: Match[];
+  pending_count: number;
   recent_results: Match[];
   total_points: number;
   current_rank: number | null;

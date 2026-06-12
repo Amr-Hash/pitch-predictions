@@ -193,9 +193,33 @@ class Match(models.Model):
             )
         return False, None
 
+    def _stage_completion_lock_info(self):
+        if self.stage.stage_type != Stage.StageType.KNOCKOUT:
+            return False, None
+
+        incomplete = (
+            Match.objects.filter(
+                tournament=self.tournament,
+                stage__order__lt=self.stage.order,
+            )
+            .exclude(status=self.Status.FINISHED)
+            .exists()
+        )
+        if incomplete:
+            return (
+                True,
+                "Predictions open after all previous round games finish.",
+            )
+        return False, None
+
     @property
     def is_matchday_locked(self):
         locked, _ = self._matchday_lock_info()
+        return locked
+
+    @property
+    def is_stage_locked(self):
+        locked, _ = self._stage_completion_lock_info()
         return locked
 
     @property
@@ -203,10 +227,17 @@ class Match(models.Model):
         matchday_locked, matchday_msg = self._matchday_lock_info()
         if matchday_locked:
             return matchday_msg
+        stage_locked, stage_msg = self._stage_completion_lock_info()
+        if stage_locked:
+            return stage_msg
         if self.is_kickoff_locked:
             return "Prediction window has closed for this match."
         return None
 
     @property
     def is_locked(self):
-        return self.is_kickoff_locked or self.is_matchday_locked
+        return (
+            self.is_kickoff_locked
+            or self.is_matchday_locked
+            or self.is_stage_locked
+        )
