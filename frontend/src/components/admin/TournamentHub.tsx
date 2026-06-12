@@ -50,9 +50,9 @@ function pickCurrentMatchday(matches: Match[], stageId: number): number | null {
 
 function StatusBadge({ status }: { status: string }) {
   const colors: Record<string, string> = {
-    scheduled: "bg-blue-100 text-blue-700",
-    live: "bg-red-100 text-red-700",
-    finished: "bg-green-100 text-green-700",
+    scheduled: "bg-royal-100 text-royal-800",
+    live: "bg-fan-100 text-fan-800",
+    finished: "bg-pitch-100 text-pitch-800",
   };
   return (
     <span
@@ -89,7 +89,7 @@ function AdminMatchCard({
   }
 
   return (
-    <div className="card">
+    <div className="admin-card">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
@@ -324,12 +324,12 @@ export function TournamentHub({ tournamentId }: { tournamentId: number }) {
   return (
     <div>
       <div className="mb-6">
-        <Link href="/admin" className="text-sm text-amber-700 hover:underline">
+        <Link href="/admin" className="link-back">
           ← All tournaments
         </Link>
         <div className="mt-2 flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold">{tournament.name}</h1>
+            <h1 className="admin-page-title">{tournament.name}</h1>
             <p className="text-gray-600">
               {tournament.year} · {tournament.start_date} → {tournament.end_date}
               {tournament.is_active === false && (
@@ -350,7 +350,7 @@ export function TournamentHub({ tournamentId }: { tournamentId: number }) {
       {error && <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</div>}
       {success && <div className="mb-4 rounded-lg bg-green-50 p-3 text-sm text-green-700">{success}</div>}
 
-      <div className="mb-6 flex flex-wrap gap-2 border-b border-gray-200 pb-1">
+      <div className="mb-6 flex flex-wrap gap-2">
         {(
           [
             ["matches", "Matches & Scores"],
@@ -362,11 +362,7 @@ export function TournamentHub({ tournamentId }: { tournamentId: number }) {
             key={key}
             type="button"
             onClick={() => setTab(key)}
-            className={`rounded-t-lg px-4 py-2 text-sm font-medium transition ${
-              tab === key
-                ? "border-b-2 border-amber-500 text-amber-900"
-                : "text-gray-500 hover:text-gray-800"
-            }`}
+            className={tab === key ? "admin-tab-active" : "admin-tab"}
           >
             {label}
           </button>
@@ -376,7 +372,7 @@ export function TournamentHub({ tournamentId }: { tournamentId: number }) {
       {tab === "matches" && (
         <div>
           {stages.length === 0 ? (
-            <div className="card text-center text-gray-500">
+            <div className="admin-card text-center text-gray-500">
               <p className="mb-3">No rounds yet. Add a stage first under Rounds / Setup.</p>
               <button type="button" className="btn-primary text-sm" onClick={() => setTab("setup")}>
                 Go to Setup
@@ -404,11 +400,11 @@ export function TournamentHub({ tournamentId }: { tournamentId: number }) {
                             setStageId(stage.id);
                             setMatchday(pickCurrentMatchday(matches, stage.id));
                           }}
-                          className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
+                          className={
                             stageId === stage.id
-                              ? "bg-amber-500 text-white"
-                              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                          }`}
+                              ? "admin-round-pill-active"
+                              : "admin-round-pill"
+                          }
                         >
                           {stage.name}
                           {isCurrent && stageId !== stage.id && (
@@ -433,9 +429,9 @@ export function TournamentHub({ tournamentId }: { tournamentId: number }) {
                 </div>
               )}
 
-              {matchdaysInStage.length > 0 && (
+              {selectedStage?.stage_type === "group" && matchdaysInStage.length > 0 && (
                 <div className="mb-4">
-                  <p className="mb-2 text-sm font-medium text-gray-700">Matchday</p>
+                  <p className="mb-2 text-sm font-medium text-gray-700">Matchday filter</p>
                   <div className="flex flex-wrap gap-2">
                     <button
                       type="button"
@@ -477,7 +473,7 @@ export function TournamentHub({ tournamentId }: { tournamentId: number }) {
               </div>
 
               {showAddMatch && stageId && (
-                <form onSubmit={handleCreateMatch} className="card mb-6 space-y-4">
+                <form onSubmit={handleCreateMatch} className="admin-card mb-6 space-y-4">
                   <h3 className="font-semibold">Add match to {selectedStage?.name}</h3>
                   <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     <div>
@@ -553,7 +549,7 @@ export function TournamentHub({ tournamentId }: { tournamentId: number }) {
 
               <div className="space-y-3">
                 {filteredMatches.length === 0 ? (
-                  <div className="card py-8 text-center text-gray-500">
+                  <div className="admin-card py-8 text-center text-gray-500">
                     No matches in this round yet. Add one above.
                   </div>
                 ) : (
@@ -575,7 +571,7 @@ export function TournamentHub({ tournamentId }: { tournamentId: number }) {
 
       {tab === "groups" && (
         <div>
-          <form onSubmit={handleSaveGroup} className="card mb-6 space-y-4">
+          <form onSubmit={handleSaveGroup} className="admin-card mb-6 space-y-4">
             <h3 className="font-semibold">{editingGroupId ? "Edit group" : "Add group"}</h3>
             <div>
               <label className="mb-1 block text-sm font-medium">Group letter</label>
@@ -634,7 +630,7 @@ export function TournamentHub({ tournamentId }: { tournamentId: number }) {
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {cupGroups.map((group) => (
-              <div key={group.id} className="card">
+              <div key={group.id} className="admin-card">
                 <div className="mb-3 flex items-center justify-between">
                   <h3 className="text-lg font-semibold">Group {group.name}</h3>
                   <div className="flex gap-2 text-sm">
@@ -685,7 +681,7 @@ export function TournamentHub({ tournamentId }: { tournamentId: number }) {
 
       {tab === "setup" && (
         <div>
-          <form onSubmit={handleCreateStage} className="card mb-6 space-y-4">
+          <form onSubmit={handleCreateStage} className="admin-card mb-6 space-y-4">
             <h3 className="font-semibold">Add round / stage</h3>
             <div className="grid gap-4 sm:grid-cols-3">
               <div>
@@ -694,7 +690,7 @@ export function TournamentHub({ tournamentId }: { tournamentId: number }) {
                   className="input"
                   value={stageForm.name}
                   onChange={(e) => setStageForm({ ...stageForm, name: e.target.value })}
-                  placeholder="Group Stage MD1"
+                  placeholder="Group Stage"
                   required
                 />
               </div>
@@ -735,7 +731,7 @@ export function TournamentHub({ tournamentId }: { tournamentId: number }) {
             </button>
           </form>
 
-          <div className="card">
+          <div className="admin-card">
             <h3 className="mb-4 font-semibold">Rounds in this tournament</h3>
             {stages.length === 0 ? (
               <p className="text-gray-500">No rounds yet.</p>
@@ -744,7 +740,17 @@ export function TournamentHub({ tournamentId }: { tournamentId: number }) {
                 {[...stages]
                   .sort((a, b) => a.order - b.order)
                   .map((stage) => {
-                    const count = matches.filter((m) => m.stage === stage.id).length;
+                    const stageMatches = matches.filter((m) => m.stage === stage.id);
+                    const matchdays =
+                      stage.stage_type === "group"
+                        ? Array.from(
+                            new Set(
+                              stageMatches
+                                .map((m) => m.matchday)
+                                .filter((day): day is number => day != null)
+                            )
+                          ).sort((a, b) => a - b)
+                        : [];
                     return (
                       <li key={stage.id} className="flex items-center justify-between py-3">
                         <div>
@@ -752,7 +758,11 @@ export function TournamentHub({ tournamentId }: { tournamentId: number }) {
                           <span className="ml-2 text-sm capitalize text-gray-500">
                             {stage.stage_type}
                           </span>
-                          <span className="ml-2 text-sm text-gray-400">{count} matches</span>
+                          <span className="ml-2 text-sm text-gray-400">
+                            {stageMatches.length} matches
+                            {matchdays.length > 0 &&
+                              ` · MD${matchdays.join(", MD")}`}
+                          </span>
                         </div>
                         <button
                           type="button"

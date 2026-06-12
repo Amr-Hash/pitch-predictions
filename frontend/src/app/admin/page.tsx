@@ -68,8 +68,8 @@ export default function AdminOverviewPage() {
     <div>
       <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="mb-2 text-3xl font-bold">Tournaments</h1>
-          <p className="text-gray-600">
+          <h1 className="admin-page-title mb-2">Tournaments</h1>
+          <p className="text-night-700/70">
             Pick a tournament to manage rounds, groups, matches, and scores in one place.
           </p>
         </div>
@@ -91,7 +91,7 @@ export default function AdminOverviewPage() {
       {success && <div className="mb-4 rounded-lg bg-green-50 p-3 text-sm text-green-700">{success}</div>}
 
       {showCreate && (
-        <form onSubmit={handleCreate} className="card mb-8 space-y-4">
+        <form onSubmit={handleCreate} className="admin-card mb-8 space-y-4">
           <h2 className="font-semibold">Create tournament</h2>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
@@ -150,7 +150,7 @@ export default function AdminOverviewPage() {
 
       <div className="grid gap-4 sm:grid-cols-2">
         {tournaments.map((t) => (
-          <div key={t.id} className="card flex flex-col justify-between gap-4">
+          <div key={t.id} className="admin-card flex flex-col justify-between gap-4">
             <div>
               <div className="flex items-start justify-between gap-2">
                 <h2 className="text-xl font-semibold">{t.name}</h2>
@@ -189,7 +189,7 @@ export default function AdminOverviewPage() {
       </div>
 
       {tournaments.length === 0 && (
-        <div className="card py-12 text-center text-gray-500">
+        <div className="admin-card py-12 text-center text-gray-500">
           No tournaments yet. Create one to get started.
         </div>
       )}

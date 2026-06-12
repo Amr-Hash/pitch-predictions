@@ -22,17 +22,18 @@ export function AdminNavbar() {
   const tournamentDetailMatch = pathname.match(/^\/admin\/tournaments\/(\d+)/);
 
   return (
-    <nav className="border-b border-amber-200 bg-amber-50">
-      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6 lg:px-8">
-        <Link href="/admin" className="flex items-center gap-2 text-xl font-bold text-amber-900">
+    <header className="sticky top-0 z-50 shadow-lg">
+    <nav className="bg-night-900">
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
+        <Link href="/admin" className="flex items-center gap-2 text-xl font-extrabold text-white">
           <span>⚙️</span>
           <span>{APP_NAME}</span>
-          <span className="rounded-full bg-amber-200 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-amber-900">
+          <span className="rounded-full bg-gold-500 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-night-900">
             {t("admin")}
           </span>
         </Link>
         <div className="flex flex-wrap items-center gap-2">
-          <LanguageToggle />
+          <LanguageToggle variant="dark" />
           {LINKS.map((item) => {
             const active =
               item.href === "/admin"
@@ -42,10 +43,10 @@ export function AdminNavbar() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
+                className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition ${
                   active
-                    ? "bg-white text-amber-900 shadow-sm"
-                    : "text-amber-800 hover:bg-amber-100"
+                    ? "bg-gold-500 text-night-900 shadow-sm"
+                    : "text-white/85 hover:bg-white/10"
                 }`}
               >
                 {t(item.labelKey)}
@@ -53,16 +54,18 @@ export function AdminNavbar() {
             );
           })}
           {tournamentDetailMatch && (
-            <span className="rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-amber-900 shadow-sm">
+            <span className="rounded-lg bg-pitch-600/50 px-3 py-1.5 text-sm font-semibold text-white">
               {t("managingTournament")}
             </span>
           )}
-          <span className="ml-2 text-sm text-amber-700">{user?.username}</span>
-          <button onClick={logout} className="btn-secondary border-amber-300 bg-white text-sm">
+          <span className="ml-2 text-sm text-white/60">{user?.username}</span>
+          <button onClick={logout} className="btn-ghost-nav">
             {t("logout")}
           </button>
         </div>
       </div>
     </nav>
+    <div className="nav-stripe" aria-hidden />
+    </header>
   );
 }

@@ -42,11 +42,13 @@ export default function HomeContent() {
 
   return (
     <div className="flex flex-col items-center py-10 text-center sm:py-16">
-      <div className="mb-6 text-6xl">⚽</div>
-      <h1 className="mb-2 text-4xl font-bold text-pitch-900 sm:text-5xl">
+      <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-pitch-500 via-gold-400 to-fan-500 text-5xl shadow-lg ring-4 ring-white">
+        ⚽
+      </div>
+      <h1 className="mb-2 font-display text-4xl font-extrabold text-night-900 sm:text-5xl">
         {APP_NAME}
       </h1>
-      <p className="mb-1 text-lg text-gray-500">{APP_NAME_LATIN}</p>
+      <p className="mb-1 text-lg font-semibold text-royal-600">{APP_NAME_LATIN}</p>
       <p className="mb-4 max-w-2xl text-lg text-gray-600">{APP_TAGLINE}</p>
       <p className="mb-10 max-w-2xl text-sm text-gray-500">
         {APP_TAGLINE_EN} {t("taglineExtra")}
@@ -57,12 +59,13 @@ export default function HomeContent() {
       ) : showPicker ? (
         <TournamentPicker />
       ) : !user ? (
-        <div className="flex flex-col items-center gap-6">
+        <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-gradient-to-r from-night-900 via-royal-800 to-pitch-700 p-8 text-white shadow-xl">
+          <p className="mb-6 text-lg font-medium text-white/90">{t("createGroupsDesc")}</p>
           <div className="flex flex-wrap justify-center gap-4">
-            <Link href="/register" className="btn-primary px-8 py-3 text-lg">
+            <Link href="/register" className="rounded-full bg-fan-500 px-8 py-3 text-lg font-bold text-white shadow-lg transition hover:bg-fan-400">
               {t("getStarted")}
             </Link>
-            <Link href="/login" className="btn-secondary px-8 py-3 text-lg">
+            <Link href="/login" className="rounded-full border-2 border-white/40 bg-white/10 px-8 py-3 text-lg font-bold text-white backdrop-blur transition hover:bg-white/20">
               {t("login")}
             </Link>
           </div>
@@ -71,26 +74,26 @@ export default function HomeContent() {
 
       {!user && (
         <div className="mt-16 grid w-full max-w-4xl gap-6 sm:grid-cols-3">
-          <div className="card text-left">
-            <div className="mb-2 text-2xl">👥</div>
-            <h3 className="font-semibold">{t("createGroups")}</h3>
+          <div className="feature-card-fan">
+            <div className="mb-2 text-3xl">👥</div>
+            <h3 className="font-bold text-fan-700">{t("createGroups")}</h3>
             <p className="mt-1 text-sm text-gray-600">{t("createGroupsDesc")}</p>
           </div>
-          <div className="card text-left">
-            <div className="mb-2 text-2xl">🎯</div>
-            <h3 className="font-semibold">{t("predictMatches")}</h3>
+          <div className="feature-card-pitch">
+            <div className="mb-2 text-3xl">🎯</div>
+            <h3 className="font-bold text-pitch-700">{t("predictMatches")}</h3>
             <p className="mt-1 text-sm text-gray-600">{t("predictMatchesDesc")}</p>
           </div>
-          <div className="card text-left">
-            <div className="mb-2 text-2xl">📊</div>
-            <h3 className="font-semibold">{t("trackRankings")}</h3>
+          <div className="feature-card-royal">
+            <div className="mb-2 text-3xl">📊</div>
+            <h3 className="font-bold text-royal-700">{t("trackRankings")}</h3>
             <p className="mt-1 text-sm text-gray-600">{t("trackRankingsDesc")}</p>
           </div>
         </div>
       )}
 
       <section className="mt-16 w-full max-w-4xl text-left">
-        <h2 className="mb-2 text-center text-2xl font-bold text-pitch-900">
+        <h2 className="mb-2 text-center font-display text-2xl font-extrabold text-night-900">
           {t("howScoringWorks")}
         </h2>
         <p className="mb-6 text-center text-sm text-gray-500">{t("scoringIntro")}</p>
@@ -115,12 +118,12 @@ function ScoreRule({
   description: string;
 }) {
   return (
-    <div className="card">
+    <div className="card card-hover">
       <div className="mb-2 flex items-center gap-3">
-        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-pitch-100 text-lg font-bold text-pitch-700">
+        <span className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-gold-400 to-fan-500 text-lg font-extrabold text-white shadow">
           {points}
         </span>
-        <h3 className="font-semibold">{title}</h3>
+        <h3 className="font-bold text-night-900">{title}</h3>
       </div>
       <p className="text-sm text-gray-600">{description}</p>
     </div>

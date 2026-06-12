@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { RequireTournament } from "@/components/RequireTournament";
 import { useLocale, useT } from "@/lib/i18n";
 import { localizedName, teamLabel, tournamentLabel } from "@/lib/localize";
+import { cupGroupAccent } from "@/lib/theme";
 
 function TournamentGroupsContent() {
   const { token } = useAuth();
@@ -30,18 +31,18 @@ function TournamentGroupsContent() {
 
   return (
     <div>
-      <h1 className="mb-2 text-3xl font-bold">{t("tournamentGroupsTitle")}</h1>
-      <p className="mb-6 text-gray-600">
+      <h1 className="page-title mb-2">{t("tournamentGroupsTitle")}</h1>
+      <p className="mb-6 font-medium text-night-700/70">
         {tournamentName} ({selectedTournament.year}) —{" "}
         {t("groupsConfigured", { count: cupGroups.length })}
       </p>
 
       {isTestCup ? (
-        <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+        <div className="info-banner-fan">
           <strong>{t("demoTestCup")}</strong> — {t("demoTestCupGroupsDesc")}
         </div>
       ) : (
-        <div className="mb-6 rounded-lg border border-pitch-200 bg-pitch-50 p-4 text-sm text-pitch-900">
+        <div className="info-banner-pitch">
           <strong>{t("predictionRules")}</strong> {t("predictionRulesDesc")}
         </div>
       )}
@@ -54,38 +55,48 @@ function TournamentGroupsContent() {
         />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {cupGroups.map((group) => (
-            <div key={group.id} className="card">
-              <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-xl font-bold text-pitch-700">
-                  {t("group")} {localizedName(group, locale)}
-                </h2>
-                <Link
-                  href={`/matches?cup_group=${group.name}`}
-                  className="text-xs font-medium text-pitch-600 hover:underline"
-                >
-                  {t("viewMatchesLink")}
-                </Link>
+          {cupGroups.map((group) => {
+            const accent = cupGroupAccent(group.name);
+            return (
+              <div key={group.id} className="card overflow-hidden p-0">
+                <div className={`h-2 ${accent.bar}`} />
+                <div className="p-4">
+                  <div className="mb-3 flex items-center justify-between gap-2">
+                    <span
+                      className={`rounded-full px-3 py-1 font-display text-lg font-extrabold ${accent.pill}`}
+                    >
+                      {t("group")} {localizedName(group, locale)}
+                    </span>
+                    <Link
+                      href={`/matches?cup_group=${group.name}`}
+                      className="text-xs font-bold text-royal-600 hover:underline"
+                    >
+                      {t("viewMatchesLink")} →
+                    </Link>
+                  </div>
+                  <ul className="space-y-2">
+                    {group.group_teams.map(({ team }) => (
+                      <li key={team.id} className="flex items-center gap-3">
+                        {team.flag_url ? (
+                          <img
+                            src={team.flag_url}
+                            alt=""
+                            className="h-5 w-7 rounded-sm object-cover shadow-sm"
+                          />
+                        ) : (
+                          <span className="inline-block h-5 w-7 rounded-sm bg-gray-200" />
+                        )}
+                        <span className="font-semibold text-night-900">
+                          {teamLabel(team, locale)}
+                        </span>
+                        <span className="text-xs font-medium text-gray-400">{team.code}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </div>
-              <ul className="space-y-2">
-                {group.group_teams.map(({ team }) => (
-                  <li key={team.id} className="flex items-center gap-3">
-                    {team.flag_url ? (
-                      <img
-                        src={team.flag_url}
-                        alt=""
-                        className="h-5 w-7 object-cover"
-                      />
-                    ) : (
-                      <span className="inline-block h-5 w-7 bg-gray-200" />
-                    )}
-                    <span className="font-medium">{teamLabel(team, locale)}</span>
-                    <span className="text-xs text-gray-400">{team.code}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

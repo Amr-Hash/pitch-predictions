@@ -10,6 +10,10 @@ def main():
             [sys.executable, "manage.py", "sync_wc2026_kickoffs"],
             stderr=subprocess.STDOUT,
         )
+        subprocess.check_call(
+            [sys.executable, "manage.py", "merge_group_stages"],
+            stderr=subprocess.STDOUT,
+        )
     else:
         print("WARNING: DATABASE_URL not set — skipping migrations until database is linked.")
 

@@ -182,51 +182,21 @@ class GroupViewSet(viewsets.ModelViewSet):
         ).select_related("user", "predicted_winner_team")
         pred_map = {(p.user_id, p.match_id): p for p in predictions}
 
-        matches = (
-            Match.objects.filter(tournament_id=tournament_id)
-            .select_related(
-                "home_team", "away_team", "winner_team", "stage", "cup_group"
-            )
-            .order_by("kickoff_time")
+        matches = Match.objects.filter(tournament_id=tournament_id).select_related(
+            "home_team", "away_team", "winner_team", "stage", "cup_group"
         )
 
         matches_data = []
         for match in matches:
+            revealed = self._group_predictions_revealed(match)
             match_predictions = []
             for membership in members:
                 pred = pred_map.get((membership.user_id, match.id))
-                if pred:
-                    match_predictions.append(
-                        {
-                            "user_id": membership.user_id,
-                            "username": membership.user.username,
-                            "predicted_home_score": pred.predicted_home_score,
-                            "predicted_away_score": pred.predicted_away_score,
-                            "predicted_winner_team": (
-                                {
-                                    "id": pred.predicted_winner_team.id,
-                                    "name": pred.predicted_winner_team.name,
-                                    "name_ar": pred.predicted_winner_team.name_ar,
-                                    "code": pred.predicted_winner_team.code,
-                                    "flag_url": pred.predicted_winner_team.flag_url,
-                                }
-                                if pred.predicted_winner_team
-                                else None
-                            ),
-                            "points_awarded": pred.points_awarded,
-                        }
+                match_predictions.append(
+                    self._serialize_group_match_prediction(
+                        membership, pred, revealed
                     )
-                else:
-                    match_predictions.append(
-                        {
-                            "user_id": membership.user_id,
-                            "username": membership.user.username,
-                            "predicted_home_score": None,
-                            "predicted_away_score": None,
-                            "predicted_winner_team": None,
-                            "points_awarded": 0,
-                        }
-                    )
+                )
             matches_data.append(
                 {
                     "match": MatchSerializer(match, context={"request": request}).data,
@@ -241,6 +211,49 @@ class GroupViewSet(viewsets.ModelViewSet):
                 "matches": matches_data,
             }
         )
+
+    @staticmethod
+    def _group_predictions_revealed(match):
+        return match.is_kickoff_locked or match.status in (
+            Match.Status.FINISHED,
+            Match.Status.LIVE,
+        )
+
+    @staticmethod
+    def _serialize_group_match_prediction(membership, pred, revealed):
+        base = {
+            "user_id": membership.user_id,
+            "username": membership.user.username,
+            "has_prediction": False,
+            "is_hidden": False,
+            "predicted_home_score": None,
+            "predicted_away_score": None,
+            "predicted_winner_team": None,
+            "points_awarded": 0,
+        }
+        if not pred:
+            return base
+
+        base["has_prediction"] = True
+        if not revealed:
+            base["is_hidden"] = True
+            return base
+
+        base["predicted_home_score"] = pred.predicted_home_score
+        base["predicted_away_score"] = pred.predicted_away_score
+        base["predicted_winner_team"] = (
+            {
+                "id": pred.predicted_winner_team.id,
+                "name": pred.predicted_winner_team.name,
+                "name_ar": pred.predicted_winner_team.name_ar,
+                "code": pred.predicted_winner_team.code,
+                "flag_url": pred.predicted_winner_team.flag_url,
+            }
+            if pred.predicted_winner_team
+            else None
+        )
+        base["points_awarded"] = pred.points_awarded
+        return base
 
     @action(
         detail=True,

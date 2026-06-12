@@ -1,15 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { FormEvent, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { FormEvent, Suspense, useEffect, useState } from "react";
+import { postAuthRedirect, authLinkWithNext } from "@/lib/authRedirect";
 import { useAuth } from "@/lib/auth";
 import { useT } from "@/lib/i18n";
-import { staffHomePath } from "@/lib/staff";
 
-export default function LoginPage() {
+function LoginForm() {
   const { login, user } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const next = searchParams.get("next");
   const t = useT();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -17,8 +19,8 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (user) router.replace(staffHomePath(user));
-  }, [user, router]);
+    if (user) router.replace(postAuthRedirect(user, next));
+  }, [user, router, next]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -26,7 +28,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const me = await login(email, password);
-      router.push(staffHomePath(me));
+      router.push(postAuthRedirect(me, next));
     } catch (err) {
       setError(err instanceof Error ? err.message : t("loginFailed"));
     } finally {
@@ -38,43 +40,61 @@ export default function LoginPage() {
 
   return (
     <div className="mx-auto max-w-md">
-      <div className="card">
-        <h1 className="mb-6 text-2xl font-bold">{t("login")}</h1>
-        {error && (
-          <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</div>
-        )}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="mb-1 block text-sm font-medium">{t("email")}</label>
-            <input
-              type="email"
-              className="input"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium">{t("password")}</label>
-            <input
-              type="password"
-              className="input"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </div>
-          <button type="submit" className="btn-primary w-full" disabled={loading}>
-            {loading ? t("loggingIn") : t("login")}
-          </button>
-        </form>
-        <p className="mt-4 text-center text-sm text-gray-600">
-          {t("noAccount")}{" "}
-          <Link href="/register" className="text-pitch-600 hover:underline">
-            {t("register")}
-          </Link>
-        </p>
+      <div className="auth-card">
+        <div className="auth-card-header">
+          <h1 className="font-display text-2xl font-extrabold">{t("login")}</h1>
+          <p className="mt-1 text-sm text-white/80">{t("taglineExtra")}</p>
+        </div>
+        <div className="auth-card-body">
+          {error && (
+            <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {error}
+            </div>
+          )}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="mb-1 block text-sm font-bold text-night-700">{t("email")}</label>
+              <input
+                type="email"
+                className="input"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-bold text-night-700">{t("password")}</label>
+              <input
+                type="password"
+                className="input"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
+            <button type="submit" className="btn-primary w-full" disabled={loading}>
+              {loading ? t("loggingIn") : t("login")}
+            </button>
+          </form>
+          <p className="mt-4 text-center text-sm text-gray-600">
+            {t("noAccount")}{" "}
+            <Link
+              href={authLinkWithNext("/register", next)}
+              className="font-bold text-royal-600 hover:underline"
+            >
+              {t("register")}
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="text-center text-gray-500">Loading...</div>}>
+      <LoginForm />
+    </Suspense>
   );
 }

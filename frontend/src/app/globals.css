@@ -3,24 +3,240 @@
 @tailwind utilities;
 
 body {
-  @apply bg-gray-50 text-gray-900 antialiased;
+  @apply min-h-screen text-gray-900 antialiased;
+  background-color: #f4f7fc;
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(16, 185, 129, 0.12), transparent),
+    radial-gradient(ellipse 60% 40% at 100% 0%, rgba(59, 130, 246, 0.1), transparent),
+    radial-gradient(ellipse 50% 35% at 0% 100%, rgba(249, 115, 22, 0.08), transparent);
 }
 
 [dir="rtl"] body {
-  font-family: system-ui, "Segoe UI", Tahoma, Arial, sans-serif;
+  font-family: var(--font-outfit), system-ui, "Segoe UI", Tahoma, Arial, sans-serif;
 }
 
 @layer components {
+  .nav-stripe {
+    @apply h-1 w-full;
+    background: linear-gradient(
+      90deg,
+      #059669 0%,
+      #F59E0B 35%,
+      #3B82F6 65%,
+      #F97316 100%
+    );
+  }
+
   .btn-primary {
-    @apply rounded-lg bg-pitch-600 px-4 py-2 font-medium text-white transition hover:bg-pitch-700 disabled:opacity-50;
+    @apply rounded-xl bg-gradient-to-r from-pitch-600 to-pitch-500 px-4 py-2 font-semibold text-white shadow-md transition hover:from-pitch-700 hover:to-pitch-600 hover:shadow-lg disabled:opacity-50;
   }
+
+  .btn-fan {
+    @apply rounded-xl bg-gradient-to-r from-fan-600 to-fan-500 px-4 py-2 font-semibold text-white shadow-md transition hover:from-fan-700 hover:to-fan-600 hover:shadow-lg disabled:opacity-50;
+  }
+
   .btn-secondary {
-    @apply rounded-lg border border-gray-300 bg-white px-4 py-2 font-medium text-gray-700 transition hover:bg-gray-50;
+    @apply rounded-xl border-2 border-gray-200 bg-white px-4 py-2 font-semibold text-night-800 transition hover:border-royal-300 hover:bg-royal-50;
   }
+
+  .btn-ghost-nav {
+    @apply rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/20;
+  }
+
   .card {
-    @apply rounded-xl border border-gray-200 bg-white p-6 shadow-sm;
+    @apply rounded-2xl border border-white/80 bg-white p-6 shadow-card transition;
   }
+
+  .card-hover {
+    @apply hover:-translate-y-0.5 hover:border-royal-200 hover:shadow-card-hover;
+  }
+
+  .card-match {
+    @apply card card-hover overflow-hidden p-0;
+  }
+
   .input {
-    @apply w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-pitch-500 focus:outline-none focus:ring-2 focus:ring-pitch-500/20;
+    @apply w-full rounded-xl border-2 border-gray-200 bg-white px-3 py-2 transition focus:border-royal-400 focus:outline-none focus:ring-2 focus:ring-royal-400/25;
+  }
+
+  .input-nav {
+    @apply max-w-[11rem] rounded-lg border border-white/25 bg-night-800 py-1.5 text-sm text-white focus:border-gold-400 focus:outline-none focus:ring-2 focus:ring-gold-400/30;
+  }
+
+  .stat-card-pitch {
+    @apply card border-l-4 border-l-pitch-500 bg-gradient-to-br from-pitch-50 to-white;
+  }
+
+  .stat-card-gold {
+    @apply card border-l-4 border-l-gold-500 bg-gradient-to-br from-gold-50 to-white card-hover;
+  }
+
+  .stat-card-royal {
+    @apply card border-l-4 border-l-royal-500 bg-gradient-to-br from-royal-50 to-white;
+  }
+
+  .hero-pending {
+    @apply card overflow-hidden border-0 bg-gradient-to-br from-fan-500 via-fan-400 to-gold-400 p-6 text-white shadow-lg;
+  }
+
+  .section-heading {
+    @apply mb-4 text-sm font-bold uppercase tracking-widest text-night-700;
+  }
+
+  .section-heading-fan {
+    @apply section-heading text-fan-700;
+  }
+
+  .section-heading-royal {
+    @apply section-heading text-royal-700;
+  }
+
+  .section-heading-pitch {
+    @apply section-heading text-pitch-700;
+  }
+
+  .page-title {
+    @apply font-display text-3xl font-extrabold tracking-tight text-night-900;
+  }
+
+  .filter-pill {
+    @apply rounded-full px-4 py-1.5 text-sm font-bold transition;
+  }
+
+  .filter-pill-active {
+    @apply filter-pill bg-gradient-to-r from-pitch-600 to-royal-600 text-white shadow-md;
+  }
+
+  .filter-pill-inactive {
+    @apply filter-pill bg-white text-night-700 shadow-sm hover:bg-royal-50;
+  }
+
+  .leaderboard-row-gold {
+    @apply bg-gold-50/80;
+  }
+
+  .leaderboard-row-silver {
+    @apply bg-gray-50;
+  }
+
+  .leaderboard-row-bronze {
+    @apply bg-fan-50/60;
+  }
+
+  .feature-card-fan {
+    @apply card border-t-4 border-t-fan-500 bg-gradient-to-b from-fan-50/80 to-white text-left;
+  }
+
+  .feature-card-royal {
+    @apply card border-t-4 border-t-royal-500 bg-gradient-to-b from-royal-50/80 to-white text-left;
+  }
+
+  .feature-card-pitch {
+    @apply card border-t-4 border-t-pitch-500 bg-gradient-to-b from-pitch-50/80 to-white text-left;
+  }
+
+  .auth-card {
+    @apply card overflow-hidden border-0 p-0 shadow-card-hover;
+  }
+
+  .auth-card-header {
+    @apply bg-gradient-to-r from-night-900 via-royal-800 to-pitch-700 px-6 py-5 text-white;
+  }
+
+  .auth-card-body {
+    @apply p-6;
+  }
+
+  .league-hero {
+    @apply mb-6 overflow-hidden rounded-2xl bg-gradient-to-r from-royal-600 via-pitch-600 to-fan-500 p-6 text-white shadow-lg;
+  }
+
+  .info-banner-pitch {
+    @apply mb-6 rounded-2xl border-l-4 border-l-pitch-500 bg-gradient-to-r from-pitch-50 to-white p-4 text-sm text-pitch-900 shadow-sm;
+  }
+
+  .info-banner-fan {
+    @apply mb-6 rounded-2xl border-l-4 border-l-fan-500 bg-gradient-to-r from-fan-50 to-white p-4 text-sm text-fan-900 shadow-sm;
+  }
+
+  .tab-pill {
+    @apply rounded-full border-2 border-gray-200 bg-white px-4 py-2 text-sm font-bold text-night-700 transition hover:border-royal-300 hover:bg-royal-50;
+  }
+
+  .tab-pill-active {
+    @apply rounded-full bg-gradient-to-r from-pitch-600 to-royal-600 px-4 py-2 text-sm font-bold text-white shadow-md;
+  }
+
+  .admin-page-title {
+    @apply font-display text-3xl font-extrabold tracking-tight text-night-900;
+  }
+
+  .admin-card {
+    @apply rounded-xl border border-gray-200 bg-white p-5 shadow-sm;
+  }
+
+  .admin-tab-active {
+    @apply rounded-lg bg-night-800 px-4 py-2 text-sm font-bold text-white shadow;
+  }
+
+  .admin-tab {
+    @apply rounded-lg px-4 py-2 text-sm font-semibold text-night-700 transition hover:bg-gray-100;
+  }
+
+  .admin-round-pill {
+    @apply rounded-full border border-gray-200 bg-white px-4 py-1.5 text-sm font-semibold text-night-700 transition hover:border-gray-300 hover:bg-gray-50;
+  }
+
+  .admin-round-pill-active {
+    @apply rounded-full bg-night-800 px-4 py-1.5 text-sm font-bold text-white shadow;
+  }
+
+  .empty-state {
+    @apply flex flex-col items-center rounded-2xl border-2 border-dashed border-royal-200 bg-gradient-to-b from-royal-50/50 to-white px-6 py-12 text-center;
+  }
+
+  .link-back {
+    @apply inline-flex items-center gap-1 text-sm font-bold text-royal-600 transition hover:text-royal-800;
+  }
+
+  .group-slider {
+    @apply flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-2;
+    scrollbar-width: thin;
+  }
+
+  .group-slider-card {
+    @apply card min-w-[min(100%,22rem)] flex-shrink-0 snap-center p-5 sm:min-w-[20rem];
+  }
+
+  .live-hub {
+    @apply overflow-hidden rounded-2xl bg-gradient-to-br from-night-900 via-fan-700 to-royal-800 p-6 text-white shadow-xl;
+  }
+
+  .live-hub-countdown {
+    @apply rounded-xl bg-white/10 p-4 backdrop-blur-sm;
+  }
+
+  .countdown-digit {
+    @apply flex h-14 w-12 items-center justify-center rounded-xl bg-night-950/60 font-display text-2xl font-extrabold tabular-nums text-white shadow-inner ring-1 ring-white/20 sm:h-16 sm:w-14 sm:text-3xl;
+  }
+
+  .live-match-tile {
+    @apply rounded-xl border border-white/20 bg-white/10 p-4 backdrop-blur-sm transition hover:bg-white/15;
+  }
+
+  .live-badge {
+    @apply inline-flex items-center gap-1.5 rounded-full bg-fan-500/90 px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-white;
+  }
+
+  .live-badge-sm {
+    @apply inline-flex items-center gap-1 rounded-full bg-fan-100 px-2.5 py-0.5 text-xs font-bold uppercase text-fan-800;
+  }
+
+  .live-dot {
+    @apply h-2 w-2 animate-pulse rounded-full bg-white;
+  }
+
+  .live-dot-lg {
+    @apply inline-block h-3 w-3 animate-pulse rounded-full bg-fan-400 shadow-[0_0_8px_rgba(249,115,22,0.8)];
   }
 }

@@ -16,7 +16,7 @@ A full-stack football prediction platform where users compete by predicting matc
 
 Knockout stages follow the expanded World Cup bracket:
 
-1. Group Stage (Day 1–3)
+1. Group Stage (filter by matchday 1–3)
 2. **Round of 32** — 32 teams, 16 matches
 3. Round of 16
 4. Quarter Finals

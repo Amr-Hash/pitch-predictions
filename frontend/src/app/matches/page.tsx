@@ -11,6 +11,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { RequireTournament } from "@/components/RequireTournament";
 import { useLocale, useT } from "@/lib/i18n";
 import { tournamentLabel } from "@/lib/localize";
+import { MATCHDAY_SECTION_CLASS } from "@/lib/theme";
 
 function MatchesContent() {
   const { user, token, loading: authLoading } = useAuth();
@@ -73,7 +74,7 @@ function MatchesContent() {
 
   return (
     <div>
-      <h1 className="mb-2 text-3xl font-bold">{t("matches")}</h1>
+      <h1 className="page-title mb-2">{t("matches")}</h1>
       <p className="mb-4 text-gray-600">
         {tournamentName} ({selectedTournament.year}) — {t("fixtures", { count: matches.length })}
       </p>
@@ -125,7 +126,7 @@ function MatchesContent() {
         [1, 2, 3].map((day) =>
           grouped[day].length > 0 ? (
             <section key={day} className="mb-10">
-              <h2 className="mb-4 text-xl font-semibold">
+              <h2 className={`mb-4 text-lg ${MATCHDAY_SECTION_CLASS[day] ?? "section-heading"}`}>
                 {t("filterMatchday", { day })}
               </h2>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -171,11 +172,7 @@ function FilterLink({
   return (
     <Link
       href={href}
-      className={`rounded-full px-3 py-1 text-sm font-medium ${
-        active
-          ? "bg-pitch-600 text-white"
-          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-      }`}
+      className={active ? "filter-pill-active" : "filter-pill-inactive"}
     >
       {children}
     </Link>

@@ -60,6 +60,8 @@ export interface GroupMember {
 export interface GroupMemberMatchPrediction {
   user_id: number;
   username: string;
+  has_prediction?: boolean;
+  is_hidden?: boolean;
   predicted_home_score: number | null;
   predicted_away_score: number | null;
   predicted_winner_team: Team | null;
@@ -141,6 +143,14 @@ export interface LeaderboardEntry {
   correct_outcomes: number;
 }
 
+export interface DashboardPodiumEntry {
+  rank: number;
+  user_id: number;
+  username: string;
+  total_points: number;
+  is_you: boolean;
+}
+
 export interface DashboardGroupSummary {
   id: number;
   name: string;
@@ -149,11 +159,14 @@ export interface DashboardGroupSummary {
   rank: number | null;
   total_points: number;
   leader_points: number;
+  podium: DashboardPodiumEntry[];
 }
 
 export interface Dashboard {
   groups: DashboardGroupSummary[];
   upcoming_matches: Match[];
+  live_matches: Match[];
+  next_match: Match | null;
   pending_predictions: Match[];
   pending_count: number;
   recent_results: Match[];

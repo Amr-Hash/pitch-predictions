@@ -68,7 +68,7 @@ class DashboardTests(TestCase):
         )
         self.stage = Stage.objects.create(
             tournament=self.tournament,
-            name="Group Stage — Matchday 1",
+            name="Group Stage",
             order=1,
             stage_type=Stage.StageType.GROUP,
         )
@@ -91,6 +91,8 @@ class DashboardTests(TestCase):
         self.assertIn("groups", response.data)
         self.assertIn("total_points", response.data)
         self.assertIn("pending_count", response.data)
+        self.assertIn("live_matches", response.data)
+        self.assertIn("next_match", response.data)
 
     def test_dashboard_with_tournament_filter(self):
         response = self.client.get(f"/api/dashboard?tournament={self.tournament.id}")

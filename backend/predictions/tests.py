@@ -328,13 +328,31 @@ class PredictionLockTests(TestCase):
         self.client = APIClient()
         self.client.force_authenticate(user=self.user)
 
-    def test_locked_prediction_rejected(self):
+    def test_prediction_allowed_until_kickoff(self):
         match = Match.objects.create(
             tournament=self.tournament,
             stage=self.stage,
             home_team=self.home,
             away_team=self.away,
             kickoff_time=timezone.now() + timedelta(minutes=30),
+        )
+        response = self.client.post(
+            "/api/predictions/",
+            {
+                "match": match.id,
+                "predicted_home_score": 1,
+                "predicted_away_score": 0,
+            },
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_locked_prediction_rejected_after_kickoff(self):
+        match = Match.objects.create(
+            tournament=self.tournament,
+            stage=self.stage,
+            home_team=self.home,
+            away_team=self.away,
+            kickoff_time=timezone.now() - timedelta(minutes=1),
         )
         response = self.client.post(
             "/api/predictions/",
@@ -360,16 +378,10 @@ class MatchdayLockTests(TestCase):
             start_date=timezone.now().date(),
             end_date=timezone.now().date() + timedelta(days=30),
         )
-        self.stage1 = Stage.objects.create(
+        self.group_stage = Stage.objects.create(
             tournament=self.tournament,
-            name="Matchday 1",
+            name="Group Stage",
             order=1,
-            stage_type=Stage.StageType.GROUP,
-        )
-        self.stage2 = Stage.objects.create(
-            tournament=self.tournament,
-            name="Matchday 2",
-            order=2,
             stage_type=Stage.StageType.GROUP,
         )
         self.group = Group.objects.create(name="MD Group", created_by=self.user)
@@ -378,7 +390,7 @@ class MatchdayLockTests(TestCase):
         )
         self.md1_match = Match.objects.create(
             tournament=self.tournament,
-            stage=self.stage1,
+            stage=self.group_stage,
             matchday=1,
             home_team=self.home,
             away_team=self.away,
@@ -386,7 +398,7 @@ class MatchdayLockTests(TestCase):
         )
         self.md2_match = Match.objects.create(
             tournament=self.tournament,
-            stage=self.stage2,
+            stage=self.group_stage,
             matchday=2,
             home_team=self.home,
             away_team=self.away,
@@ -561,7 +573,10 @@ class GroupMemberViewsTests(TestCase):
         preds = response.data["matches"][0]["predictions"]
         self.assertEqual(len(preds), 2)
         by_user = {row["username"]: row for row in preds}
-        self.assertEqual(by_user["gmember"]["predicted_home_score"], 2)
+        self.assertTrue(by_user["gmember"]["has_prediction"])
+        self.assertTrue(by_user["gmember"]["is_hidden"])
+        self.assertIsNone(by_user["gmember"]["predicted_home_score"])
+        self.assertFalse(by_user["gother"]["has_prediction"])
         self.assertIsNone(by_user["gother"]["predicted_home_score"])
 
     def test_group_predictions_require_tournament(self):

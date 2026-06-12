@@ -173,7 +173,8 @@ EMAIL_BACKEND = config(
     default="django.core.mail.backends.console.EmailBackend",
 )
 
-PREDICTION_LOCK_HOURS = 1
+# Predictions lock when kickoff_time is reached (0 = at kickoff, not before).
+PREDICTION_LOCK_HOURS = 0
 
 # Avoid 301 redirect loops when API is proxied through Vercel (trailing-slash mismatch)
 APPEND_SLASH = False

@@ -6,6 +6,7 @@ import { api, Group, LeaderboardEntry, unwrapList } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useTournament } from "@/lib/tournament";
 import { EmptyState } from "@/components/EmptyState";
+import { LeaderboardTable } from "@/components/LeaderboardTable";
 import { RequireTournament } from "@/components/RequireTournament";
 import { useLocale, useT } from "@/lib/i18n";
 import { tournamentLabel } from "@/lib/localize";
@@ -50,65 +51,45 @@ export default function LeaderboardsContent() {
 
   return (
     <RequireTournament>
-    <div>
-      <h1 className="mb-2 text-3xl font-bold">{t("leaderboards")}</h1>
-      <p className="mb-6 text-gray-600">
-        {selectedTournament
-          ? t("rankingsFor", { name: tournamentName, year: selectedTournament.year })
-          : ""}
-      </p>
+      <div>
+        <h1 className="page-title mb-2">{t("leaderboards")}</h1>
+        <p className="mb-6 font-medium text-night-700/70">
+          {selectedTournament
+            ? t("rankingsFor", { name: tournamentName, year: selectedTournament.year })
+            : ""}
+        </p>
 
-      <div className="mb-6">
-        <select
-          className="input max-w-xs"
-          value={selectedGroup}
-          onChange={(e) =>
-            setSelectedGroup(e.target.value === "global" ? "global" : Number(e.target.value))
-          }
-        >
-          <option value="global">{t("globalLeaderboard")}</option>
+        <div className="mb-6 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setSelectedGroup("global")}
+            className={selectedGroup === "global" ? "filter-pill-active" : "filter-pill-inactive"}
+          >
+            {t("globalLeaderboard")}
+          </button>
           {groups.map((g) => (
-            <option key={g.id} value={g.id}>{g.name}</option>
+            <button
+              key={g.id}
+              type="button"
+              onClick={() => setSelectedGroup(g.id)}
+              className={selectedGroup === g.id ? "filter-pill-active" : "filter-pill-inactive"}
+            >
+              {g.name}
+            </button>
           ))}
-        </select>
-      </div>
-
-      {leaderboard.length === 0 ? (
-        <EmptyState
-          icon="📊"
-          title={t("noRankingsYet")}
-          description={t("noRankingsDesc")}
-          action={{ label: t("makePredictions"), href: "/matches" }}
-        />
-      ) : (
-        <div className="card overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b text-gray-500">
-                <th className="pb-3 pr-4">{t("rank")}</th>
-                <th className="pb-3 pr-4">{t("username")}</th>
-                <th className="pb-3 pr-4">{t("points")}</th>
-                <th className="pb-3 pr-4">{t("exact")}</th>
-                <th className="pb-3">{t("outcomes")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {leaderboard.map((entry) => (
-                <tr key={`${entry.user_id}-${entry.rank}`} className="border-b last:border-0">
-                  <td className="py-3 pr-4">
-                    {entry.rank === 1 ? "🥇" : entry.rank === 2 ? "🥈" : entry.rank === 3 ? "🥉" : entry.rank}
-                  </td>
-                  <td className="py-3 pr-4 font-medium">{entry.username}</td>
-                  <td className="py-3 pr-4 font-bold text-pitch-600">{entry.total_points}</td>
-                  <td className="py-3 pr-4">{entry.exact_predictions}</td>
-                  <td className="py-3">{entry.correct_outcomes}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
         </div>
-      )}
-    </div>
+
+        {leaderboard.length === 0 ? (
+          <EmptyState
+            icon="📊"
+            title={t("noRankingsYet")}
+            description={t("noRankingsDesc")}
+            action={{ label: t("makePredictions"), href: "/matches" }}
+          />
+        ) : (
+          <LeaderboardTable entries={leaderboard} highlightUserId={user.id} />
+        )}
+      </div>
     </RequireTournament>
   );
 }

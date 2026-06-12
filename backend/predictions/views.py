@@ -1,3 +1,4 @@
+from django.contrib.auth import get_user_model
 from django.db.models import Count, Q, Sum
 from django.utils import timezone
 from rest_framework import permissions, viewsets
@@ -138,14 +139,29 @@ class DashboardView(APIView):
         groups = Group.objects.filter(memberships__user=user).distinct()
         groups_data = self._get_group_summaries(user, tournament_id, groups)
 
-        matches_qs = Match.objects.filter(status=Match.Status.SCHEDULED).select_related(
-            "home_team", "away_team", "stage"
+        base_matches_qs = Match.objects.select_related(
+            "home_team", "away_team", "stage", "cup_group"
         )
         if tournament_id:
-            matches_qs = matches_qs.filter(tournament_id=tournament_id)
-        upcoming = matches_qs.filter(
-            kickoff_time__gte=timezone.now()
-        ).order_by("kickoff_time")[:10]
+            base_matches_qs = base_matches_qs.filter(tournament_id=tournament_id)
+
+        now = timezone.now()
+        upcoming = (
+            base_matches_qs.exclude(status=Match.Status.FINISHED)
+            .filter(kickoff_time__gt=now)
+            .order_by("kickoff_time")[:10]
+        )
+        live_matches = (
+            base_matches_qs.exclude(status=Match.Status.FINISHED)
+            .filter(Q(status=Match.Status.LIVE) | Q(kickoff_time__lte=now))
+            .order_by("-kickoff_time")[:10]
+        )
+        next_match = (
+            base_matches_qs.exclude(status=Match.Status.FINISHED)
+            .filter(kickoff_time__gt=now)
+            .order_by("kickoff_time")
+            .first()
+        )
 
         predictions_qs = Prediction.objects.filter(user=user)
         if tournament_id:
@@ -169,13 +185,28 @@ class DashboardView(APIView):
         from tournaments.serializers import MatchSerializer
 
         pending_slice = pending[:10]
+        serializer_context = {"request": request}
         return Response(
             {
                 "groups": groups_data,
-                "upcoming_matches": MatchSerializer(upcoming, many=True).data,
-                "pending_predictions": MatchSerializer(pending_slice, many=True).data,
+                "upcoming_matches": MatchSerializer(
+                    upcoming, many=True, context=serializer_context
+                ).data,
+                "live_matches": MatchSerializer(
+                    live_matches, many=True, context=serializer_context
+                ).data,
+                "next_match": (
+                    MatchSerializer(next_match, context=serializer_context).data
+                    if next_match
+                    else None
+                ),
+                "pending_predictions": MatchSerializer(
+                    pending_slice, many=True, context=serializer_context
+                ).data,
                 "pending_count": len(pending),
-                "recent_results": MatchSerializer(recent_results, many=True).data,
+                "recent_results": MatchSerializer(
+                    recent_results, many=True, context=serializer_context
+                ).data,
                 "total_points": total_points,
                 "current_rank": self._get_user_rank(user, tournament_id),
             }
@@ -191,22 +222,29 @@ class DashboardView(APIView):
             if tournament_id:
                 predictions_qs = predictions_qs.filter(match__tournament_id=tournament_id)
 
-            leaderboard = []
-            for member_id in member_ids:
-                user_preds = predictions_qs.filter(user_id=member_id)
-                total = user_preds.aggregate(total=Sum("points_awarded"))["total"] or 0
-                leaderboard.append((member_id, total))
-            leaderboard.sort(key=lambda row: -row[1])
+            leaderboard = self._build_group_leaderboard(member_ids, predictions_qs)
 
             rank = None
             points = 0
-            for index, (member_id, total) in enumerate(leaderboard, start=1):
-                if member_id == user.id:
+            for index, entry in enumerate(leaderboard, start=1):
+                if entry["user_id"] == user.id:
                     rank = index
-                    points = total
+                    points = entry["total_points"]
                     break
 
-            leader_points = leaderboard[0][1] if leaderboard else 0
+            leader_points = leaderboard[0]["total_points"] if leaderboard else 0
+            podium = []
+            for index, entry in enumerate(leaderboard[:3], start=1):
+                podium.append(
+                    {
+                        "rank": index,
+                        "user_id": entry["user_id"],
+                        "username": entry["username"],
+                        "total_points": entry["total_points"],
+                        "is_you": entry["user_id"] == user.id,
+                    }
+                )
+
             summaries.append(
                 {
                     "id": group.id,
@@ -216,9 +254,31 @@ class DashboardView(APIView):
                     "rank": rank,
                     "total_points": points,
                     "leader_points": leader_points,
+                    "podium": podium,
                 }
             )
         return summaries
+
+    def _build_group_leaderboard(self, member_ids, predictions_qs):
+        users = get_user_model().objects.in_bulk(member_ids)
+        rows = []
+        for member_id in member_ids:
+            total = (
+                predictions_qs.filter(user_id=member_id).aggregate(
+                    total=Sum("points_awarded")
+                )["total"]
+                or 0
+            )
+            member = users.get(member_id)
+            rows.append(
+                {
+                    "user_id": member_id,
+                    "username": member.username if member else "?",
+                    "total_points": total,
+                }
+            )
+        rows.sort(key=lambda row: (-row["total_points"], row["username"].lower()))
+        return rows
 
     def _get_user_rank(self, user, tournament_id):
         predictions_qs = Prediction.objects.all()

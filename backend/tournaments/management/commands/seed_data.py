@@ -21,9 +21,7 @@ from tournaments.wc2026_data import (
 User = get_user_model()
 
 STAGES_CONFIG = [
-    ("Group Stage — Matchday 1", 1, Stage.StageType.GROUP),
-    ("Group Stage — Matchday 2", 2, Stage.StageType.GROUP),
-    ("Group Stage — Matchday 3", 3, Stage.StageType.GROUP),
+    ("Group Stage", 1, Stage.StageType.GROUP),
     ("Round of 32", 4, Stage.StageType.KNOCKOUT),
     ("Round of 16", 5, Stage.StageType.KNOCKOUT),
     ("Quarter Finals", 6, Stage.StageType.KNOCKOUT),
@@ -33,9 +31,7 @@ STAGES_CONFIG = [
 ]
 
 TEST_STAGES_CONFIG = [
-    ("Group Stage — Matchday 1", 1, Stage.StageType.GROUP),
-    ("Group Stage — Matchday 2", 2, Stage.StageType.GROUP),
-    ("Group Stage — Matchday 3", 3, Stage.StageType.GROUP),
+    ("Group Stage", 1, Stage.StageType.GROUP),
 ]
 
 
@@ -182,7 +178,7 @@ class Command(BaseCommand):
                 kickoff = datetime.fromisoformat(kickoff.replace("Z", "+00:00"))
             Match.objects.create(
                 tournament=tournament,
-                stage=stages[matchday],
+                stage=stages[1],
                 cup_group=cup_groups[group_letter],
                 matchday=matchday,
                 home_team=teams[home_code],
@@ -220,7 +216,7 @@ class Command(BaseCommand):
         for group_letter, matchday, home_code, away_code, kickoff in schedule["matches"]:
             Match.objects.create(
                 tournament=tournament,
-                stage=stages[matchday],
+                stage=stages[1],
                 cup_group=cup_groups[group_letter],
                 matchday=matchday,
                 home_team=teams[home_code],

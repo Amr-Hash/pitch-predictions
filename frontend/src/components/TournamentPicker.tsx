@@ -102,8 +102,8 @@ function TournamentCard({
     <button
       type="button"
       onClick={onSelect}
-      className={`card w-full text-left transition hover:border-pitch-300 hover:shadow-md ${
-        selected ? "border-pitch-400 ring-2 ring-pitch-200" : ""
+      className={`card card-hover w-full border-t-4 border-t-pitch-500 text-left ${
+        selected ? "ring-2 ring-royal-400 ring-offset-2" : ""
       }`}
     >
       <div className="flex items-start justify-between gap-3">
