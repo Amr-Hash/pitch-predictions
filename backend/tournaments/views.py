@@ -48,6 +48,13 @@ class TournamentViewSet(viewsets.ReadOnlyModelViewSet):
         serializer = CupGroupSerializer(groups, many=True)
         return Response(serializer.data)
 
+    @action(detail=True, methods=["get"], url_path="standings")
+    def standings(self, request, pk=None):
+        from tournaments.services.standings import build_tournament_standings
+
+        tournament = self.get_object()
+        return Response(build_tournament_standings(tournament))
+
 
 class AdminTournamentViewSet(viewsets.ModelViewSet):
     queryset = Tournament.objects.all()

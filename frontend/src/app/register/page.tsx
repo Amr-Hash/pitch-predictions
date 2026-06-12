@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useEffect, useState } from "react";
 import { postAuthRedirect, authLinkWithNext } from "@/lib/authRedirect";
 import { useAuth } from "@/lib/auth";
+import { LoadingScreen } from "@/components/LoadingScreen";
 import { useT } from "@/lib/i18n";
 
 function RegisterForm() {
@@ -104,7 +105,7 @@ function RegisterForm() {
 
 export default function RegisterPage() {
   return (
-    <Suspense fallback={<div className="text-center text-gray-500">Loading...</div>}>
+    <Suspense fallback={<LoadingScreen />}>
       <RegisterForm />
     </Suspense>
   );

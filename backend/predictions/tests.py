@@ -668,6 +668,72 @@ class LeaderboardTests(TestCase):
         self.assertTrue(len(response.data) >= 1)
 
 
+class CompetitionRankTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="alpha", email="alpha@example.com", password="pass12345"
+        )
+        self.tie_user = User.objects.create_user(
+            username="zulu", email="zulu@example.com", password="pass12345"
+        )
+        self.third = User.objects.create_user(
+            username="middle", email="middle@example.com", password="pass12345"
+        )
+        self.home = Team.objects.create(name="H", code="TH")
+        self.away = Team.objects.create(name="A", code="TA")
+        self.tournament = Tournament.objects.create(
+            name="Cup",
+            year=2026,
+            start_date=timezone.now().date(),
+            end_date=timezone.now().date() + timedelta(days=30),
+        )
+        self.stage = Stage.objects.create(
+            tournament=self.tournament, name="Day 1", order=1
+        )
+        self.match = Match.objects.create(
+            tournament=self.tournament,
+            stage=self.stage,
+            home_team=self.home,
+            away_team=self.away,
+            kickoff_time=timezone.now() - timedelta(days=1),
+            status=Match.Status.FINISHED,
+            home_score=2,
+            away_score=1,
+        )
+        for user, points in (
+            (self.user, 10),
+            (self.tie_user, 10),
+            (self.third, 5),
+        ):
+            Prediction.objects.create(
+                user=user,
+                match=self.match,
+                predicted_home_score=2,
+                predicted_away_score=1,
+                points_awarded=points,
+            )
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.user)
+
+    def test_tied_points_share_rank_on_global_leaderboard(self):
+        response = self.client.get(
+            f"/api/leaderboards/global?tournament={self.tournament.id}"
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        ranks = {row["username"]: row["rank"] for row in response.data}
+        self.assertEqual(ranks["alpha"], 1)
+        self.assertEqual(ranks["zulu"], 1)
+        self.assertEqual(ranks["middle"], 3)
+
+    def test_global_podium_includes_all_tied_leaders(self):
+        from predictions.services.leaderboard import global_podium_for_user
+
+        podium = global_podium_for_user(self.tournament.id, self.user.id)
+        rank_one = [entry for entry in podium if entry["rank"] == 1]
+        self.assertEqual(len(rank_one), 2)
+        self.assertEqual({entry["username"] for entry in rank_one}, {"alpha", "zulu"})
+
+
 class NotificationTests(TestCase):
     def setUp(self):
         self.admin = User.objects.create_user(

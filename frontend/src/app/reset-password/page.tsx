@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useState } from "react";
 import { api } from "@/lib/api";
+import { LoadingScreen } from "@/components/LoadingScreen";
 import { useT } from "@/lib/i18n";
 
 function ResetPasswordForm() {
@@ -111,7 +112,7 @@ function ResetPasswordForm() {
 
 export default function ResetPasswordPage() {
   return (
-    <Suspense fallback={<div className="text-center text-gray-500">Loading...</div>}>
+    <Suspense fallback={<LoadingScreen />}>
       <ResetPasswordForm />
     </Suspense>
   );

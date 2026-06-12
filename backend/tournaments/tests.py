@@ -193,3 +193,121 @@ class AdminApiTests(TestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertGreaterEqual(len(response.data), 1)
+
+
+class GroupStandingsTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="standingsuser",
+            email="standings@example.com",
+            password="pass12345",
+        )
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.user)
+        self.tournament = Tournament.objects.create(
+            name="Standings Cup",
+            year=2026,
+            start_date=timezone.now().date(),
+            end_date=timezone.now().date() + timedelta(days=30),
+            standing_rules=Tournament.StandingRules.FIFA_WORLD_CUP,
+            qualifiers_per_group=2,
+        )
+        self.stage = Stage.objects.create(
+            tournament=self.tournament,
+            name="Group Stage",
+            order=1,
+            stage_type=Stage.StageType.GROUP,
+        )
+        self.teams = {
+            code: Team.objects.create(name=code, code=code)
+            for code in ("AAA", "BBB", "CCC", "DDD")
+        }
+        self.cup_group = CupGroup.objects.create(
+            tournament=self.tournament,
+            name="A",
+        )
+        for order, code in enumerate(("AAA", "BBB", "CCC", "DDD")):
+            self.cup_group.group_teams.create(
+                team=self.teams[code],
+                order=order,
+            )
+
+    def _finish(self, home_code, away_code, home_score, away_score, matchday=1):
+        return Match.objects.create(
+            tournament=self.tournament,
+            stage=self.stage,
+            cup_group=self.cup_group,
+            matchday=matchday,
+            home_team=self.teams[home_code],
+            away_team=self.teams[away_code],
+            kickoff_time=timezone.now() - timedelta(days=1),
+            status=Match.Status.FINISHED,
+            home_score=home_score,
+            away_score=away_score,
+        )
+
+    def test_standings_points_and_goal_difference(self):
+        self._finish("AAA", "BBB", 2, 0)
+        self._finish("CCC", "DDD", 1, 1)
+
+        response = self.client.get(f"/api/tournaments/{self.tournament.id}/standings")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        group = response.data["groups"][0]
+        by_code = {row["team"]["code"]: row for row in group["standings"]}
+
+        self.assertEqual(by_code["AAA"]["points"], 3)
+        self.assertEqual(by_code["AAA"]["goal_difference"], 2)
+        self.assertEqual(by_code["AAA"]["rank"], 1)
+        self.assertTrue(by_code["AAA"]["qualifies"])
+        self.assertEqual(by_code["CCC"]["points"], 1)
+        self.assertEqual(by_code["CCC"]["goals_for"], 1)
+        self.assertEqual(by_code["CCC"]["goals_against"], 1)
+
+    def test_fifa_ranks_by_goal_difference_when_points_tied(self):
+        self._finish("AAA", "BBB", 2, 0)
+        self._finish("CCC", "DDD", 1, 0)
+        self._finish("AAA", "CCC", 0, 0)
+        self._finish("BBB", "DDD", 1, 0)
+
+        response = self.client.get(f"/api/tournaments/{self.tournament.id}/standings")
+        group = response.data["groups"][0]
+        ranked_codes = [row["team"]["code"] for row in group["standings"]]
+        self.assertEqual(ranked_codes[0], "AAA")
+
+    def test_uefa_head_to_head_breaks_two_team_tie(self):
+        self.tournament.standing_rules = Tournament.StandingRules.UEFA_CHAMPIONS_LEAGUE
+        self.tournament.save(update_fields=["standing_rules"])
+
+        self._finish("AAA", "BBB", 1, 0)
+        self._finish("AAA", "CCC", 0, 0)
+        self._finish("BBB", "CCC", 1, 0)
+
+        response = self.client.get(f"/api/tournaments/{self.tournament.id}/standings")
+        group = response.data["groups"][0]
+        by_code = {row["team"]["code"]: row for row in group["standings"]}
+
+        self.assertEqual(by_code["AAA"]["points"], 4)
+        self.assertEqual(by_code["BBB"]["points"], 3)
+        self.assertEqual(by_code["AAA"]["rank"], 1)
+        self.assertEqual(by_code["BBB"]["rank"], 2)
+        self.assertTrue(by_code["AAA"]["qualifies"])
+        self.assertTrue(by_code["BBB"]["qualifies"])
+
+    def test_uefa_head_to_head_wins_when_points_are_level(self):
+        self.tournament.standing_rules = Tournament.StandingRules.UEFA_CHAMPIONS_LEAGUE
+        self.tournament.save(update_fields=["standing_rules"])
+
+        self._finish("AAA", "BBB", 1, 0)
+        self._finish("AAA", "CCC", 0, 0)
+        self._finish("DDD", "AAA", 1, 0)
+        self._finish("BBB", "CCC", 1, 0)
+        self._finish("BBB", "DDD", 0, 0)
+        self._finish("CCC", "DDD", 0, 0)
+
+        response = self.client.get(f"/api/tournaments/{self.tournament.id}/standings")
+        group = response.data["groups"][0]
+        by_code = {row["team"]["code"]: row for row in group["standings"]}
+
+        self.assertEqual(by_code["DDD"]["rank"], 1)
+        self.assertEqual(by_code["AAA"]["points"], by_code["BBB"]["points"])
+        self.assertLess(by_code["AAA"]["rank"], by_code["BBB"]["rank"])

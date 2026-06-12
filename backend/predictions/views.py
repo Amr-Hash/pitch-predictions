@@ -1,4 +1,3 @@
-from django.contrib.auth import get_user_model
 from django.db.models import Count, Q, Sum
 from django.utils import timezone
 from rest_framework import permissions, viewsets
@@ -57,76 +56,20 @@ class GroupLeaderboardView(APIView):
         if not GroupMember.objects.filter(user=request.user, group=group).exists():
             return Response({"detail": "Not a group member."}, status=403)
 
+        from predictions.services.leaderboard import build_group_leaderboard
+
         tournament_id = request.query_params.get("tournament")
-        member_ids = GroupMember.objects.filter(group=group).values_list(
-            "user_id", flat=True
-        )
-        predictions_qs = Prediction.objects.filter(user_id__in=member_ids)
-        if tournament_id:
-            predictions_qs = predictions_qs.filter(match__tournament_id=tournament_id)
-
-        members = GroupMember.objects.filter(group=group).select_related("user")
-        leaderboard = []
-        for membership in members:
-            user_preds = predictions_qs.filter(user=membership.user)
-            total_points = user_preds.aggregate(total=Sum("points_awarded"))["total"] or 0
-            exact_count = user_preds.filter(points_awarded__gte=5).count()
-            outcome_count = user_preds.filter(points_awarded__gte=1).count()
-            leaderboard.append(
-                {
-                    "user_id": membership.user.id,
-                    "username": membership.user.username,
-                    "total_points": total_points,
-                    "exact_predictions": exact_count,
-                    "correct_outcomes": outcome_count,
-                }
-            )
-
-        leaderboard.sort(
-            key=lambda x: (
-                -x["total_points"],
-                -x["exact_predictions"],
-                -x["correct_outcomes"],
-            )
-        )
-        for rank, entry in enumerate(leaderboard, start=1):
-            entry["rank"] = rank
-
-        return Response(leaderboard)
+        return Response(build_group_leaderboard(group, tournament_id))
 
 
 class GlobalLeaderboardView(APIView):
     permission_classes = (permissions.IsAuthenticated,)
 
     def get(self, request):
+        from predictions.services.leaderboard import build_global_leaderboard
+
         tournament_id = request.query_params.get("tournament")
-        predictions_qs = Prediction.objects.all()
-        if tournament_id:
-            predictions_qs = predictions_qs.filter(match__tournament_id=tournament_id)
-
-        stats = (
-            predictions_qs.values("user_id", "user__username")
-            .annotate(
-                total_points=Sum("points_awarded"),
-                exact_predictions=Count("id", filter=Q(points_awarded__gte=5)),
-                correct_outcomes=Count("id", filter=Q(points_awarded__gte=1)),
-            )
-            .order_by("-total_points", "-exact_predictions", "-correct_outcomes")
-        )
-
-        leaderboard = []
-        for rank, entry in enumerate(stats, start=1):
-            leaderboard.append(
-                {
-                    "rank": rank,
-                    "user_id": entry["user_id"],
-                    "username": entry["user__username"],
-                    "total_points": entry["total_points"] or 0,
-                    "exact_predictions": entry["exact_predictions"],
-                    "correct_outcomes": entry["correct_outcomes"],
-                }
-            )
-        return Response(leaderboard)
+        return Response(build_global_leaderboard(tournament_id))
 
 
 class DashboardView(APIView):
@@ -186,9 +129,23 @@ class DashboardView(APIView):
 
         pending_slice = pending[:10]
         serializer_context = {"request": request}
+
+        from predictions.services.leaderboard import (
+            build_global_leaderboard,
+            global_podium_for_user,
+            global_rank_map,
+        )
+
+        global_leaderboard = build_global_leaderboard(tournament_id)
+        global_leader_points = (
+            global_leaderboard[0]["total_points"] if global_leaderboard else 0
+        )
+
         return Response(
             {
                 "groups": groups_data,
+                "global_podium": global_podium_for_user(tournament_id, user.id),
+                "global_leader_points": global_leader_points,
                 "upcoming_matches": MatchSerializer(
                     upcoming, many=True, context=serializer_context
                 ).data,
@@ -208,42 +165,27 @@ class DashboardView(APIView):
                     recent_results, many=True, context=serializer_context
                 ).data,
                 "total_points": total_points,
-                "current_rank": self._get_user_rank(user, tournament_id),
+                "current_rank": global_rank_map(tournament_id).get(user.id),
             }
         )
 
     def _get_group_summaries(self, user, tournament_id, groups):
+        from predictions.services.leaderboard import (
+            build_group_leaderboard,
+            build_podium_from_leaderboard,
+        )
+
         summaries = []
         for group in groups:
-            member_ids = list(
-                GroupMember.objects.filter(group=group).values_list("user_id", flat=True)
+            leaderboard = build_group_leaderboard(group, tournament_id)
+            member_ids = [row["user_id"] for row in leaderboard]
+
+            user_row = next(
+                (entry for entry in leaderboard if entry["user_id"] == user.id), None
             )
-            predictions_qs = Prediction.objects.filter(user_id__in=member_ids)
-            if tournament_id:
-                predictions_qs = predictions_qs.filter(match__tournament_id=tournament_id)
-
-            leaderboard = self._build_group_leaderboard(member_ids, predictions_qs)
-
-            rank = None
-            points = 0
-            for index, entry in enumerate(leaderboard, start=1):
-                if entry["user_id"] == user.id:
-                    rank = index
-                    points = entry["total_points"]
-                    break
-
+            rank = user_row["rank"] if user_row else None
+            points = user_row["total_points"] if user_row else 0
             leader_points = leaderboard[0]["total_points"] if leaderboard else 0
-            podium = []
-            for index, entry in enumerate(leaderboard[:3], start=1):
-                podium.append(
-                    {
-                        "rank": index,
-                        "user_id": entry["user_id"],
-                        "username": entry["username"],
-                        "total_points": entry["total_points"],
-                        "is_you": entry["user_id"] == user.id,
-                    }
-                )
 
             summaries.append(
                 {
@@ -254,42 +196,7 @@ class DashboardView(APIView):
                     "rank": rank,
                     "total_points": points,
                     "leader_points": leader_points,
-                    "podium": podium,
+                    "podium": build_podium_from_leaderboard(leaderboard, user.id),
                 }
             )
         return summaries
-
-    def _build_group_leaderboard(self, member_ids, predictions_qs):
-        users = get_user_model().objects.in_bulk(member_ids)
-        rows = []
-        for member_id in member_ids:
-            total = (
-                predictions_qs.filter(user_id=member_id).aggregate(
-                    total=Sum("points_awarded")
-                )["total"]
-                or 0
-            )
-            member = users.get(member_id)
-            rows.append(
-                {
-                    "user_id": member_id,
-                    "username": member.username if member else "?",
-                    "total_points": total,
-                }
-            )
-        rows.sort(key=lambda row: (-row["total_points"], row["username"].lower()))
-        return rows
-
-    def _get_user_rank(self, user, tournament_id):
-        predictions_qs = Prediction.objects.all()
-        if tournament_id:
-            predictions_qs = predictions_qs.filter(match__tournament_id=tournament_id)
-        stats = list(
-            predictions_qs.values("user_id")
-            .annotate(total=Sum("points_awarded"))
-            .order_by("-total")
-        )
-        for rank, entry in enumerate(stats, start=1):
-            if entry["user_id"] == user.id:
-                return rank
-        return None

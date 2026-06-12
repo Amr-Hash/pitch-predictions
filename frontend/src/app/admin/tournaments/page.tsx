@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { api, Tournament, unwrapList } from "@/lib/api";
+import { bilingualAdminLabel } from "@/lib/adminDisplay";
 import { useAuth } from "@/lib/auth";
+import { useT } from "@/lib/i18n";
 
 const emptyForm = {
   name: "",
@@ -11,12 +13,15 @@ const emptyForm = {
   year: new Date().getFullYear(),
   start_date: "",
   end_date: "",
+  standing_rules: "fifa",
+  qualifiers_per_group: 2,
   is_active: true,
   is_archived: false,
 };
 
 export default function AdminTournamentsPage() {
   const { token } = useAuth();
+  const t = useT();
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -30,9 +35,9 @@ export default function AdminTournamentsPage() {
       .adminGetTournaments(token)
       .then((data) => setTournaments(unwrapList(data)))
       .catch((err) =>
-        setError(err instanceof Error ? err.message : "Could not load tournaments.")
+        setError(err instanceof Error ? err.message : t("failedLoadTournaments"))
       );
-  }, [token]);
+  }, [token, t]);
 
   useEffect(() => {
     load();
@@ -46,68 +51,72 @@ export default function AdminTournamentsPage() {
     try {
       if (editingId) {
         await api.adminUpdateTournament(token, editingId, form);
-        setSuccess("Tournament updated.");
+        setSuccess(t("tournamentUpdated"));
         setEditingId(null);
       } else {
         await api.adminCreateTournament(token, form);
-        setSuccess("Tournament created.");
+        setSuccess(t("tournamentCreated"));
       }
       setForm(emptyForm);
       load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save tournament.");
+      setError(err instanceof Error ? err.message : t("failedSaveTournament"));
     }
   }
 
-  async function toggleActive(t: Tournament) {
+  async function toggleActive(tournament: Tournament) {
     if (!token) return;
     try {
-      await api.adminUpdateTournament(token, t.id, { is_active: !t.is_active });
+      await api.adminUpdateTournament(token, tournament.id, {
+        is_active: !tournament.is_active,
+      });
       load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update tournament.");
+      setError(err instanceof Error ? err.message : t("failedSaveTournament"));
     }
   }
 
-  function startEdit(t: Tournament) {
-    setEditingId(t.id);
+  function startEdit(tournament: Tournament) {
+    setEditingId(tournament.id);
     setForm({
-      name: t.name,
-      name_ar: t.name_ar || "",
-      year: t.year,
-      start_date: t.start_date,
-      end_date: t.end_date,
-      is_active: t.is_active ?? true,
-      is_archived: t.is_archived ?? false,
+      name: tournament.name,
+      name_ar: tournament.name_ar || "",
+      year: tournament.year,
+      start_date: tournament.start_date,
+      end_date: tournament.end_date,
+      standing_rules: tournament.standing_rules || "fifa",
+      qualifiers_per_group: tournament.qualifiers_per_group ?? 2,
+      is_active: tournament.is_active ?? true,
+      is_archived: tournament.is_archived ?? false,
     });
   }
 
   async function handleDelete(id: number) {
-    if (!token || !confirm("Delete this tournament and all its data?")) return;
+    if (!token || !confirm(t("adminDeleteConfirmTournament"))) return;
     try {
       await api.adminDeleteTournament(token, id);
-      setSuccess("Tournament deleted.");
+      setSuccess(t("tournamentDeleted"));
       load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete tournament.");
+      setError(err instanceof Error ? err.message : t("failedSaveTournament"));
     }
   }
 
   return (
     <div>
-      <h1 className="mb-2 text-3xl font-bold">Tournaments</h1>
-      <p className="mb-6 text-gray-600">
-        Create competitions and control whether users can see them.
-      </p>
+      <h1 className="mb-2 text-3xl font-bold">{t("adminTournaments")}</h1>
+      <p className="mb-6 text-gray-600">{t("adminTournamentsDesc")}</p>
 
       {error && <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</div>}
       {success && <div className="mb-4 rounded-lg bg-green-50 p-3 text-sm text-green-700">{success}</div>}
 
       <form onSubmit={handleSubmit} className="card mb-8 space-y-4">
-        <h2 className="font-semibold">{editingId ? "Edit Tournament" : "Add Tournament"}</h2>
+        <h2 className="font-semibold">
+          {editingId ? t("adminEditTournament") : t("adminAddTournament")}
+        </h2>
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label className="mb-1 block text-sm font-medium">Name</label>
+            <label className="mb-1 block text-sm font-medium">{t("fieldName")}</label>
             <input
               className="input"
               value={form.name}
@@ -116,7 +125,7 @@ export default function AdminTournamentsPage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium">Arabic name</label>
+            <label className="mb-1 block text-sm font-medium">{t("nameAr")}</label>
             <input
               className="input"
               dir="rtl"
@@ -125,7 +134,7 @@ export default function AdminTournamentsPage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium">Year</label>
+            <label className="mb-1 block text-sm font-medium">{t("fieldYear")}</label>
             <input
               className="input"
               type="number"
@@ -135,7 +144,7 @@ export default function AdminTournamentsPage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium">Start date</label>
+            <label className="mb-1 block text-sm font-medium">{t("fieldStartDate")}</label>
             <input
               className="input"
               type="date"
@@ -145,13 +154,38 @@ export default function AdminTournamentsPage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium">End date</label>
+            <label className="mb-1 block text-sm font-medium">{t("fieldEndDate")}</label>
             <input
               className="input"
               type="date"
               value={form.end_date}
               onChange={(e) => setForm({ ...form, end_date: e.target.value })}
               required
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium">{t("adminStandingRules")}</label>
+            <select
+              className="input"
+              value={form.standing_rules}
+              onChange={(e) => setForm({ ...form, standing_rules: e.target.value })}
+            >
+              <option value="fifa">{t("adminStandingRulesFifa")}</option>
+              <option value="uefa">{t("adminStandingRulesUefa")}</option>
+              <option value="simple">{t("adminStandingRulesSimple")}</option>
+            </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium">{t("adminQualifiersPerGroup")}</label>
+            <input
+              className="input"
+              type="number"
+              min={1}
+              max={4}
+              value={form.qualifiers_per_group}
+              onChange={(e) =>
+                setForm({ ...form, qualifiers_per_group: Number(e.target.value) })
+              }
             />
           </div>
         </div>
@@ -162,7 +196,7 @@ export default function AdminTournamentsPage() {
               checked={form.is_active}
               onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
             />
-            Active (visible to users)
+            {t("adminActiveVisible")}
           </label>
           <label className="flex items-center gap-2 text-sm">
             <input
@@ -170,12 +204,12 @@ export default function AdminTournamentsPage() {
               checked={form.is_archived}
               onChange={(e) => setForm({ ...form, is_archived: e.target.checked })}
             />
-            Archived
+            {t("adminArchived")}
           </label>
         </div>
         <div className="flex gap-2">
           <button type="submit" className="btn-primary">
-            {editingId ? "Update" : "Create"}
+            {editingId ? t("update") : t("create")}
           </button>
           {editingId && (
             <button
@@ -186,42 +220,61 @@ export default function AdminTournamentsPage() {
                 setForm(emptyForm);
               }}
             >
-              Cancel
+              {t("cancel")}
             </button>
           )}
         </div>
       </form>
 
       <div className="space-y-3">
-        {tournaments.map((t) => (
-          <div key={t.id} className="card flex flex-wrap items-center justify-between gap-4">
+        {tournaments.map((tournament) => (
+          <div key={tournament.id} className="card flex flex-wrap items-center justify-between gap-4">
             <div>
               <h3 className="font-semibold">
-                {t.name}{" "}
-                <span className="text-gray-400">({t.year})</span>
+                {bilingualAdminLabel(tournament)}{" "}
+                <span className="text-gray-400">({tournament.year})</span>
               </h3>
               <p className="text-sm text-gray-500">
-                {t.start_date} → {t.end_date} · {t.match_count ?? 0} matches
+                {tournament.start_date} → {tournament.end_date} · {tournament.match_count ?? 0}{" "}
+                {t("matches").toLowerCase()}
               </p>
               <div className="mt-1 flex gap-2">
-                <StatusBadge active={t.is_active ?? true} label="Active" />
-                {(t.is_archived ?? false) && (
-                  <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">Archived</span>
+                <StatusBadge
+                  active={tournament.is_active ?? true}
+                  activeLabel={t("adminActive")}
+                  inactiveLabel={t("adminInactive")}
+                />
+                {(tournament.is_archived ?? false) && (
+                  <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
+                    {t("adminArchived")}
+                  </span>
                 )}
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Link href={`/admin/tournaments/${t.id}`} className="btn-primary text-sm">
-                Manage →
+              <Link href={`/admin/tournaments/${tournament.id}`} className="btn-primary text-sm">
+                {t("adminManage")} →
               </Link>
-              <button type="button" className="btn-secondary text-sm" onClick={() => toggleActive(t)}>
-                {t.is_active ? "Deactivate" : "Activate"}
+              <button
+                type="button"
+                className="btn-secondary text-sm"
+                onClick={() => toggleActive(tournament)}
+              >
+                {tournament.is_active ? t("adminDeactivate") : t("adminActivate")}
               </button>
-              <button type="button" className="btn-secondary text-sm" onClick={() => startEdit(t)}>
-                Edit details
+              <button
+                type="button"
+                className="btn-secondary text-sm"
+                onClick={() => startEdit(tournament)}
+              >
+                {t("adminEditDetails")}
               </button>
-              <button type="button" className="text-sm text-red-600 hover:underline" onClick={() => handleDelete(t.id)}>
-                Delete
+              <button
+                type="button"
+                className="text-sm text-red-600 hover:underline"
+                onClick={() => handleDelete(tournament.id)}
+              >
+                {t("adminDelete")}
               </button>
             </div>
           </div>
@@ -231,14 +284,22 @@ export default function AdminTournamentsPage() {
   );
 }
 
-function StatusBadge({ active, label }: { active: boolean; label: string }) {
+function StatusBadge({
+  active,
+  activeLabel,
+  inactiveLabel,
+}: {
+  active: boolean;
+  activeLabel: string;
+  inactiveLabel: string;
+}) {
   return (
     <span
       className={`rounded-full px-2 py-0.5 text-xs font-medium ${
         active ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
       }`}
     >
-      {active ? label : "Inactive"}
+      {active ? activeLabel : inactiveLabel}
     </span>
   );
 }

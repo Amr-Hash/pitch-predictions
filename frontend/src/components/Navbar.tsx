@@ -67,40 +67,45 @@ export function Navbar() {
             <span>{APP_NAME}</span>
             <span className="hidden text-sm font-medium text-white/50 sm:inline">{APP_NAME_LATIN}</span>
           </Link>
-          <div className="flex flex-wrap items-center justify-end gap-3 sm:gap-4">
+          <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-4">
             <LanguageToggle variant="dark" />
             {!loading && user ? (
               <>
-                <TournamentSwitcher variant="dark" />
-                <Link href="/dashboard" className={navLinkClass(pathname === "/dashboard")}>
-                  {t("home")}
-                </Link>
-                <Link
-                  href="/matches"
-                  className={`${navLinkClass(pathname.startsWith("/matches"))} inline-flex items-center gap-1`}
-                >
-                  {t("matches")}
-                  {pendingCount > 0 && (
-                    <span className="inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-gold-500 px-1.5 py-0.5 text-xs font-bold text-night-900 shadow">
-                      {pendingCount > 9 ? "9+" : pendingCount}
-                    </span>
-                  )}
-                </Link>
-                <Link href="/groups" className={navLinkClass(pathname.startsWith("/groups"))}>
-                  {t("myGroups")}
-                </Link>
-                <Link
-                  href="/tournament-groups"
-                  className={navLinkClass(pathname.startsWith("/tournament-groups"))}
-                >
-                  {t("standings")}
-                </Link>
-                <Link href="/scoring" className={navLinkClass(pathname === "/scoring")}>
-                  {t("scoringNav")}
-                </Link>
+                <div className="hidden md:contents">
+                  <TournamentSwitcher variant="dark" />
+                  <Link href="/dashboard" className={navLinkClass(pathname === "/dashboard")}>
+                    {t("home")}
+                  </Link>
+                  <Link
+                    href="/matches"
+                    className={`${navLinkClass(pathname.startsWith("/matches"))} inline-flex items-center gap-1`}
+                  >
+                    {t("matches")}
+                    {pendingCount > 0 && (
+                      <span className="inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-gold-500 px-1.5 py-0.5 text-xs font-bold text-night-900 shadow">
+                        {pendingCount > 9 ? "9+" : pendingCount}
+                      </span>
+                    )}
+                  </Link>
+                  <Link href="/groups" className={navLinkClass(pathname.startsWith("/groups"))}>
+                    {t("myGroups")}
+                  </Link>
+                  <Link
+                    href="/tournament-groups"
+                    className={navLinkClass(pathname.startsWith("/tournament-groups"))}
+                  >
+                    {t("standings")}
+                  </Link>
+                  <Link href="/scoring" className={navLinkClass(pathname === "/scoring")}>
+                    {t("scoringNav")}
+                  </Link>
+                </div>
+                <div className="md:hidden">
+                  <TournamentSwitcher variant="dark" />
+                </div>
                 <NotificationBell />
-                <span className="hidden text-sm text-white/60 sm:inline">{user.username}</span>
-                <button onClick={logout} className="btn-ghost-nav">
+                <span className="hidden text-sm text-white/60 lg:inline">{user.username}</span>
+                <button onClick={logout} className="btn-ghost-nav hidden sm:inline-flex">
                   {t("logout")}
                 </button>
               </>

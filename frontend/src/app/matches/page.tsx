@@ -81,10 +81,7 @@ function MatchesContent() {
 
       {isTestCup && (
         <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-          <strong>Demo Test Cup</strong> — 2-hour window starting tomorrow at{" "}
-          <strong>12:00 Egypt time</strong> (6 matches, Groups A &amp; B). Predict
-          Matchday 1 now; Matchday 2 opens after all Matchday 1 games are finished,
-          then Matchday 3.
+          <strong>{t("demoTestCup")}</strong> — {t("demoTestCupMatchesDesc")}
         </div>
       )}
 

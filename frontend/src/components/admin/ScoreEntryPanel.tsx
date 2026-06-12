@@ -2,6 +2,8 @@
 
 import { FormEvent, useState } from "react";
 import { api, Match } from "@/lib/api";
+import { bilingualAdminLabel } from "@/lib/adminDisplay";
+import { useT } from "@/lib/i18n";
 
 interface ScoreDraft {
   home_score: string;
@@ -35,6 +37,7 @@ export function ScoreEntryPanel({
   onSaved: () => void;
   onCancel: () => void;
 }) {
+  const t = useT();
   const [draft, setDraft] = useState<ScoreDraft>(() => toDraft(match));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -63,6 +66,8 @@ export function ScoreEntryPanel({
   }
 
   const showWinner = needsWinner(match, draft);
+  const homeLabel = bilingualAdminLabel(match.home_team);
+  const awayLabel = bilingualAdminLabel(match.away_team);
 
   return (
     <form onSubmit={handleSubmit} className="mt-4 rounded-lg border border-amber-200 bg-amber-50/50 p-4">
@@ -70,7 +75,7 @@ export function ScoreEntryPanel({
       <div className="flex flex-wrap items-end gap-4">
         <div>
           <label className="mb-1 block text-xs font-medium text-gray-600">
-            {match.home_team.code} score
+            {match.home_team.code} — {homeLabel}
           </label>
           <input
             className="input w-16 text-center"
@@ -84,7 +89,7 @@ export function ScoreEntryPanel({
         <span className="pb-2 text-gray-400">–</span>
         <div>
           <label className="mb-1 block text-xs font-medium text-gray-600">
-            {match.away_team.code} score
+            {match.away_team.code} — {awayLabel}
           </label>
           <input
             className="input w-16 text-center"
@@ -97,29 +102,29 @@ export function ScoreEntryPanel({
         </div>
         {showWinner && (
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-600">Winner (penalties)</label>
+            <label className="mb-1 block text-xs font-medium text-gray-600">
+              {t("adminAdvancingTeam")}
+            </label>
             <select
-              className="input min-w-[140px]"
+              className="input min-w-[180px]"
               value={draft.winner_team}
               onChange={(e) => setDraft({ ...draft, winner_team: e.target.value })}
               required
             >
-              <option value="">Pick winner</option>
-              <option value={match.home_team.id}>{match.home_team.name}</option>
-              <option value={match.away_team.id}>{match.away_team.name}</option>
+              <option value="">{t("pickWinner")}</option>
+              <option value={match.home_team.id}>{homeLabel}</option>
+              <option value={match.away_team.id}>{awayLabel}</option>
             </select>
           </div>
         )}
       </div>
-      <p className="mt-2 text-xs text-gray-500">
-        Saving marks the match as <strong>finished</strong> and awards prediction points automatically.
-      </p>
+      <p className="mt-2 text-xs text-gray-500">{t("scoreSaveHint")}</p>
       <div className="mt-4 flex gap-2">
         <button type="submit" className="btn-primary text-sm" disabled={saving}>
-          {saving ? "Saving…" : "Save final score"}
+          {saving ? t("adminSaving") : t("saveFinalScore")}
         </button>
         <button type="button" className="btn-secondary text-sm" onClick={onCancel}>
-          Cancel
+          {t("cancel")}
         </button>
       </div>
     </form>

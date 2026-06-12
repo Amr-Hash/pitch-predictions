@@ -89,6 +89,8 @@ class DashboardTests(TestCase):
         response = self.client.get("/api/dashboard")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn("groups", response.data)
+        self.assertIn("global_podium", response.data)
+        self.assertIn("global_leader_points", response.data)
         self.assertIn("total_points", response.data)
         self.assertIn("pending_count", response.data)
         self.assertIn("live_matches", response.data)

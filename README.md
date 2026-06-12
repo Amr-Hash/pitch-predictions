@@ -243,7 +243,9 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on every push and pull request:
 1. Deploy backend to Vercel and alias `alhabeed-api.vercel.app` to the new deployment
 2. Deploy frontend to Vercel and alias `alhabeed.vercel.app` to the new deployment
 
-If `VERCEL_TOKEN` is missing, tests still pass and a notice job explains that deploy was skipped.
+If `VERCEL_TOKEN` is missing, deploy jobs **fail** (the workflow does not report a false green deploy). Tests on pull requests still run without deploying.
+
+After each deploy, CI verifies that `alhabeed-api.vercel.app` and `alhabeed.vercel.app` serve the **same git commit** as the push (`/api/health` and `/api/build-info` return `git_sha`).
 
 ### One-time GitHub secret setup
 

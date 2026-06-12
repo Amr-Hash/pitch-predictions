@@ -2,14 +2,15 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { api, CupGroup } from "@/lib/api";
+import { useEffect, useMemo, useState } from "react";
+import { api, CupGroup, TournamentStandings } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useTournament } from "@/lib/tournament";
 import { EmptyState } from "@/components/EmptyState";
+import { GroupStandingsTable } from "@/components/GroupStandingsTable";
 import { RequireTournament } from "@/components/RequireTournament";
 import { useLocale, useT } from "@/lib/i18n";
-import { localizedName, teamLabel, tournamentLabel } from "@/lib/localize";
+import { localizedName, tournamentLabel } from "@/lib/localize";
 import { cupGroupAccent } from "@/lib/theme";
 
 function TournamentGroupsContent() {
@@ -18,16 +19,30 @@ function TournamentGroupsContent() {
   const { locale } = useLocale();
   const t = useT();
   const [cupGroups, setCupGroups] = useState<CupGroup[]>([]);
+  const [standings, setStandings] = useState<TournamentStandings | null>(null);
 
   useEffect(() => {
     if (!token || !selectedTournament) return;
     api.getCupGroups(token, selectedTournament.id).then(setCupGroups);
+    api.getTournamentStandings(token, selectedTournament.id).then(setStandings);
   }, [token, selectedTournament]);
+
+  const standingsByGroupId = useMemo(() => {
+    const map = new Map<number, TournamentStandings["groups"][number]>();
+    standings?.groups.forEach((group) => map.set(group.group_id, group));
+    return map;
+  }, [standings]);
 
   if (!selectedTournament) return null;
 
   const tournamentName = tournamentLabel(selectedTournament, locale);
   const isTestCup = selectedTournament.name === "Demo Test Cup";
+  const rulesLabel =
+    locale === "ar"
+      ? standings?.standing_rules_label_ar
+      : standings?.standing_rules_label_en;
+  const tiebreakers =
+    locale === "ar" ? standings?.tiebreakers_ar : standings?.tiebreakers_en;
 
   return (
     <div>
@@ -47,6 +62,25 @@ function TournamentGroupsContent() {
         </div>
       )}
 
+      {standings && rulesLabel && (
+        <div className="card mt-6">
+          <h2 className="text-sm font-bold uppercase tracking-wide text-night-700">
+            {t("standingRulesTitle")}
+          </h2>
+          <p className="mt-1 text-sm font-semibold text-royal-700">{rulesLabel}</p>
+          <p className="mt-2 text-xs text-gray-600">
+            {t("qualifiersPerGroup", { count: standings.qualifiers_per_group })}
+          </p>
+          {tiebreakers && tiebreakers.length > 0 && (
+            <ol className="mt-3 list-decimal space-y-1 ps-5 text-xs text-gray-600">
+              {tiebreakers.map((step) => (
+                <li key={step}>{step}</li>
+              ))}
+            </ol>
+          )}
+        </div>
+      )}
+
       {cupGroups.length === 0 ? (
         <EmptyState
           icon="🏟️"
@@ -54,14 +88,15 @@ function TournamentGroupsContent() {
           description={t("noGroupsConfiguredDesc")}
         />
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="mt-6 grid gap-4 lg:grid-cols-2">
           {cupGroups.map((group) => {
             const accent = cupGroupAccent(group.name);
+            const groupStandings = standingsByGroupId.get(group.id);
             return (
               <div key={group.id} className="card overflow-hidden p-0">
                 <div className={`h-2 ${accent.bar}`} />
                 <div className="p-4">
-                  <div className="mb-3 flex items-center justify-between gap-2">
+                  <div className="mb-2 flex items-center justify-between gap-2">
                     <span
                       className={`rounded-full px-3 py-1 font-display text-lg font-extrabold ${accent.pill}`}
                     >
@@ -74,25 +109,12 @@ function TournamentGroupsContent() {
                       {t("viewMatchesLink")} →
                     </Link>
                   </div>
-                  <ul className="space-y-2">
-                    {group.group_teams.map(({ team }) => (
-                      <li key={team.id} className="flex items-center gap-3">
-                        {team.flag_url ? (
-                          <img
-                            src={team.flag_url}
-                            alt=""
-                            className="h-5 w-7 rounded-sm object-cover shadow-sm"
-                          />
-                        ) : (
-                          <span className="inline-block h-5 w-7 rounded-sm bg-gray-200" />
-                        )}
-                        <span className="font-semibold text-night-900">
-                          {teamLabel(team, locale)}
-                        </span>
-                        <span className="text-xs font-medium text-gray-400">{team.code}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  {groupStandings ? (
+                    <GroupStandingsTable
+                      standings={groupStandings.standings}
+                      locale={locale}
+                    />
+                  ) : null}
                 </div>
               </div>
             );

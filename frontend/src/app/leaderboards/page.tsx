@@ -1,9 +1,10 @@
 import { Suspense } from "react";
+import { LoadingScreen } from "@/components/LoadingScreen";
 import LeaderboardsContent from "./LeaderboardsContent";
 
 export default function LeaderboardsPage() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={<LoadingScreen />}>
       <LeaderboardsContent />
     </Suspense>
   );

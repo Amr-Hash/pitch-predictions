@@ -105,7 +105,9 @@ export default function NotificationsPage() {
                       {formatNotificationText(notification, locale)}
                     </p>
                     <p className="mt-2 text-xs text-night-400">
-                      {new Date(notification.created_at).toLocaleString()}
+                      {new Date(notification.created_at).toLocaleString(
+                        locale === "ar" ? "ar-EG" : undefined
+                      )}
                     </p>
                   </div>
                 </div>

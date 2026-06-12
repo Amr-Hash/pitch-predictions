@@ -3,61 +3,8 @@
 import Link from "next/link";
 import { useRef } from "react";
 import { DashboardGroupSummary } from "@/lib/api";
+import { OlympicPodium } from "@/components/OlympicPodium";
 import { useT } from "@/lib/i18n";
-
-const PODIUM_SLOTS = [
-  { rank: 2, medal: "🥈", height: "h-20", platform: "from-slate-300 to-slate-100" },
-  { rank: 1, medal: "🥇", height: "h-28", platform: "from-gold-500 to-gold-200" },
-  { rank: 3, medal: "🥉", height: "h-14", platform: "from-amber-700 to-amber-400" },
-] as const;
-
-function OlympicPodium({ podium }: { podium: DashboardGroupSummary["podium"] }) {
-  const t = useT();
-  const byRank = Object.fromEntries(podium.map((entry) => [entry.rank, entry]));
-
-  return (
-    <div className="flex items-end justify-center gap-1.5 sm:gap-2">
-      {PODIUM_SLOTS.map((slot) => {
-        const entry = byRank[slot.rank];
-        return (
-          <div key={slot.rank} className="flex w-[31%] flex-col items-center">
-            <span className="text-xl sm:text-2xl" aria-hidden>
-              {slot.medal}
-            </span>
-            {entry ? (
-              <>
-                <p
-                  className={`mt-1 w-full truncate text-center text-[11px] font-bold sm:text-xs ${
-                    entry.is_you ? "text-royal-600" : "text-night-900"
-                  }`}
-                  title={entry.username}
-                >
-                  {entry.username}
-                  {entry.is_you && (
-                    <span className="block text-[10px] font-semibold text-royal-500">
-                      ({t("you")})
-                    </span>
-                  )}
-                </p>
-              </>
-            ) : (
-              <p className="mt-1 text-xs text-gray-400">—</p>
-            )}
-            <div
-              className={`mt-2 flex w-full ${slot.height} items-end justify-center rounded-t-xl bg-gradient-to-t ${slot.platform} pb-1.5 shadow-inner`}
-            >
-              {entry && (
-                <span className="font-display text-sm font-extrabold text-night-900/80">
-                  {entry.total_points}
-                </span>
-              )}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
 
 function GroupSlide({ group }: { group: DashboardGroupSummary }) {
   const t = useT();

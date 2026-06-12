@@ -11,6 +11,8 @@ env:
   VERCEL_ORG_ID: team_4Xmlf7t3YpurUX6c1nZH0ra0
   VERCEL_FRONTEND_PROJECT_ID: prj_uvzwNOMdzKBrd2IsQ0MCrQUtHc5K
   VERCEL_BACKEND_PROJECT_ID: prj_FRxuskySw6XocyTyrftLpgZw2baf
+  PRODUCTION_API_URL: https://alhabeed-api.vercel.app
+  PRODUCTION_FRONTEND_URL: https://alhabeed.vercel.app
 
 jobs:
   backend-tests:
@@ -100,26 +102,29 @@ jobs:
     if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
     concurrency:
       group: deploy-backend-production
-      cancel-in-progress: true
+      cancel-in-progress: false
     environment:
       name: production-backend
       url: https://alhabeed-api.vercel.app
+    outputs:
+      deploy_url: ${{ steps.deploy.outputs.deploy_url }}
+      git_sha: ${{ steps.deploy.outputs.git_sha }}
 
     steps:
       - uses: actions/checkout@v4
 
       - name: Deploy Django API and update live alias
         id: deploy
-        continue-on-error: true
         working-directory: backend
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ env.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ env.VERCEL_BACKEND_PROJECT_ID }}
           PRODUCTION_ALIAS: alhabeed-api.vercel.app
+          GITHUB_SHA: ${{ github.sha }}
         run: |
           if [ -z "$VERCEL_TOKEN" ]; then
-            echo "::warning::VERCEL_TOKEN is not set in GitHub Actions secrets."
+            echo "::error::VERCEL_TOKEN is not set in GitHub Actions secrets."
             echo "Create a token at https://vercel.com/account/tokens then run: gh secret set VERCEL_TOKEN"
             exit 1
           fi
@@ -132,26 +137,29 @@ jobs:
     if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
     concurrency:
       group: deploy-frontend-production
-      cancel-in-progress: true
+      cancel-in-progress: false
     environment:
       name: production-frontend
       url: https://alhabeed.vercel.app
+    outputs:
+      deploy_url: ${{ steps.deploy.outputs.deploy_url }}
+      git_sha: ${{ steps.deploy.outputs.git_sha }}
 
     steps:
       - uses: actions/checkout@v4
 
       - name: Deploy Next.js app and update live alias
         id: deploy
-        continue-on-error: true
         working-directory: frontend
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ env.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ env.VERCEL_FRONTEND_PROJECT_ID }}
           PRODUCTION_ALIAS: alhabeed.vercel.app
+          GITHUB_SHA: ${{ github.sha }}
         run: |
           if [ -z "$VERCEL_TOKEN" ]; then
-            echo "::warning::VERCEL_TOKEN is not set in GitHub Actions secrets."
+            echo "::error::VERCEL_TOKEN is not set in GitHub Actions secrets."
             echo "Create a token at https://vercel.com/account/tokens then run: gh secret set VERCEL_TOKEN"
             exit 1
           fi
@@ -160,17 +168,52 @@ jobs:
   verify-production:
     name: Verify production is live
     runs-on: ubuntu-latest
-    needs: [backend-tests, frontend-tests, deploy-backend, deploy-frontend]
+    needs: [deploy-backend, deploy-frontend]
     if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
 
     steps:
-      - name: Check API and frontend production URLs
+      - name: Confirm production aliases serve this commit
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+          API_URL: ${{ env.PRODUCTION_API_URL }}
+          FRONTEND_URL: ${{ env.PRODUCTION_FRONTEND_URL }}
+          BACKEND_DEPLOY_URL: ${{ needs.deploy-backend.outputs.deploy_url }}
+          FRONTEND_DEPLOY_URL: ${{ needs.deploy-frontend.outputs.deploy_url }}
         run: |
           set -euo pipefail
-          api_health="$(curl -s -o /dev/null -w "%{http_code}" https://alhabeed-api.vercel.app/api/health)"
-          api_notifications="$(curl -s -o /dev/null -w "%{http_code}" https://alhabeed-api.vercel.app/api/notifications)"
-          fe_home="$(curl -s -o /dev/null -w "%{http_code}" https://alhabeed.vercel.app/)"
-          fe_notifications="$(curl -s -o /dev/null -w "%{http_code}" https://alhabeed.vercel.app/notifications)"
+
+          read_sha() {
+            local url=$1
+            local kind=$2
+            if [ "$kind" = "api" ]; then
+              curl -fsS "${url}/api/health" | python3 -c "import sys,json; print(json.load(sys.stdin).get('git_sha') or '')"
+            else
+              curl -fsS "${url}/api/build-info" | python3 -c "import sys,json; print(json.load(sys.stdin).get('git_sha') or '')"
+            fi
+          }
+
+          assert_sha() {
+            local url=$1
+            local kind=$2
+            local label=$3
+            local actual
+            actual="$(read_sha "$url" "$kind")"
+            echo "${label}: ${actual:-<empty>} (expected ${EXPECTED_SHA})"
+            test "$actual" = "$EXPECTED_SHA"
+          }
+
+          echo "Backend deployment URL: ${BACKEND_DEPLOY_URL}"
+          echo "Frontend deployment URL: ${FRONTEND_DEPLOY_URL}"
+
+          assert_sha "${BACKEND_DEPLOY_URL}" api "Backend deployment"
+          assert_sha "${FRONTEND_DEPLOY_URL}" frontend "Frontend deployment"
+          assert_sha "${API_URL}" api "Production API alias"
+          assert_sha "${FRONTEND_URL}" frontend "Production frontend alias"
+
+          api_health="$(curl -s -o /dev/null -w "%{http_code}" "${API_URL}/api/health")"
+          api_notifications="$(curl -s -o /dev/null -w "%{http_code}" "${API_URL}/api/notifications")"
+          fe_home="$(curl -s -o /dev/null -w "%{http_code}" "${FRONTEND_URL}/")"
+          fe_notifications="$(curl -s -o /dev/null -w "%{http_code}" "${FRONTEND_URL}/notifications")"
 
           echo "API health: $api_health (expected 200)"
           echo "API notifications: $api_notifications (expected 401)"
@@ -181,4 +224,5 @@ jobs:
           test "$api_notifications" = "401"
           test "$fe_home" = "200"
           test "$fe_notifications" = "200"
-          echo "Production aliases are serving the latest app."
+
+          echo "Production aliases are serving commit ${EXPECTED_SHA}."

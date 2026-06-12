@@ -14,21 +14,80 @@ def _predictions_for_tournament(tournament_id):
     return qs
 
 
-def global_rank_map(tournament_id):
+def assign_competition_ranks(rows, points_key="total_points"):
+    """
+    Users with the same points share a rank (1, 1, 3 …).
+    Display order within a tie is alphabetical by username only — not a separate rank.
+    """
+    rows.sort(key=lambda row: (-row[points_key], row.get("username", "").lower()))
+    rank = 0
+    position = 0
+    prev_points = object()
+    for row in rows:
+        position += 1
+        points = row[points_key]
+        if points != prev_points:
+            rank = position
+            prev_points = points
+        row["rank"] = rank
+    return rows
+
+
+def build_podium_from_leaderboard(leaderboard, user_id=None):
+    """All players at ranks 1, 2, and 3 (supports multiple users per rank)."""
+    entries = []
+    for podium_rank in (1, 2, 3):
+        for row in leaderboard:
+            if row["rank"] != podium_rank:
+                continue
+            entry = {
+                "rank": podium_rank,
+                "user_id": row["user_id"],
+                "username": row["username"],
+                "total_points": row["total_points"],
+            }
+            if user_id is not None:
+                entry["is_you"] = row["user_id"] == user_id
+            entries.append(entry)
+    return entries
+
+
+def build_global_leaderboard(tournament_id):
     stats = list(
         _predictions_for_tournament(tournament_id)
-        .values("user_id")
+        .values("user_id", "user__username")
         .annotate(
             total_points=Sum("points_awarded"),
             exact_predictions=Count("id", filter=Q(points_awarded__gte=5)),
             correct_outcomes=Count("id", filter=Q(points_awarded__gte=1)),
         )
-        .order_by("-total_points", "-exact_predictions", "-correct_outcomes")
     )
+    rows = []
+    for entry in stats:
+        rows.append(
+            {
+                "user_id": entry["user_id"],
+                "username": entry["user__username"],
+                "total_points": entry["total_points"] or 0,
+                "exact_predictions": entry["exact_predictions"],
+                "correct_outcomes": entry["correct_outcomes"],
+            }
+        )
+    assign_competition_ranks(rows)
+    return rows
+
+
+def global_rank_map(tournament_id):
     return {
-        entry["user_id"]: index
-        for index, entry in enumerate(stats, start=1)
+        entry["user_id"]: entry["rank"]
+        for entry in build_global_leaderboard(tournament_id)
     }
+
+
+def global_podium_for_user(tournament_id, user_id):
+    return build_podium_from_leaderboard(
+        build_global_leaderboard(tournament_id), user_id=user_id
+    )
 
 
 def build_group_leaderboard(group, tournament_id):
@@ -55,25 +114,23 @@ def build_group_leaderboard(group, tournament_id):
                 "correct_outcomes": outcomes,
             }
         )
-    rows.sort(
-        key=lambda row: (
-            -row["total_points"],
-            -row["exact_predictions"],
-            -row["correct_outcomes"],
-            row["username"].lower(),
-        )
-    )
-    for index, row in enumerate(rows, start=1):
-        row["rank"] = index
+    assign_competition_ranks(rows)
     return rows
 
 
 def group_podium_signature(leaderboard):
-    """Top-3 identity + points used to detect podium changes."""
-    return tuple(
-        (row["user_id"], row["total_points"], row["rank"])
-        for row in leaderboard[:3]
-    )
+    """Podium slots 1–3: who holds each rank (supports ties)."""
+    slots = []
+    for podium_rank in (1, 2, 3):
+        members = tuple(
+            sorted(
+                (row["user_id"], row["total_points"])
+                for row in leaderboard
+                if row["rank"] == podium_rank
+            )
+        )
+        slots.append((podium_rank, members))
+    return tuple(slots)
 
 
 def tournament_groups_with_members(tournament_id):
@@ -85,7 +142,10 @@ def tournament_groups_with_members(tournament_id):
 
 
 def group_rank_map(group, tournament_id):
-    return {row["user_id"]: row["rank"] for row in build_group_leaderboard(group, tournament_id)}
+    return {
+        row["user_id"]: row["rank"]
+        for row in build_group_leaderboard(group, tournament_id)
+    }
 
 
 def capture_tournament_podiums(tournament_id):
@@ -96,6 +156,6 @@ def capture_tournament_podiums(tournament_id):
             "group_id": group.id,
             "group_name": group.name,
             "signature": group_podium_signature(leaderboard),
-            "podium": leaderboard[:3],
+            "podium": build_podium_from_leaderboard(leaderboard),
         }
     return podiums

@@ -2,11 +2,25 @@ from django.db import models
 
 
 class Tournament(models.Model):
+    class StandingRules(models.TextChoices):
+        FIFA_WORLD_CUP = "fifa_world_cup", "FIFA World Cup"
+        UEFA_CHAMPIONS_LEAGUE = "uefa_champions_league", "UEFA Champions League"
+        SIMPLE = "simple", "Simple (points → GD → GF)"
+
     name = models.CharField(max_length=200)
     name_ar = models.CharField(max_length=200, blank=True, default="")
     year = models.PositiveIntegerField()
     start_date = models.DateField()
     end_date = models.DateField()
+    standing_rules = models.CharField(
+        max_length=32,
+        choices=StandingRules.choices,
+        default=StandingRules.FIFA_WORLD_CUP,
+    )
+    qualifiers_per_group = models.PositiveSmallIntegerField(
+        default=2,
+        help_text="How many teams advance from each group (e.g. 2 for World Cup).",
+    )
     is_active = models.BooleanField(
         default=True,
         help_text="Inactive tournaments are hidden from users (still manageable in admin).",

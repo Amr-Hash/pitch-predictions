@@ -15,6 +15,9 @@ def health(request):
                     "DATABASE_URL is missing. Add Neon Postgres in Vercel: "
                     "Project alhabeed-api → Storage → Create Database → Neon."
                 ),
+                "git_sha": os.environ.get("GIT_SHA")
+                or os.environ.get("VERCEL_GIT_COMMIT_SHA")
+                or None,
             },
             status=503,
         )
@@ -35,6 +38,9 @@ def health(request):
             "status": "ok" if db_ok else "degraded",
             "database": "connected" if db_ok else "unavailable",
             "detail": db_error,
+            "git_sha": os.environ.get("GIT_SHA")
+            or os.environ.get("VERCEL_GIT_COMMIT_SHA")
+            or None,
         },
         status=status,
     )

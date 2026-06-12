@@ -7,6 +7,7 @@ import { api, Dashboard, Prediction, unwrapList } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useTournament } from "@/lib/tournament";
 import { DashboardGroupsSlider } from "@/components/DashboardGroupsSlider";
+import { GlobalRankPodium } from "@/components/GlobalRankPodium";
 import { DashboardLiveHub } from "@/components/DashboardLiveHub";
 import { EmptyState } from "@/components/EmptyState";
 import { MatchCard } from "@/components/MatchCard";
@@ -88,9 +89,16 @@ function DashboardContent() {
         predictionsByMatch={predictionsByMatch}
       />
 
+      <GlobalRankPodium
+        podium={dashboard.global_podium ?? []}
+        currentRank={dashboard.current_rank}
+        totalPoints={dashboard.total_points}
+        leaderPoints={dashboard.global_leader_points ?? 0}
+      />
+
       <DashboardGroupsSlider groups={dashboard.groups} />
 
-      <div className="mb-8 grid gap-4 sm:grid-cols-2">
+      <div className="mb-8">
         <div className="stat-card-gold">
           <p className="text-sm font-bold uppercase tracking-wide text-gold-700">{t("totalPoints")}</p>
           <p className="font-display text-4xl font-extrabold text-gold-600">{dashboard.total_points}</p>
@@ -98,11 +106,6 @@ function DashboardContent() {
             <p className="mt-1 text-xs text-gray-500">{t("earnPointsHint")}</p>
           )}
         </div>
-        <Link href="/leaderboards" className="stat-card-royal block">
-          <p className="text-sm font-bold uppercase tracking-wide text-royal-700">{t("globalRank")}</p>
-          <p className="font-display text-4xl font-extrabold text-night-900">{dashboard.current_rank ?? "—"}</p>
-          <p className="mt-1 text-xs font-semibold text-royal-600">{t("viewGlobalLeaderboard")} →</p>
-        </Link>
       </div>
 
       {hasPending && (

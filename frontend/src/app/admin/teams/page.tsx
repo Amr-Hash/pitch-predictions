@@ -1,11 +1,14 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
-import { api, Match, Team, Tournament, unwrapList } from "@/lib/api";
+import { api, Team, unwrapList } from "@/lib/api";
+import { bilingualAdminLabel } from "@/lib/adminDisplay";
 import { useAuth } from "@/lib/auth";
+import { useT } from "@/lib/i18n";
 
 export default function AdminTeamsPage() {
   const { token } = useAuth();
+  const t = useT();
   const [teams, setTeams] = useState<Team[]>([]);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -18,8 +21,10 @@ export default function AdminTeamsPage() {
     api
       .adminGetTeams(token)
       .then((data) => setTeams(unwrapList(data)))
-      .catch((err) => setError(err instanceof Error ? err.message : "Could not load teams."));
-  }, [token]);
+      .catch((err) =>
+        setError(err instanceof Error ? err.message : t("failedLoadTeams"))
+      );
+  }, [token, t]);
 
   useEffect(() => {
     load();
@@ -33,48 +38,55 @@ export default function AdminTeamsPage() {
     try {
       if (editingId) {
         await api.adminUpdateTeam(token, editingId, form);
-        setSuccess("Team updated.");
+        setSuccess(t("teamUpdated"));
         setEditingId(null);
       } else {
         await api.adminCreateTeam(token, form);
-        setSuccess("Team created.");
+        setSuccess(t("teamCreated"));
       }
       setForm({ name: "", name_ar: "", code: "", flag_url: "" });
       load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save team.");
+      setError(err instanceof Error ? err.message : t("failedSaveTeam"));
     }
   }
 
   function startEdit(team: Team) {
     setEditingId(team.id);
-    setForm({ name: team.name, name_ar: team.name_ar || "", code: team.code, flag_url: team.flag_url || "" });
+    setForm({
+      name: team.name,
+      name_ar: team.name_ar || "",
+      code: team.code,
+      flag_url: team.flag_url || "",
+    });
   }
 
   async function handleDelete(id: number) {
-    if (!token || !confirm("Delete this team?")) return;
+    if (!token || !confirm(t("adminDeleteConfirmTeam"))) return;
     try {
       await api.adminDeleteTeam(token, id);
-      setSuccess("Team deleted.");
+      setSuccess(t("teamDeleted"));
       load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete team.");
+      setError(err instanceof Error ? err.message : t("failedSaveTeam"));
     }
   }
 
   return (
     <div>
-      <h1 className="mb-2 text-3xl font-bold">Teams</h1>
-      <p className="mb-6 text-gray-600">Add and edit teams used in tournaments and matches.</p>
+      <h1 className="mb-2 text-3xl font-bold">{t("adminTeams")}</h1>
+      <p className="mb-6 text-gray-600">{t("adminTeamsDesc")}</p>
 
       {error && <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</div>}
       {success && <div className="mb-4 rounded-lg bg-green-50 p-3 text-sm text-green-700">{success}</div>}
 
       <form onSubmit={handleSubmit} className="card mb-8 space-y-4">
-        <h2 className="font-semibold">{editingId ? "Edit Team" : "Add Team"}</h2>
+        <h2 className="font-semibold">
+          {editingId ? t("adminEditTeam") : t("adminAddTeam")}
+        </h2>
         <div className="grid gap-4 sm:grid-cols-3">
           <div>
-            <label className="mb-1 block text-sm font-medium">Name</label>
+            <label className="mb-1 block text-sm font-medium">{t("fieldName")}</label>
             <input
               className="input"
               value={form.name}
@@ -83,7 +95,7 @@ export default function AdminTeamsPage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium">Arabic name</label>
+            <label className="mb-1 block text-sm font-medium">{t("nameAr")}</label>
             <input
               className="input"
               dir="rtl"
@@ -102,7 +114,7 @@ export default function AdminTeamsPage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium">Flag URL</label>
+            <label className="mb-1 block text-sm font-medium">{t("adminFlag")}</label>
             <input
               className="input"
               type="url"
@@ -114,7 +126,7 @@ export default function AdminTeamsPage() {
         </div>
         <div className="flex gap-2">
           <button type="submit" className="btn-primary">
-            {editingId ? "Update" : "Create"}
+            {editingId ? t("update") : t("create")}
           </button>
           {editingId && (
             <button
@@ -125,7 +137,7 @@ export default function AdminTeamsPage() {
                 setForm({ name: "", name_ar: "", code: "", flag_url: "" });
               }}
             >
-              Cancel
+              {t("cancel")}
             </button>
           )}
         </div>
@@ -135,10 +147,11 @@ export default function AdminTeamsPage() {
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="border-b text-gray-500">
-              <th className="py-2 pr-4">Flag</th>
-              <th className="py-2 pr-4">Name</th>
+              <th className="py-2 pr-4">{t("adminFlag")}</th>
+              <th className="py-2 pr-4">{t("fieldName")}</th>
+              <th className="py-2 pr-4">{t("nameAr")}</th>
               <th className="py-2 pr-4">Code</th>
-              <th className="py-2">Actions</th>
+              <th className="py-2">{t("adminActions")}</th>
             </tr>
           </thead>
           <tbody>
@@ -153,14 +166,25 @@ export default function AdminTeamsPage() {
                   )}
                 </td>
                 <td className="py-2 pr-4 font-medium">{team.name}</td>
+                <td className="py-2 pr-4" dir="rtl">
+                  {team.name_ar || "—"}
+                </td>
                 <td className="py-2 pr-4">{team.code}</td>
                 <td className="py-2">
                   <div className="flex gap-2">
-                    <button type="button" className="text-pitch-600 hover:underline" onClick={() => startEdit(team)}>
-                      Edit
+                    <button
+                      type="button"
+                      className="text-pitch-600 hover:underline"
+                      onClick={() => startEdit(team)}
+                    >
+                      {t("adminEdit")}
                     </button>
-                    <button type="button" className="text-red-600 hover:underline" onClick={() => handleDelete(team.id)}>
-                      Delete
+                    <button
+                      type="button"
+                      className="text-red-600 hover:underline"
+                      onClick={() => handleDelete(team.id)}
+                    >
+                      {t("adminDelete")}
                     </button>
                   </div>
                 </td>

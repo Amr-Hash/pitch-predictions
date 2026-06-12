@@ -4,6 +4,8 @@
 
 body {
   @apply min-h-screen text-gray-900 antialiased;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
   background-color: #f4f7fc;
   background-image:
     radial-gradient(ellipse 80% 50% at 50% -10%, rgba(16, 185, 129, 0.12), transparent),
@@ -238,5 +240,27 @@ body {
 
   .live-dot-lg {
     @apply inline-block h-3 w-3 animate-pulse rounded-full bg-fan-400 shadow-[0_0_8px_rgba(249,115,22,0.8)];
+  }
+
+  .app-main {
+    padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  @media (min-width: 768px) {
+    .app-main {
+      padding-bottom: 2rem;
+    }
+  }
+
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .input,
+  .btn-primary,
+  .btn-fan,
+  .btn-secondary,
+  .btn-ghost-nav {
+    @apply min-h-[2.75rem];
   }
 }

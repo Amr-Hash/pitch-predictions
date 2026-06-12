@@ -153,6 +153,8 @@ class Command(BaseCommand):
                 "name_ar": WC2026_TOURNAMENT_AR,
                 "start_date": WC2026_TOURNAMENT["start_date"],
                 "end_date": WC2026_TOURNAMENT["end_date"],
+                "standing_rules": Tournament.StandingRules.FIFA_WORLD_CUP,
+                "qualifiers_per_group": 2,
             },
         )
         update_fields = []
@@ -162,6 +164,12 @@ class Command(BaseCommand):
         if not tournament.name_ar:
             tournament.name_ar = WC2026_TOURNAMENT_AR
             update_fields.append("name_ar")
+        if tournament.standing_rules != Tournament.StandingRules.FIFA_WORLD_CUP:
+            tournament.standing_rules = Tournament.StandingRules.FIFA_WORLD_CUP
+            update_fields.append("standing_rules")
+        if tournament.qualifiers_per_group != 2:
+            tournament.qualifiers_per_group = 2
+            update_fields.append("qualifiers_per_group")
         if update_fields:
             tournament.save(update_fields=update_fields)
 

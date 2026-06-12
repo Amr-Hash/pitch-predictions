@@ -3,10 +3,13 @@
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { api, Tournament, unwrapList } from "@/lib/api";
+import { bilingualAdminLabel } from "@/lib/adminDisplay";
 import { useAuth } from "@/lib/auth";
+import { useT } from "@/lib/i18n";
 
 const emptyForm = {
   name: "",
+  name_ar: "",
   year: new Date().getFullYear(),
   start_date: "",
   end_date: "",
@@ -16,6 +19,7 @@ const emptyForm = {
 
 export default function AdminOverviewPage() {
   const { token } = useAuth();
+  const t = useT();
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState(emptyForm);
@@ -29,9 +33,9 @@ export default function AdminOverviewPage() {
       .adminGetTournaments(token)
       .then((data) => setTournaments(unwrapList(data)))
       .catch((err) =>
-        setError(err instanceof Error ? err.message : "Could not load tournaments.")
+        setError(err instanceof Error ? err.message : t("failedLoadTournaments"))
       );
-  }, [token]);
+  }, [token, t]);
 
   useEffect(() => {
     load();
@@ -44,23 +48,25 @@ export default function AdminOverviewPage() {
     setSuccess("");
     try {
       const created = await api.adminCreateTournament(token, form);
-      setSuccess("Tournament created.");
+      setSuccess(t("tournamentCreated"));
       setForm(emptyForm);
       setShowCreate(false);
       load();
       window.location.href = `/admin/tournaments/${created.id}`;
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create tournament.");
+      setError(err instanceof Error ? err.message : t("failedSaveTournament"));
     }
   }
 
-  async function toggleActive(t: Tournament) {
+  async function toggleActive(tournament: Tournament) {
     if (!token) return;
     try {
-      await api.adminUpdateTournament(token, t.id, { is_active: !t.is_active });
+      await api.adminUpdateTournament(token, tournament.id, {
+        is_active: !tournament.is_active,
+      });
       load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update tournament.");
+      setError(err instanceof Error ? err.message : t("failedSaveTournament"));
     }
   }
 
@@ -68,21 +74,19 @@ export default function AdminOverviewPage() {
     <div>
       <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="admin-page-title mb-2">Tournaments</h1>
-          <p className="text-night-700/70">
-            Pick a tournament to manage rounds, groups, matches, and scores in one place.
-          </p>
+          <h1 className="admin-page-title mb-2">{t("adminTournaments")}</h1>
+          <p className="text-night-700/70">{t("adminOverviewDesc")}</p>
         </div>
         <div className="flex gap-2">
           <Link href="/admin/teams" className="btn-secondary text-sm">
-            Manage teams
+            {t("adminManageTeams")}
           </Link>
           <button
             type="button"
             className="btn-primary text-sm"
             onClick={() => setShowCreate((v) => !v)}
           >
-            {showCreate ? "Cancel" : "+ New tournament"}
+            {showCreate ? t("cancel") : `+ ${t("adminNewTournament")}`}
           </button>
         </div>
       </div>
@@ -92,10 +96,10 @@ export default function AdminOverviewPage() {
 
       {showCreate && (
         <form onSubmit={handleCreate} className="admin-card mb-8 space-y-4">
-          <h2 className="font-semibold">Create tournament</h2>
+          <h2 className="font-semibold">{t("adminAddTournament")}</h2>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-sm font-medium">Name</label>
+              <label className="mb-1 block text-sm font-medium">{t("fieldName")}</label>
               <input
                 className="input"
                 value={form.name}
@@ -104,7 +108,16 @@ export default function AdminOverviewPage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium">Year</label>
+              <label className="mb-1 block text-sm font-medium">{t("nameAr")}</label>
+              <input
+                className="input"
+                dir="rtl"
+                value={form.name_ar}
+                onChange={(e) => setForm({ ...form, name_ar: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium">{t("fieldYear")}</label>
               <input
                 className="input"
                 type="number"
@@ -114,7 +127,7 @@ export default function AdminOverviewPage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium">Start date</label>
+              <label className="mb-1 block text-sm font-medium">{t("fieldStartDate")}</label>
               <input
                 className="input"
                 type="date"
@@ -124,7 +137,7 @@ export default function AdminOverviewPage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium">End date</label>
+              <label className="mb-1 block text-sm font-medium">{t("fieldEndDate")}</label>
               <input
                 className="input"
                 type="date"
@@ -140,48 +153,49 @@ export default function AdminOverviewPage() {
               checked={form.is_active}
               onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
             />
-            Active (visible to users)
+            {t("adminActiveVisible")}
           </label>
           <button type="submit" className="btn-primary">
-            Create & open
+            {t("adminCreateOpen")}
           </button>
         </form>
       )}
 
       <div className="grid gap-4 sm:grid-cols-2">
-        {tournaments.map((t) => (
-          <div key={t.id} className="admin-card flex flex-col justify-between gap-4">
+        {tournaments.map((tournament) => (
+          <div key={tournament.id} className="admin-card flex flex-col justify-between gap-4">
             <div>
               <div className="flex items-start justify-between gap-2">
-                <h2 className="text-xl font-semibold">{t.name}</h2>
+                <h2 className="text-xl font-semibold">{bilingualAdminLabel(tournament)}</h2>
                 <span
                   className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
-                    t.is_active ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                    tournament.is_active ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
                   }`}
                 >
-                  {t.is_active ? "Active" : "Inactive"}
+                  {tournament.is_active ? t("adminActive") : t("adminInactive")}
                 </span>
               </div>
               <p className="mt-1 text-sm text-gray-500">
-                {t.year} · {t.start_date} → {t.end_date}
+                {tournament.year} · {tournament.start_date} → {tournament.end_date}
               </p>
               <p className="mt-2 text-sm text-gray-600">
-                {t.stage_count ?? 0} rounds · {t.match_count ?? 0} matches
+                {t("adminRoundsCount", { count: tournament.stage_count ?? 0 })} ·{" "}
+                {t("adminMatchesCount", { count: tournament.match_count ?? 0 })}
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Link href={`/admin/tournaments/${t.id}`} className="btn-primary text-sm">
-                Manage tournament →
+              <Link href={`/admin/tournaments/${tournament.id}`} className="btn-primary text-sm">
+                {t("adminManageTournament")} →
               </Link>
               <button
                 type="button"
                 className="btn-secondary text-sm"
-                onClick={() => toggleActive(t)}
+                onClick={() => toggleActive(tournament)}
               >
-                {t.is_active ? "Deactivate" : "Activate"}
+                {tournament.is_active ? t("adminDeactivate") : t("adminActivate")}
               </button>
               <Link href="/admin/tournaments" className="btn-secondary text-sm">
-                Edit details
+                {t("adminEditDetails")}
               </Link>
             </div>
           </div>
@@ -189,9 +203,7 @@ export default function AdminOverviewPage() {
       </div>
 
       {tournaments.length === 0 && (
-        <div className="admin-card py-12 text-center text-gray-500">
-          No tournaments yet. Create one to get started.
-        </div>
+        <div className="admin-card py-12 text-center text-gray-500">{t("adminNoTournamentsYet")}</div>
       )}
     </div>
   );

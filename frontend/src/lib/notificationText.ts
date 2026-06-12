@@ -61,11 +61,22 @@ function formatGroupPodium(
   payload: GroupPodiumNotificationPayload,
   t: (key: MessageKey, vars?: Record<string, string | number>) => string
 ) {
-  const podium = (payload.podium ?? [])
-    .slice(0, 3)
-    .map((entry, index) => `${PODIUM_MEDALS[index] ?? ""} ${entry.username}`)
-    .join(" ");
-  return t("notificationPodium", { group: payload.group_name, podium });
+  const byRank = new Map<number, string[]>();
+  for (const entry of payload.podium ?? []) {
+    if (entry.rank < 1 || entry.rank > 3) continue;
+    const list = byRank.get(entry.rank) ?? [];
+    list.push(entry.username);
+    byRank.set(entry.rank, list);
+  }
+
+  const parts: string[] = [];
+  for (const rank of [1, 2, 3]) {
+    const names = byRank.get(rank);
+    if (!names?.length) continue;
+    parts.push(`${PODIUM_MEDALS[rank - 1]} ${names.join(", ")}`);
+  }
+
+  return t("notificationPodium", { group: payload.group_name, podium: parts.join(" · ") });
 }
 
 export function formatNotificationText(

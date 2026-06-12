@@ -125,6 +125,38 @@ export interface CupGroup {
   group_teams: CupGroupTeam[];
 }
 
+export interface GroupStandingRow {
+  rank: number;
+  team: Team;
+  played: number;
+  won: number;
+  drawn: number;
+  lost: number;
+  goals_for: number;
+  goals_against: number;
+  goal_difference: number;
+  points: number;
+  qualifies: boolean;
+}
+
+export interface CupGroupStandings {
+  group_id: number;
+  group_name: string;
+  group_name_ar?: string;
+  standings: GroupStandingRow[];
+}
+
+export interface TournamentStandings {
+  tournament_id: number;
+  standing_rules: string;
+  standing_rules_label_en: string;
+  standing_rules_label_ar: string;
+  tiebreakers_en: string[];
+  tiebreakers_ar: string[];
+  qualifiers_per_group: number;
+  groups: CupGroupStandings[];
+}
+
 export interface Prediction {
   id: number;
   match: number;
@@ -166,6 +198,8 @@ export interface DashboardGroupSummary {
 
 export interface Dashboard {
   groups: DashboardGroupSummary[];
+  global_podium: DashboardPodiumEntry[];
+  global_leader_points: number;
   upcoming_matches: Match[];
   live_matches: Match[];
   next_match: Match | null;
@@ -235,6 +269,8 @@ export interface Tournament {
   year: number;
   start_date: string;
   end_date: string;
+  standing_rules?: string;
+  qualifiers_per_group?: number;
   is_active?: boolean;
   is_archived?: boolean;
   stage_count?: number;
@@ -354,6 +390,9 @@ export const api = {
   getCupGroups: (token: string, tournamentId: number) =>
     request<CupGroup[]>(`/api/tournaments/${tournamentId}/cup-groups`, {}, token),
 
+  getTournamentStandings: (token: string, tournamentId: number) =>
+    request<TournamentStandings>(`/api/tournaments/${tournamentId}/standings`, {}, token),
+
   getMatches: (token: string, params?: {
     tournament?: number;
     stage?: number;
@@ -425,9 +464,12 @@ export const api = {
     token: string,
     data: {
       name: string;
+      name_ar?: string;
       year: number;
       start_date: string;
       end_date: string;
+      standing_rules?: string;
+      qualifiers_per_group?: number;
       is_active?: boolean;
       is_archived?: boolean;
     }
@@ -443,9 +485,12 @@ export const api = {
     id: number,
     data: Partial<{
       name: string;
+      name_ar: string;
       year: number;
       start_date: string;
       end_date: string;
+      standing_rules: string;
+      qualifiers_per_group: number;
       is_active: boolean;
       is_archived: boolean;
     }>
@@ -462,16 +507,50 @@ export const api = {
   adminGetStages: (token: string, tournament?: number) => {
     const qs = tournament ? `?tournament=${tournament}` : "";
     return request<
-      { results?: { id: number; name: string; order: number; stage_type: string; tournament: number }[] }
-      | { id: number; name: string; order: number; stage_type: string; tournament: number }[]
+      {
+        results?: {
+          id: number;
+          name: string;
+          name_ar?: string;
+          order: number;
+          stage_type: string;
+          tournament: number;
+        }[];
+      }
+      | {
+          id: number;
+          name: string;
+          name_ar?: string;
+          order: number;
+          stage_type: string;
+          tournament: number;
+        }[]
     >(`/api/tournaments/admin/stages${qs}`, {}, token);
   },
 
   adminCreateStage: (
     token: string,
-    data: { tournament: number; name: string; order: number; stage_type: string }
+    data: {
+      tournament: number;
+      name: string;
+      name_ar?: string;
+      order: number;
+      stage_type: string;
+    }
   ) =>
     request("/api/tournaments/admin/stages", { method: "POST", body: JSON.stringify(data) }, token),
+
+  adminUpdateStage: (
+    token: string,
+    id: number,
+    data: Partial<{
+      name: string;
+      name_ar: string;
+      order: number;
+      stage_type: string;
+    }>
+  ) =>
+    request(`/api/tournaments/admin/stages/${id}`, { method: "PATCH", body: JSON.stringify(data) }, token),
 
   adminDeleteStage: (token: string, id: number) =>
     request(`/api/tournaments/admin/stages/${id}`, { method: "DELETE" }, token),
@@ -479,13 +558,16 @@ export const api = {
   adminGetTeams: (token: string) =>
     request<{ results?: Team[] } | Team[]>("/api/tournaments/teams", {}, token),
 
-  adminCreateTeam: (token: string, data: { name: string; code: string; flag_url?: string }) =>
+  adminCreateTeam: (
+    token: string,
+    data: { name: string; name_ar?: string; code: string; flag_url?: string }
+  ) =>
     request<Team>("/api/tournaments/teams", { method: "POST", body: JSON.stringify(data) }, token),
 
   adminUpdateTeam: (
     token: string,
     id: number,
-    data: Partial<{ name: string; code: string; flag_url: string }>
+    data: Partial<{ name: string; name_ar: string; code: string; flag_url: string }>
   ) =>
     request<Team>(`/api/tournaments/teams/${id}`, { method: "PATCH", body: JSON.stringify(data) }, token),
 
@@ -503,7 +585,7 @@ export const api = {
 
   adminCreateCupGroup: (
     token: string,
-    data: { tournament: number; name: string; team_ids?: number[] }
+    data: { tournament: number; name: string; name_ar?: string; team_ids?: number[] }
   ) =>
     request<CupGroup>(
       "/api/tournaments/admin/cup-groups",
@@ -514,7 +596,7 @@ export const api = {
   adminUpdateCupGroup: (
     token: string,
     id: number,
-    data: Partial<{ tournament: number; name: string; team_ids: number[] }>
+    data: Partial<{ tournament: number; name: string; name_ar: string; team_ids: number[] }>
   ) =>
     request<CupGroup>(
       `/api/tournaments/admin/cup-groups/${id}`,

@@ -5,12 +5,14 @@ import { useParams, useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import { api, Match, Prediction, unwrapList } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { useT } from "@/lib/i18n";
+import { useLocale, useT } from "@/lib/i18n";
+import { matchContextLabel, teamLabel } from "@/lib/localize";
 
 export default function MatchDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { user, token, loading: authLoading } = useAuth();
   const router = useRouter();
+  const { locale } = useLocale();
   const t = useT();
   const [match, setMatch] = useState<Match | null>(null);
   const [prediction, setPrediction] = useState<Prediction | null>(null);
@@ -63,11 +65,11 @@ export default function MatchDetailPage() {
     e.preventDefault();
     if (!token || !match) return;
     if (homeScore === "" || awayScore === "") {
-      setError("Please enter both scores.");
+      setError(t("enterBothScores"));
       return;
     }
     if (showWinnerSelect && !winnerId) {
-      setError("Please select the team that advances.");
+      setError(t("selectAdvancingTeamRequired"));
       return;
     }
     setError("");
@@ -87,25 +89,30 @@ export default function MatchDetailPage() {
         router.push("/matches");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed");
+      setError(err instanceof Error ? err.message : t("tryAgain"));
     }
   };
 
-  if (authLoading || !user) return <div>Loading...</div>;
-  if (!match) return <div>Match not found</div>;
+  if (authLoading || !user) return <div>{t("loading")}</div>;
+  if (!match) return <div>{t("matchNotFound")}</div>;
 
   const isFinished = match.status === "finished";
   const canEdit = !match.is_locked && !isFinished;
+  const kickoff = new Date(match.kickoff_time).toLocaleString(
+    locale === "ar" ? "ar-EG" : undefined
+  );
+  const context = matchContextLabel(match, locale, t("group"));
+  const matchdaySuffix = match.matchday ? ` · ${t("matchday", { day: match.matchday })}` : "";
 
   return (
     <div className="mx-auto max-w-2xl">
       <Link href="/matches" className="mb-4 inline-flex items-center text-sm text-pitch-600 hover:underline">
         ← {t("backToMatches")}
       </Link>
-      <h1 className="mb-2 text-3xl font-bold">Match Prediction</h1>
+      <h1 className="mb-2 text-3xl font-bold">{t("matchPrediction")}</h1>
       <p className="mb-6 text-gray-600">
-        {match.cup_group_name ? `Group ${match.cup_group_name}` : match.stage_name}
-        {match.matchday ? ` · Matchday ${match.matchday}` : ""}
+        {context}
+        {matchdaySuffix}
       </p>
 
       <div className="card mb-6">
@@ -114,7 +121,7 @@ export default function MatchDetailPage() {
             {match.home_team.flag_url && (
               <img src={match.home_team.flag_url} alt="" className="mx-auto mb-2 h-12 w-16 object-cover" />
             )}
-            <p className="text-lg font-semibold">{match.home_team.name}</p>
+            <p className="text-lg font-semibold">{teamLabel(match.home_team, locale)}</p>
           </div>
           <div className="text-center">
             {isFinished ? (
@@ -122,18 +129,18 @@ export default function MatchDetailPage() {
                 {match.home_score} - {match.away_score}
               </p>
             ) : (
-              <p className="text-gray-400">vs</p>
+              <p className="text-gray-400">{t("vs")}</p>
             )}
           </div>
           <div className="flex-1 text-center">
             {match.away_team.flag_url && (
               <img src={match.away_team.flag_url} alt="" className="mx-auto mb-2 h-12 w-16 object-cover" />
             )}
-            <p className="text-lg font-semibold">{match.away_team.name}</p>
+            <p className="text-lg font-semibold">{teamLabel(match.away_team, locale)}</p>
           </div>
         </div>
         <p className="mt-4 text-center text-sm text-gray-500">
-          Kickoff: {new Date(match.kickoff_time).toLocaleString()}
+          {t("kickoffLabel")}: {kickoff}
         </p>
         {isFinished && (
           <p className="mt-2 text-center text-sm font-medium text-gray-700">
@@ -141,8 +148,10 @@ export default function MatchDetailPage() {
           </p>
         )}
         {!isFinished && match.is_locked && (
-          <p className={`mt-2 text-center text-sm font-medium ${match.is_matchday_locked ? "text-amber-700" : "text-red-600"}`}>
-            {match.lock_reason || "Prediction window has closed for this match."}
+          <p
+            className={`mt-2 text-center text-sm font-medium ${match.is_matchday_locked ? "text-amber-700" : "text-red-600"}`}
+          >
+            {match.lock_reason || t("predictionWindowClosed")}
           </p>
         )}
       </div>
@@ -154,7 +163,9 @@ export default function MatchDetailPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="flex items-center gap-4">
               <div className="flex-1">
-                <label className="mb-1 block text-sm font-medium">{match.home_team.code} Score</label>
+                <label className="mb-1 block text-sm font-medium">
+                  {t("teamScoreLabel", { code: match.home_team.code })}
+                </label>
                 <input
                   type="text"
                   inputMode="numeric"
@@ -168,7 +179,9 @@ export default function MatchDetailPage() {
               </div>
               <span className="pt-6 text-xl font-bold">-</span>
               <div className="flex-1">
-                <label className="mb-1 block text-sm font-medium">{match.away_team.code} Score</label>
+                <label className="mb-1 block text-sm font-medium">
+                  {t("teamScoreLabel", { code: match.away_team.code })}
+                </label>
                 <input
                   type="text"
                   inputMode="numeric"
@@ -183,18 +196,16 @@ export default function MatchDetailPage() {
             </div>
             {showWinnerSelect && (
               <div>
-                <label className="mb-1 block text-sm font-medium">
-                  Team that advances (required for tied score)
-                </label>
+                <label className="mb-1 block text-sm font-medium">{t("selectAdvancingTeam")}</label>
                 <select
                   className="input"
                   value={winnerId}
                   onChange={(e) => setWinnerId(Number(e.target.value) || "")}
                   required
                 >
-                  <option value="">Select winner</option>
-                  <option value={match.home_team.id}>{match.home_team.name}</option>
-                  <option value={match.away_team.id}>{match.away_team.name}</option>
+                  <option value="">{t("pickWinner")}</option>
+                  <option value={match.home_team.id}>{teamLabel(match.home_team, locale)}</option>
+                  <option value={match.away_team.id}>{teamLabel(match.away_team, locale)}</option>
                 </select>
               </div>
             )}
@@ -211,7 +222,7 @@ export default function MatchDetailPage() {
           <div className="text-sm">
             {prediction.predicted_home_score}-{prediction.predicted_away_score}
             {prediction.predicted_winner_team
-              ? ` (${prediction.predicted_winner_team.name} ${t("advances")})`
+              ? ` (${teamLabel(prediction.predicted_winner_team, locale)} ${t("advances")})`
               : match.is_knockout &&
                 prediction.predicted_home_score === prediction.predicted_away_score &&
                 ` (${t("noAdvancingPickSaved")})`}
@@ -226,9 +237,7 @@ export default function MatchDetailPage() {
       )}
 
       {!prediction && isFinished && (
-        <div className="card mt-6 text-sm text-gray-500">
-          You did not submit a prediction for this match.
-        </div>
+        <div className="card mt-6 text-sm text-gray-500">{t("noPredictionSubmitted")}</div>
       )}
     </div>
   );
