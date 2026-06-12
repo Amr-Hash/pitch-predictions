@@ -56,6 +56,9 @@ jobs:
           coverage run manage.py test --settings=worldcup.test_settings -v 1
           coverage report --fail-under=80
 
+      - name: Build Docker image
+        run: docker build -t alhabeed-backend ./backend
+
   frontend-tests:
     runs-on: ubuntu-latest
     steps:
@@ -85,3 +88,6 @@ jobs:
           BACKEND_URL: http://localhost:8000
           NEXT_PUBLIC_API_URL: ""
         run: npm run build
+
+      - name: Build Docker image
+        run: docker build -f frontend/Dockerfile.dev -t alhabeed-frontend ./frontend
