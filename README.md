@@ -265,6 +265,25 @@ gh secret set VERCEL_TOKEN
 Pull requests run tests only — production deploys happen when code is merged to `main`.
 You can also trigger deploy manually from **Actions → CI/CD → Run workflow**.
 
+### World Cup live score sync (API-Football)
+
+Add these environment variables on the **alhabeed-api** Vercel project:
+
+| Variable | Purpose |
+|----------|---------|
+| `API_FOOTBALL_KEY` | Key from [api-football.com](https://www.api-football.com/) |
+| `CRON_SECRET` | Random secret; Vercel Cron sends `Authorization: Bearer …` |
+| `LIVE_SCORE_SYNC_START` | Optional; ISO date e.g. `2026-06-11` |
+| `LIVE_SCORE_SYNC_END` | Optional; ISO date e.g. `2026-06-28` (group stage) |
+
+After deploy:
+
+1. Run `python manage.py map_wc2026_fixtures` once against production (maps 72 group fixtures).
+2. Vercel Cron (`backend/vercel.json`) hits `/api/cron/sync-live-scores` every 2 minutes.
+3. Admin can still use **Sync live scores now** on the tournaments page.
+
+Live scores update match `status` and display scores; prediction points are awarded only when a match reaches `finished`.
+
 ## Project Structure
 
 ```

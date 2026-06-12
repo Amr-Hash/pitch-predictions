@@ -1,13 +1,19 @@
+import os
 from datetime import timedelta
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APIClient
 
 from predictions.models import Prediction
 from tournaments.models import CupGroup, Match, Stage, Team, Tournament
+from tournaments.services.live_scores import (
+    apply_live_match_update,
+    sync_tournament_live_scores,
+)
 
 User = get_user_model()
 
@@ -330,3 +336,118 @@ class GroupStandingsTests(TestCase):
         self.assertEqual(by_code["DDD"]["rank"], 1)
         self.assertEqual(by_code["AAA"]["points"], by_code["BBB"]["points"])
         self.assertLess(by_code["AAA"]["rank"], by_code["BBB"]["rank"])
+
+
+class LiveScoreSyncTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.home = Team.objects.create(name="Egypt", code="EGY")
+        self.away = Team.objects.create(name="Morocco", code="MAR")
+        self.tournament = Tournament.objects.create(
+            name="Test Cup",
+            year=2026,
+            start_date=timezone.now().date(),
+            end_date=timezone.now().date() + timedelta(days=30),
+            live_score_provider=Tournament.LiveScoreProvider.API_FOOTBALL,
+            live_score_config={"league_id": 1, "season": 2026},
+        )
+        self.stage = Stage.objects.create(
+            tournament=self.tournament,
+            name="Group MD1",
+            order=1,
+            stage_type=Stage.StageType.GROUP,
+        )
+        self.cup_group = CupGroup.objects.create(tournament=self.tournament, name="A")
+        self.match = Match.objects.create(
+            tournament=self.tournament,
+            stage=self.stage,
+            cup_group=self.cup_group,
+            matchday=1,
+            home_team=self.home,
+            away_team=self.away,
+            kickoff_time=timezone.now(),
+            status=Match.Status.SCHEDULED,
+            external_fixture_id="999001",
+        )
+        self.user = User.objects.create_user(
+            username="predictor",
+            email="pred@example.com",
+            password="pass12345",
+        )
+        self.prediction = Prediction.objects.create(
+            user=self.user,
+            match=self.match,
+            predicted_home_score=2,
+            predicted_away_score=1,
+        )
+
+    def _fixture_payload(self, *, short_status: str, home: int, away: int) -> dict:
+        return {
+            "fixture": {"id": 999001, "status": {"short": short_status}},
+            "goals": {"home": home, "away": away},
+            "teams": {"home": {"winner": None}, "away": {"winner": None}},
+        }
+
+    @override_settings()
+    def test_cron_endpoint_rejects_missing_secret(self):
+        with patch.dict(os.environ, {"CRON_SECRET": "test-cron-secret"}, clear=False):
+            response = self.client.get("/api/cron/sync-live-scores")
+            self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    @patch.dict(os.environ, {"CRON_SECRET": "test-cron-secret"})
+    @patch(
+        "tournaments.services.live_scores.sync_all_configured_tournaments",
+        return_value=[{"tournament_id": 1, "updated": 0, "skipped": 0}],
+    )
+    def test_cron_endpoint_accepts_bearer_secret(self, _mock_sync):
+        response = self.client.get(
+            "/api/cron/sync-live-scores",
+            HTTP_X_CRON_SECRET="test-cron-secret",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("tournaments", response.data)
+
+    def test_apply_live_update_does_not_award_points(self):
+        apply_live_match_update(
+            self.match,
+            status=Match.Status.LIVE,
+            home_score=2,
+            away_score=1,
+        )
+        self.prediction.refresh_from_db()
+        self.assertEqual(self.match.status, Match.Status.LIVE)
+        self.assertEqual(self.prediction.points_awarded, 0)
+
+    def test_apply_finished_update_awards_points(self):
+        apply_live_match_update(
+            self.match,
+            status=Match.Status.FINISHED,
+            home_score=2,
+            away_score=1,
+            finalize=True,
+        )
+        self.prediction.refresh_from_db()
+        self.assertEqual(self.match.status, Match.Status.FINISHED)
+        self.assertGreater(self.prediction.points_awarded, 0)
+
+    @patch.dict(os.environ, {"API_FOOTBALL_KEY": "test-key"}, clear=False)
+    @patch("tournaments.services.live_scores.fetch_season_fixtures")
+    def test_api_football_sync_live_does_not_award_points(self, mock_fetch):
+        mock_fetch.return_value = [self._fixture_payload(short_status="2H", home=1, away=0)]
+        result = sync_tournament_live_scores(self.tournament)
+        self.assertEqual(result["updated"], 1)
+        self.prediction.refresh_from_db()
+        self.match.refresh_from_db()
+        self.assertEqual(self.match.status, Match.Status.LIVE)
+        self.assertEqual(self.prediction.points_awarded, 0)
+
+    @patch.dict(os.environ, {"API_FOOTBALL_KEY": "test-key"}, clear=False)
+    @patch("tournaments.services.live_scores.fetch_season_fixtures")
+    def test_api_football_sync_finished_awards_points(self, mock_fetch):
+        mock_fetch.return_value = [self._fixture_payload(short_status="FT", home=2, away=1)]
+        result = sync_tournament_live_scores(self.tournament)
+        self.assertEqual(result["updated"], 1)
+        self.prediction.refresh_from_db()
+        self.match.refresh_from_db()
+        self.assertEqual(self.match.status, Match.Status.FINISHED)
+        self.assertGreater(self.prediction.points_awarded, 0)

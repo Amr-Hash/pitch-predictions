@@ -1,7 +1,7 @@
 from django.core.management.base import BaseCommand
 
 from tournaments.models import Tournament
-from tournaments.services.live_scores import sync_tournament_live_scores
+from tournaments.services.live_scores import is_sync_window_open, sync_tournament_live_scores
 
 
 class Command(BaseCommand):
@@ -15,6 +15,10 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
+        if not is_sync_window_open():
+            self.stdout.write("Outside LIVE_SCORE_SYNC_START/END window; skipping.")
+            return
+
         tournament_id = options.get("tournament")
         if tournament_id:
             tournaments = Tournament.objects.filter(id=tournament_id)

@@ -4,12 +4,15 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 from accounts.forms import AdminLoginForm
 from predictions.views import DashboardView
+from tournaments.views import cron_sync_live_scores
+
 from .health import health
 
 admin.site.login_form = AdminLoginForm
 
 urlpatterns = [
     path("api/health", health, name="health"),
+    path("api/cron/sync-live-scores", cron_sync_live_scores, name="cron-sync-live-scores"),
     path("admin/", admin.site.urls),
     path("api/schema", SpectacularAPIView.as_view(), name="schema"),
     path(

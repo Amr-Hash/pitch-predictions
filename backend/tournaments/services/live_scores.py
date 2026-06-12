@@ -13,17 +13,23 @@ from __future__ import annotations
 
 import logging
 import os
+from datetime import date, datetime, timedelta
 from typing import Any
 
 import requests
 from django.db import transaction
+from django.utils import timezone
 
 from tournaments.models import Match, Tournament
+from tournaments.services.api_football_client import fetch_season_fixtures
 
 logger = logging.getLogger(__name__)
 
 API_FOOTBALL_BASE = "https://v3.football.api-sports.io"
 SPORTMONKS_BASE = "https://api.sportmonks.com/v3/football"
+
+SYNC_WINDOW_BEFORE = timedelta(minutes=15)
+SYNC_WINDOW_AFTER = timedelta(hours=3)
 
 # API-Football short status → our Match.Status
 API_FOOTBALL_STATUS = {
@@ -41,6 +47,24 @@ API_FOOTBALL_STATUS = {
     "AET": Match.Status.FINISHED,
     "PEN": Match.Status.FINISHED,
 }
+
+
+def is_sync_window_open() -> bool:
+    """Optional date gate via LIVE_SCORE_SYNC_START / LIVE_SCORE_SYNC_END env."""
+    start_raw = os.environ.get("LIVE_SCORE_SYNC_START", "").strip()
+    end_raw = os.environ.get("LIVE_SCORE_SYNC_END", "").strip()
+    if not start_raw and not end_raw:
+        return True
+    today = timezone.now().date()
+    if start_raw:
+        start = date.fromisoformat(start_raw)
+        if today < start:
+            return False
+    if end_raw:
+        end = date.fromisoformat(end_raw)
+        if today > end:
+            return False
+    return True
 
 
 def apply_live_match_update(
@@ -70,7 +94,21 @@ def apply_live_match_update(
     return match
 
 
-def sync_tournament_live_scores(tournament: Tournament) -> dict[str, int]:
+def sync_all_configured_tournaments() -> list[dict[str, Any]]:
+    if not is_sync_window_open():
+        return [{"skipped": True, "reason": "outside_sync_window"}]
+
+    results = []
+    tournaments = Tournament.objects.exclude(
+        live_score_provider=Tournament.LiveScoreProvider.MANUAL
+    )
+    for tournament in tournaments:
+        result = sync_tournament_live_scores(tournament)
+        results.append({"tournament_id": tournament.id, **result})
+    return results
+
+
+def sync_tournament_live_scores(tournament: Tournament) -> dict[str, Any]:
     provider = tournament.live_score_provider
     if provider == Tournament.LiveScoreProvider.MANUAL:
         return {"updated": 0, "skipped": 0}
@@ -81,7 +119,15 @@ def sync_tournament_live_scores(tournament: Tournament) -> dict[str, int]:
     return {"updated": 0, "skipped": 0}
 
 
-def _sync_api_football(tournament: Tournament) -> dict[str, int]:
+def _match_in_sync_window(match: Match, now: datetime) -> bool:
+    if match.status == Match.Status.LIVE:
+        return True
+    start = match.kickoff_time - SYNC_WINDOW_BEFORE
+    end = match.kickoff_time + SYNC_WINDOW_AFTER
+    return start <= now <= end
+
+
+def _sync_api_football(tournament: Tournament) -> dict[str, Any]:
     api_key = os.environ.get("API_FOOTBALL_KEY", "").strip()
     if not api_key:
         logger.warning("API_FOOTBALL_KEY is not set; skipping tournament %s", tournament.id)
@@ -96,25 +142,11 @@ def _sync_api_football(tournament: Tournament) -> dict[str, int]:
         )
         return {"updated": 0, "skipped": 0, "error": "missing_config"}
 
-    headers = {"x-apisports-key": api_key}
-    fixtures: list[dict[str, Any]] = []
-
-    for params in (
-        {"league": league_id, "season": season, "live": "all"},
-        {"league": league_id, "season": season, "next": 50},
-    ):
-        try:
-            res = requests.get(
-                f"{API_FOOTBALL_BASE}/fixtures",
-                headers=headers,
-                params=params,
-                timeout=20,
-            )
-            res.raise_for_status()
-            fixtures.extend(res.json().get("response") or [])
-        except requests.RequestException as exc:
-            logger.exception("API-Football request failed: %s", exc)
-            return {"updated": 0, "skipped": 0, "error": "request_failed"}
+    try:
+        fixtures = fetch_season_fixtures(int(league_id), int(season))
+    except (requests.RequestException, ValueError) as exc:
+        logger.exception("API-Football request failed: %s", exc)
+        return {"updated": 0, "skipped": 0, "error": "request_failed"}
 
     by_external_id = {
         str(item["fixture"]["id"]): item
@@ -122,6 +154,7 @@ def _sync_api_football(tournament: Tournament) -> dict[str, int]:
         if item.get("fixture", {}).get("id")
     }
 
+    now = timezone.now()
     updated = 0
     skipped = 0
     matches = Match.objects.filter(tournament=tournament).exclude(
@@ -134,6 +167,12 @@ def _sync_api_football(tournament: Tournament) -> dict[str, int]:
             if not ext_id or ext_id not in by_external_id:
                 skipped += 1
                 continue
+            if not _match_in_sync_window(match, now):
+                payload = by_external_id[ext_id]
+                short = ((payload.get("fixture") or {}).get("status") or {}).get("short")
+                if short not in {"FT", "AET", "PEN"}:
+                    skipped += 1
+                    continue
             payload = by_external_id[ext_id]
             if _apply_api_football_payload(match, payload):
                 updated += 1
@@ -180,7 +219,7 @@ def _apply_api_football_payload(match: Match, payload: dict[str, Any]) -> bool:
     return True
 
 
-def _sync_sportmonks(tournament: Tournament) -> dict[str, int]:
+def _sync_sportmonks(tournament: Tournament) -> dict[str, Any]:
     api_key = os.environ.get("SPORTMONKS_API_KEY", "").strip()
     if not api_key:
         logger.warning("SPORTMONKS_API_KEY is not set; skipping tournament %s", tournament.id)
@@ -192,7 +231,6 @@ def _sync_sportmonks(tournament: Tournament) -> dict[str, int]:
         logger.warning("Tournament %s missing live_score_config.season_id", tournament.id)
         return {"updated": 0, "skipped": 0, "error": "missing_config"}
 
-    # SportMonks livescores — map fixtures via external_fixture_id on each match.
     logger.info(
         "SportMonks sync stub for tournament %s (season_id=%s)", tournament.id, season_id
     )

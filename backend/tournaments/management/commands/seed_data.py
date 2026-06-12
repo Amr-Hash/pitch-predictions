@@ -155,6 +155,8 @@ class Command(BaseCommand):
                 "end_date": WC2026_TOURNAMENT["end_date"],
                 "standing_rules": Tournament.StandingRules.FIFA_WORLD_CUP,
                 "qualifiers_per_group": 2,
+                "live_score_provider": Tournament.LiveScoreProvider.API_FOOTBALL,
+                "live_score_config": {"league_id": 1, "season": 2026},
             },
         )
         update_fields = []
@@ -170,6 +172,13 @@ class Command(BaseCommand):
         if tournament.qualifiers_per_group != 2:
             tournament.qualifiers_per_group = 2
             update_fields.append("qualifiers_per_group")
+        if tournament.live_score_provider != Tournament.LiveScoreProvider.API_FOOTBALL:
+            tournament.live_score_provider = Tournament.LiveScoreProvider.API_FOOTBALL
+            update_fields.append("live_score_provider")
+        wc_config = {"league_id": 1, "season": 2026}
+        if tournament.live_score_config != wc_config:
+            tournament.live_score_config = wc_config
+            update_fields.append("live_score_config")
         if update_fields:
             tournament.save(update_fields=update_fields)
 

@@ -235,3 +235,34 @@ def api_football_webhook(request):
 
     result = sync_tournament_live_scores(tournament)
     return Response({"tournament_id": tournament.id, **result})
+
+
+def _authorize_cron_request(request) -> bool:
+    secret = os.environ.get("CRON_SECRET", "").strip()
+    if not secret:
+        return False
+    auth = request.META.get("HTTP_AUTHORIZATION", "") or request.headers.get(
+        "Authorization", ""
+    )
+    if auth == f"Bearer {secret}":
+        return True
+    cron_header = request.META.get("HTTP_X_CRON_SECRET", "") or request.headers.get(
+        "X-Cron-Secret", ""
+    )
+    return cron_header == secret
+
+
+@api_view(["GET", "POST"])
+@permission_classes([permissions.AllowAny])
+def cron_sync_live_scores(request):
+    """
+    Vercel Cron entrypoint. Set CRON_SECRET in project env.
+  Authorization: Bearer <CRON_SECRET>
+    """
+    if not _authorize_cron_request(request):
+        return Response({"detail": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
+
+    from tournaments.services.live_scores import sync_all_configured_tournaments
+
+    tournaments = sync_all_configured_tournaments()
+    return Response({"tournaments": tournaments})
