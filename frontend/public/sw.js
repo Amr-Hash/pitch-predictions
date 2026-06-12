@@ -1,8 +1,9 @@
-const CACHE_VERSION = "alhabeed-v1";
+const CACHE_VERSION = "alhabeed-v2";
 const SHELL_CACHE = `${CACHE_VERSION}-shell`;
 
 const SHELL_ASSETS = [
   "/",
+  "/scoring",
   "/dashboard",
   "/manifest.webmanifest",
   "/logo.svg",

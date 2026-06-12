@@ -9,7 +9,6 @@ import { useTournament } from "@/lib/tournament";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
 import { Logo } from "@/components/Logo";
-import { ScoringRulesSection } from "@/components/ScoringRulesSection";
 import { useT } from "@/lib/i18n";
 
 export default function HomeContent() {
@@ -93,8 +92,6 @@ export default function HomeContent() {
           </div>
         </div>
       )}
-
-      <ScoringRulesSection className="mt-16 w-full max-w-4xl text-left" />
     </div>
   );
 }

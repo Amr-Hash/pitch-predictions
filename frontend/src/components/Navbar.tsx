@@ -111,6 +111,9 @@ export function Navbar() {
               </>
             ) : !loading ? (
               <>
+                <Link href="/scoring" className={navLinkClass(pathname === "/scoring")}>
+                  {t("scoringNav")}
+                </Link>
                 <Link href="/login" className="btn-ghost-nav">
                   {t("login")}
                 </Link>
