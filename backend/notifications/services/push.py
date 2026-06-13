@@ -62,4 +62,6 @@ def send_push_to_user(user_id: int, *, title: str, body: str, url: str) -> int:
 
 
 def frontend_base_url() -> str:
-    return os.environ.get("FRONTEND_URL", "http://localhost:3000").rstrip("/")
+    from django.conf import settings
+
+    return settings.FRONTEND_URL.rstrip("/")

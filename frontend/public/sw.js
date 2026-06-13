@@ -1,4 +1,4 @@
-const CACHE_VERSION = "alhabeed-v3";
+const CACHE_VERSION = "alhabeed-v4";
 const SHELL_CACHE = `${CACHE_VERSION}-shell`;
 
 const SHELL_ASSETS = [
@@ -54,8 +54,7 @@ self.addEventListener("push", (event) => {
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const targetPath = event.notification.data?.url || "/dashboard";
-  const targetUrl = new URL(targetPath, self.location.origin).href;
+  const targetUrl = resolveNotificationUrl(event.notification.data?.url);
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
       for (const client of clients) {
@@ -71,6 +70,21 @@ self.addEventListener("notificationclick", (event) => {
     })
   );
 });
+
+function resolveNotificationUrl(raw) {
+  const fallback = "/dashboard";
+  if (!raw) return new URL(fallback, self.location.origin).href;
+  try {
+    const parsed = new URL(raw, self.location.origin);
+    if (parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1") {
+      return new URL(`${parsed.pathname}${parsed.search}${parsed.hash}`, self.location.origin).href;
+    }
+    return parsed.href;
+  } catch {
+    const path = typeof raw === "string" && raw.startsWith("/") ? raw : fallback;
+    return new URL(path, self.location.origin).href;
+  }
+}
 
 self.addEventListener("fetch", (event) => {
   const { request } = event;

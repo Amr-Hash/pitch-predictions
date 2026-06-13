@@ -30,7 +30,7 @@ export function NotificationBell() {
     if (!token) return;
     setLoading(true);
     try {
-      const data = await api.getNotifications(token, { limit: 8 });
+      const data = await api.getNotifications(token, { limit: 8, unread: true });
       applyNotificationData(data);
     } catch {
       setItems([]);
@@ -39,7 +39,7 @@ export function NotificationBell() {
     }
   }, [token, applyNotificationData]);
 
-  useNotificationPolling(token, applyNotificationData, { limit: 8 });
+  useNotificationPolling(token, applyNotificationData, { limit: 8, unread: true });
 
   useEffect(() => {
     function onClickOutside(event: MouseEvent) {
@@ -54,14 +54,14 @@ export function NotificationBell() {
   const markRead = async (id: number) => {
     if (!token) return;
     await api.markNotificationRead(token, id);
-    setItems((prev) => prev.map((n) => (n.id === id ? { ...n, is_read: true } : n)));
+    setItems((prev) => prev.filter((n) => n.id !== id));
     setUnreadCount((c) => Math.max(0, c - 1));
   };
 
   const markAllRead = async () => {
     if (!token) return;
     await api.markAllNotificationsRead(token);
-    setItems((prev) => prev.map((n) => ({ ...n, is_read: true })));
+    setItems([]);
     setUnreadCount(0);
   };
 
@@ -121,17 +121,11 @@ export function NotificationBell() {
                           router.push(href);
                         }
                       }}
-                      className={`w-full px-4 py-3 text-start text-sm transition hover:bg-white/5 ${
-                        notification.is_read ? "text-white/70" : "text-white"
-                      }`}
+                      className="w-full px-4 py-3 text-start text-sm font-medium text-white transition hover:bg-white/5"
                     >
                       <div className="flex items-start gap-2">
-                        {!notification.is_read && (
-                          <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-gold-400" />
-                        )}
-                        <span className={notification.is_read ? "" : "font-medium"}>
-                          {formatNotificationText(notification, locale)}
-                        </span>
+                        <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-gold-400" />
+                        <span>{formatNotificationText(notification, locale)}</span>
                       </div>
                     </button>
                   </li>

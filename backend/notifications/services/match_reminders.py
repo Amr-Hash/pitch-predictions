@@ -6,7 +6,7 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 
 from notifications.models import KickoffReminderSent, Notification, PushSubscription
-from notifications.services.push import frontend_base_url, push_configured, send_push_to_user
+from notifications.services.push import push_configured, send_push_to_user
 from predictions.models import Prediction
 from tournaments.models import Match, TournamentSubscription
 
@@ -122,7 +122,7 @@ def send_match_kickoff_reminders() -> dict:
             )
         )
         dedup_key = f"match_kickoff_reminder:{match.id}"
-        match_url = f"{frontend_base_url()}/matches/{match.id}"
+        match_url = f"/matches/{match.id}"
 
         for user in users:
             eligible_users += 1
