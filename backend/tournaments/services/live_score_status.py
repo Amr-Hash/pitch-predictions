@@ -46,10 +46,8 @@ def get_global_live_score_environment() -> dict[str, Any]:
         "sync_window_open": is_sync_window_open(),
         "sync_window_start": start.isoformat() if start else (start_raw or None),
         "sync_window_end": end.isoformat() if end else (end_raw or None),
-        # Display only; schedules are defined in backend/vercel.json (Vercel Cron).
-        "cron_schedule": "vercel_cron",
-        "cron_live_scores_interval": "every_15_minutes",
-        "cron_reminders_interval": "every_5_minutes",
+        # Schedules run in the Django scheduler container (backend/cron/crontab).
+        "cron_schedule": "django_scheduler",
         "football_data_api_configured": bool(resolve_api_token()),
         "default_competition_code": DEFAULT_COMPETITION_CODE,
     }

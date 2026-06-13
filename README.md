@@ -286,18 +286,35 @@ VERCEL_TOKEN=<token> node scripts/sync-vercel-ci-secret.mjs
 Pull requests run tests only — production deploys run from the **Deploy** workflow after CI passes on `main`.
 You can also trigger deploy manually from **Actions → Deploy → Run workflow**.
 
-### Scheduled jobs (Vercel Cron)
+### Scheduled jobs (Django scheduler container)
 
-Two background jobs run on **Vercel** via `backend/vercel.json`. Vercel invokes your API on schedule and sends `Authorization: Bearer <CRON_SECRET>` automatically when `CRON_SECRET` is set on the project.
+Vercel **Hobby** plans cannot run frequent cron (only daily). The API on Vercel also cannot host a system crontab — it is serverless.
 
-| Job | Schedule | Endpoint |
-|-----|----------|----------|
-| Live score sync | Every **15 min** | `GET /api/cron/sync-live-scores` |
-| Kickoff reminders | Every **5 min** | `GET /api/cron/send-match-reminders` |
+Instead, run a **scheduler container** using the same `backend/Dockerfile`. It runs `cron` inside the container and executes Django management commands directly (no HTTP, no Vercel Cron):
 
-Deploy the backend for cron changes to take effect. The deploy workflow also runs `scripts/cron/set-cron-secret-vercel.mjs` to ensure `CRON_SECRET` exists on production.
+| Job | Schedule | Command |
+|-----|----------|---------|
+| Live score sync | Every **15 min** | `python manage.py sync_live_scores` |
+| Kickoff reminders | Every **5 min** | `python manage.py send_match_reminders` |
 
-Manual fallback (optional): `scripts/cron/*.sh` can trigger the same endpoints from any host with curl.
+Crontab definition: `backend/cron/crontab`
+
+**Local Docker:**
+
+```bash
+docker compose up --build
+# scheduler service starts automatically alongside backend
+```
+
+**Production (API on Vercel + Neon DB):** deploy a second service anywhere that supports Docker (Render background worker, Railway, Fly.io, VPS):
+
+- **Dockerfile:** `backend/Dockerfile`
+- **Start command:** `/scheduler-entrypoint.sh`
+- **Env vars:** same as the API (`DATABASE_URL`, `SECRET_KEY`, `FOOTBALL_DATA_API_TOKEN`, etc.)
+
+The scheduler connects to the same Postgres database as the API.
+
+Optional HTTP triggers (`/api/cron/...`) remain for manual testing; production schedules should use the scheduler container.
 
 #### Live score sync (football-data.org)
 
@@ -307,7 +324,7 @@ Add these environment variables on the **alhabeed-api** Vercel project:
 
 | Variable | Purpose |
 |----------|---------|
-| `CRON_SECRET` | Random secret; Vercel Cron sends `Authorization: Bearer …` (auto-created on deploy if missing) |
+| `CRON_SECRET` | Optional; protects `/api/cron/*` HTTP endpoints for manual/external triggers |
 | `FOOTBALL_DATA_API_TOKEN` | API token from football-data.org (free tier available) |
 | `FOOTBALL_DATA_COMPETITION_CODE` | Optional default competition code (World Cup = `WC`) |
 | `LIVE_SCORE_SYNC_START` | Optional; ISO date e.g. `2026-06-11` |

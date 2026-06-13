@@ -114,9 +114,9 @@ class PushUnsubscribeView(APIView):
 @permission_classes([permissions.AllowAny])
 def cron_send_match_reminders(request):
     """
-    Cron entrypoint for ~1-hour-before-kickoff match reminders.
-    Vercel Cron invokes this every 5 minutes (see backend/vercel.json) with:
-      Authorization: Bearer <CRON_SECRET>
+    Optional HTTP trigger for kickoff reminders (manual/external use).
+    Production schedules use the Django scheduler container (backend/cron/crontab).
+    When called via HTTP, send: Authorization: Bearer <CRON_SECRET>
     """
     if not _authorize_cron_request(request):
         return Response({"detail": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)

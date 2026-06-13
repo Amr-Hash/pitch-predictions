@@ -477,7 +477,7 @@ export const messages = {
     adminLiveScoreCompetitionCode: "Competition code (e.g. WC)",
     adminLiveScoreApiToken: "API token (FOOTBALL_DATA_API_TOKEN)",
     adminLiveScoreConfigHint:
-      "Vercel Cron runs every 15 minutes; football-data.org is called only during match windows. Set FOOTBALL_DATA_API_TOKEN on the API server.",
+      "The scheduler container runs every 15 minutes; football-data.org is called only during match windows. Set FOOTBALL_DATA_API_TOKEN on the scheduler.",
     adminSyncLiveScores: "Sync live scores now",
     adminLiveScoresSynced: "Live scores synced.",
     adminLiveScores: "Live scores",
@@ -491,6 +491,8 @@ export const messages = {
     adminLiveScoreCronEvery15: "Every 15 minutes via system crontab",
     adminLiveScoreCronVercel:
       "Live scores every 15 min, reminders every 5 min (Vercel Cron)",
+    adminLiveScoreCronScheduler:
+      "Live scores every 15 min, reminders every 5 min (Django scheduler container)",
     adminLiveScoreMatchesTotal: "Total matches",
     adminLiveScoreInWindowLabel: "In sync window",
     adminLiveScoreInWindow: "{count} match(es) in the live sync window now",
@@ -1013,7 +1015,7 @@ export const messages = {
     adminLiveScoreCompetitionCode: "رمز البطولة (مثل WC)",
     adminLiveScoreApiToken: "رمز API (FOOTBALL_DATA_API_TOKEN)",
     adminLiveScoreConfigHint:
-      "Vercel Cron كل 15 دقيقة؛ يُستدعى football-data.org فقط ضمن نافذة المباريات. اضبط FOOTBALL_DATA_API_TOKEN على خادم الـ API.",
+      "حاوية المجدول تعمل كل 15 دقيقة؛ يُستدعى football-data.org فقط ضمن نافذة المباريات. اضبط FOOTBALL_DATA_API_TOKEN على المجدول.",
     adminSyncLiveScores: "مزامنة النتائج المباشرة الآن",
     adminLiveScoresSynced: "تمت مزامنة النتائج المباشرة.",
     adminLiveScores: "النتائج المباشرة",
@@ -1026,6 +1028,8 @@ export const messages = {
     adminLiveScoreCronEvery15: "كل 15 دقيقة عبر crontab على الخادم",
     adminLiveScoreCronVercel:
       "النتائج كل 15 دقيقة والتذكيرات كل 5 دقائق (Vercel Cron)",
+    adminLiveScoreCronScheduler:
+      "النتائج كل 15 دقيقة والتذكيرات كل 5 دقائق (حاوية مجدول Django)",
     adminLiveScoreMatchesTotal: "إجمالي المباريات",
     adminLiveScoreInWindowLabel: "ضمن نافذة المزامنة",
     adminLiveScoreInWindow: "{count} مباراة ضمن نافذة المزامنة الآن",
