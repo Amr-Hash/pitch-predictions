@@ -1,0 +1,52 @@
+name: Setup Football Data API
+
+on:
+  workflow_dispatch:
+
+env:
+  VERCEL_ORG_ID: team_4Xmlf7t3YpurUX6c1nZH0ra0
+  VERCEL_BACKEND_PROJECT_ID: prj_FRxuskySw6XocyTyrftLpgZw2baf
+
+jobs:
+  setup-football-data:
+    name: Configure football-data.org on Vercel
+    runs-on: ubuntu-latest
+    environment:
+      name: production-backend
+      url: https://alhabeed-api.vercel.app
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Validate Vercel token
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ env.VERCEL_ORG_ID }}
+          VERCEL_TEAM_SLUG: amr-hashem
+        run: bash .github/scripts/vercel-validate-token.sh
+
+      - name: Set football-data env vars and redeploy API
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          FOOTBALL_DATA_API_TOKEN: ${{ secrets.FOOTBALL_DATA_API_TOKEN }}
+        run: node scripts/set-football-data-vercel.mjs
+
+      - name: Verify live score env is configured
+        run: |
+          for i in $(seq 1 12); do
+            resp=$(curl -fsS -H "Authorization: Bearer ${CRON_SECRET}" \
+              "https://alhabeed-api.vercel.app/api/cron/sync-live-scores" 2>/dev/null || true)
+            if echo "$resp" | python3 -c "import sys,json; d=json.load(sys.stdin); sys.exit(0 if 'tournaments' in d else 1)" 2>/dev/null; then
+              echo "API responded to live score sync."
+              exit 0
+            fi
+            echo "Waiting for production redeploy (attempt ${i}/12)..."
+            sleep 15
+          done
+          echo "Production may still be redeploying; check admin live score panel."
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
