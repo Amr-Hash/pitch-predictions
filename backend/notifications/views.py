@@ -113,18 +113,10 @@ class PushUnsubscribeView(APIView):
 @authentication_classes([])
 @permission_classes([permissions.AllowAny])
 def cron_send_match_reminders(request):
-    """Cron entrypoint for 1-hour-before-kickoff Web Push reminders."""
+    """Cron entrypoint for 1-hour-before-kickoff match reminders."""
     if not _authorize_cron_request(request):
         return Response({"detail": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
 
     from notifications.services.match_reminders import send_match_kickoff_reminders
 
-    result = send_match_kickoff_reminders()
-    if not result.get("enabled", True):
-        return Response(
-            {
-                **result,
-                "detail": "Kickoff reminders disabled: Web Push (VAPID) is not configured.",
-            }
-        )
-    return Response(result)
+    return Response(send_match_kickoff_reminders())

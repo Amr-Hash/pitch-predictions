@@ -76,21 +76,31 @@ class MatchKickoffReminderTests(TestCase):
             auth="auth2",
         )
 
-    def test_disabled_when_push_not_configured(self):
+    def test_in_app_reminders_when_push_not_configured(self):
         with patch.dict(os.environ, {"VAPID_PUBLIC_KEY": ""}, clear=False):
             result = send_match_kickoff_reminders()
 
-        self.assertFalse(result["enabled"])
+        self.assertTrue(result["enabled"])
+        self.assertFalse(result["push_enabled"])
         self.assertEqual(result["push_sent"], 0)
-        self.assertEqual(KickoffReminderSent.objects.count(), 0)
+        self.assertEqual(result["in_app_created"], 2)
+        self.assertEqual(KickoffReminderSent.objects.count(), 2)
+        self.assertEqual(
+            Notification.objects.filter(
+                notification_type=Notification.Type.MATCH_KICKOFF_REMINDER
+            ).count(),
+            2,
+        )
 
     @patch("notifications.services.match_reminders.send_push_to_user", return_value=1)
-    def test_sends_push_only_to_subscribed_users_with_push(self, mock_push):
+    def test_sends_in_app_and_push_to_subscribed_users(self, mock_push):
         result = send_match_kickoff_reminders()
 
         self.assertTrue(result["enabled"])
+        self.assertTrue(result["push_enabled"])
         self.assertEqual(result["matches"], 1)
         self.assertEqual(result["eligible_users"], 2)
+        self.assertEqual(result["in_app_created"], 2)
         self.assertEqual(result["push_sent"], 2)
         self.assertEqual(mock_push.call_count, 2)
         self.assertEqual(KickoffReminderSent.objects.count(), 2)
@@ -98,7 +108,7 @@ class MatchKickoffReminderTests(TestCase):
             Notification.objects.filter(
                 notification_type=Notification.Type.MATCH_KICKOFF_REMINDER
             ).count(),
-            0,
+            2,
         )
 
     @patch("notifications.services.match_reminders.send_push_to_user", return_value=1)
@@ -107,18 +117,26 @@ class MatchKickoffReminderTests(TestCase):
         result = send_match_kickoff_reminders()
 
         self.assertEqual(result["eligible_users"], 0)
+        self.assertEqual(result["in_app_created"], 0)
         self.assertEqual(result["push_sent"], 0)
         self.assertEqual(mock_push.call_count, 2)
 
     @patch("notifications.services.match_reminders.send_push_to_user", return_value=0)
-    def test_skips_users_without_push_subscription(self, mock_push):
+    def test_in_app_without_push_subscription_still_notifies(self, mock_push):
         PushSubscription.objects.filter(user=self.other).delete()
 
         result = send_match_kickoff_reminders()
 
-        self.assertEqual(result["eligible_users"], 1)
+        self.assertEqual(result["eligible_users"], 2)
+        self.assertEqual(result["in_app_created"], 2)
         self.assertEqual(mock_push.call_count, 1)
-        self.assertEqual(KickoffReminderSent.objects.count(), 0)
+        self.assertEqual(KickoffReminderSent.objects.count(), 2)
+        self.assertEqual(
+            Notification.objects.filter(
+                notification_type=Notification.Type.MATCH_KICKOFF_REMINDER
+            ).count(),
+            2,
+        )
 
     @patch("notifications.services.match_reminders.send_push_to_user", return_value=0)
     def test_skips_users_not_subscribed_to_tournament(self, mock_push):
@@ -127,7 +145,18 @@ class MatchKickoffReminderTests(TestCase):
         result = send_match_kickoff_reminders()
 
         self.assertEqual(result["eligible_users"], 1)
+        self.assertEqual(result["in_app_created"], 1)
         self.assertEqual(mock_push.call_count, 1)
+
+    @patch("notifications.services.match_reminders.send_push_to_user", return_value=0)
+    def test_catch_up_when_kickoff_sooner_than_one_hour(self, mock_push):
+        self.match.kickoff_time = timezone.now() + timedelta(minutes=30)
+        self.match.save(update_fields=["kickoff_time"])
+
+        result = send_match_kickoff_reminders()
+
+        self.assertEqual(result["matches"], 1)
+        self.assertEqual(result["in_app_created"], 2)
 
     @patch("notifications.services.match_reminders.send_push_to_user", return_value=0)
     def test_ignores_matches_outside_window(self, mock_push):

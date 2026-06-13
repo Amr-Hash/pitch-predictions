@@ -8,12 +8,13 @@ export const NOTIFICATION_POLL_INTERVAL_MS = 5 * 60 * 1000;
 export function useNotificationPolling(
   token: string | null,
   onUpdate: (data: NotificationListResponse) => void,
-  options?: { enabled?: boolean; limit?: number }
+  options?: { enabled?: boolean; limit?: number; unread?: boolean }
 ) {
   const onUpdateRef = useRef(onUpdate);
   onUpdateRef.current = onUpdate;
   const enabled = options?.enabled ?? true;
   const limit = options?.limit ?? 50;
+  const unread = options?.unread ?? false;
 
   useEffect(() => {
     if (!token || !enabled) return;
@@ -22,7 +23,7 @@ export function useNotificationPolling(
 
     const poll = async () => {
       try {
-        const data = await api.getNotifications(token, { limit });
+        const data = await api.getNotifications(token, { limit, unread });
         if (!cancelled) onUpdateRef.current(data);
       } catch {
         /* keep last known state */
@@ -35,5 +36,5 @@ export function useNotificationPolling(
       cancelled = true;
       window.clearInterval(intervalId);
     };
-  }, [token, enabled, limit]);
+  }, [token, enabled, limit, unread]);
 }

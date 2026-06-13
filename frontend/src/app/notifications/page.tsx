@@ -31,7 +31,7 @@ export default function NotificationsPage() {
     setLoading(true);
     setError(null);
     try {
-      const data = await api.getNotifications(token, { limit: 100 });
+      const data = await api.getNotifications(token, { limit: 100, unread: true });
       applyNotificationData(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : t("tryAgain"));
@@ -46,19 +46,20 @@ export default function NotificationsPage() {
   useNotificationPolling(token, applyNotificationData, {
     enabled: !authLoading && Boolean(token),
     limit: 100,
+    unread: true,
   });
 
   const markRead = async (id: number) => {
     if (!token) return;
     await api.markNotificationRead(token, id);
-    setItems((prev) => prev.map((n) => (n.id === id ? { ...n, is_read: true } : n)));
+    setItems((prev) => prev.filter((n) => n.id !== id));
     setUnreadCount((c) => Math.max(0, c - 1));
   };
 
   const markAllRead = async () => {
     if (!token) return;
     await api.markAllNotificationsRead(token);
-    setItems((prev) => prev.map((n) => ({ ...n, is_read: true })));
+    setItems([]);
     setUnreadCount(0);
   };
 
