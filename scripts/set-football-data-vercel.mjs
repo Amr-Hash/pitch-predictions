@@ -104,4 +104,6 @@ if (deploy.status !== 0) {
   process.exit(deploy.status || 1);
 }
 
-console.log("Done. Live score sync can use football-data.org on production.");
+console.log(
+  "Done. Set CRON_SECRET on Vercel and install scripts/cron/crontab.example on your cron host."
+);

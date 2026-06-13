@@ -374,8 +374,9 @@ def _authorize_cron_request(request) -> bool:
 @permission_classes([permissions.AllowAny])
 def cron_sync_live_scores(request):
     """
-    Vercel Cron entrypoint. Set CRON_SECRET in project env.
-  Authorization: Bearer <CRON_SECRET>
+    Cron entrypoint for live score sync. Set CRON_SECRET on the API server.
+    A system crontab (see scripts/cron/) calls this with:
+      Authorization: Bearer <CRON_SECRET>
     """
     if not _authorize_cron_request(request):
         return Response({"detail": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)

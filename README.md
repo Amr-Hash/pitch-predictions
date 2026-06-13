@@ -286,7 +286,28 @@ VERCEL_TOKEN=<token> node scripts/sync-vercel-ci-secret.mjs
 Pull requests run tests only — production deploys run from the **Deploy** workflow after CI passes on `main`.
 You can also trigger deploy manually from **Actions → Deploy → Run workflow**.
 
-### World Cup live score sync (football-data.org)
+### Scheduled jobs (system crontab)
+
+Two background jobs run on an **always-on host** (VPS, home server, etc.) via traditional crontab. Both call the production API with the same `CRON_SECRET` — no GitHub Actions required.
+
+| Job | Script | Schedule | Endpoint |
+|-----|--------|----------|----------|
+| Live score sync | `scripts/cron/sync-live-scores.sh` | Every **15 min** | `GET /api/cron/sync-live-scores` |
+| Kickoff reminders | `scripts/cron/send-match-reminders.sh` | Every **5 min** | `GET /api/cron/send-match-reminders` |
+
+**Crontab setup:**
+
+```bash
+cp scripts/cron/cron.env.example scripts/cron/cron.env
+# Edit cron.env — CRON_SECRET must match Vercel
+chmod +x scripts/cron/*.sh
+crontab -e
+# Add both lines from scripts/cron/crontab.example (adjust paths)
+```
+
+See `scripts/cron/crontab.example` for the full template. Do not commit `scripts/cron/cron.env` (secrets).
+
+#### Live score sync (football-data.org)
 
 Live scores can be **manual** (admin enters results) or **football_data** (automatic from [football-data.org](https://www.football-data.org/)).
 
@@ -294,17 +315,23 @@ Add these environment variables on the **alhabeed-api** Vercel project:
 
 | Variable | Purpose |
 |----------|---------|
-| `CRON_SECRET` | Random secret; cron jobs send `Authorization: Bearer …` |
+| `CRON_SECRET` | Random secret; the cron host sends `Authorization: Bearer …` |
 | `FOOTBALL_DATA_API_TOKEN` | API token from football-data.org (free tier available) |
 | `FOOTBALL_DATA_COMPETITION_CODE` | Optional default competition code (World Cup = `WC`) |
 | `LIVE_SCORE_SYNC_START` | Optional; ISO date e.g. `2026-06-11` |
 | `LIVE_SCORE_SYNC_END` | Optional; ISO date e.g. `2026-07-19` (full tournament) |
 
-**How it works:** The sync job runs every **15 minutes** via GitHub Actions. For each tournament set to **football-data.org**, it fetches matches from the API and matches them to your fixtures by team code (15 min before kickoff → 3 hours after). When a match is **FINISHED** in the API, the score is saved and prediction points are awarded automatically.
+The sync job runs every **15 minutes**. For each tournament set to **football-data.org**, the backend fetches matches from the API only when fixtures are in the sync window (15 min before kickoff → 3 hours after) and matches them by team code. When a match is **FINISHED** in the API, the score is saved and prediction points are awarded automatically. Outside match windows, the cron still runs but **does not call football-data.org**, which keeps the free-tier quota low.
 
 Per-tournament optional `competition_code` in admin (defaults to `WC` for World Cup). Admin can also use **Sync live scores now** on the tournaments page.
 
 Live scores update match `status` and display scores; prediction points are awarded only when a match reaches `finished`.
+
+#### Kickoff reminders
+
+Reminders notify tournament subscribers about **1 hour before kickoff** (in-app notification + Web Push when VAPID is configured). The job runs every **5 minutes** so reminders land close to the one-hour mark; it uses only your database — **no football-data.org calls**.
+
+Optional VAPID env vars on the API server: `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_ADMIN_EMAIL` (see `backend/.env.example`).
 
 ## Project Structure
 

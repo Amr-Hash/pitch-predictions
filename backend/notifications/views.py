@@ -113,7 +113,11 @@ class PushUnsubscribeView(APIView):
 @authentication_classes([])
 @permission_classes([permissions.AllowAny])
 def cron_send_match_reminders(request):
-    """Cron entrypoint for 1-hour-before-kickoff match reminders."""
+    """
+    Cron entrypoint for ~1-hour-before-kickoff match reminders.
+    System crontab calls this every 5 minutes (see scripts/cron/crontab.example):
+      Authorization: Bearer <CRON_SECRET>
+    """
     if not _authorize_cron_request(request):
         return Response({"detail": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
 

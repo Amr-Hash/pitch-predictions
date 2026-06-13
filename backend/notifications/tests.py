@@ -167,3 +167,47 @@ class MatchKickoffReminderTests(TestCase):
 
         self.assertEqual(result["matches"], 0)
         self.assertEqual(mock_push.call_count, 0)
+
+
+class CronMatchRemindersEndpointTests(TestCase):
+    def setUp(self):
+        from rest_framework.test import APIClient
+
+        self.client = APIClient()
+
+    @patch.dict(os.environ, {"CRON_SECRET": "test-cron-secret"}, clear=False)
+    def test_cron_endpoint_rejects_missing_secret(self):
+        from rest_framework import status
+
+        response = self.client.get("/api/cron/send-match-reminders")
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    @patch.dict(os.environ, {"CRON_SECRET": "test-cron-secret"})
+    @patch(
+        "notifications.services.match_reminders.send_match_kickoff_reminders",
+        return_value={"enabled": True, "matches": 0, "in_app_created": 0},
+    )
+    def test_cron_endpoint_accepts_bearer_secret(self, _mock_send):
+        from rest_framework import status
+
+        response = self.client.get(
+            "/api/cron/send-match-reminders",
+            HTTP_AUTHORIZATION="Bearer test-cron-secret",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("enabled", response.data)
+
+    @patch.dict(os.environ, {"CRON_SECRET": "test-cron-secret"})
+    @patch(
+        "notifications.services.match_reminders.send_match_kickoff_reminders",
+        return_value={"enabled": True, "matches": 0, "in_app_created": 0},
+    )
+    def test_cron_endpoint_accepts_header_secret(self, _mock_send):
+        from rest_framework import status
+
+        response = self.client.get(
+            "/api/cron/send-match-reminders",
+            HTTP_X_CRON_SECRET="test-cron-secret",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("enabled", response.data)

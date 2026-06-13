@@ -31,6 +31,7 @@ const HEALTH_KEYS: Record<string, MessageKey> = {
 };
 
 const CRON_SCHEDULE_KEYS: Record<string, MessageKey> = {
+  every_15_minutes_crontab: "adminLiveScoreCronEvery15",
   every_15_minutes: "adminLiveScoreCronEvery15",
 };
 
