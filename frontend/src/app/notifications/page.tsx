@@ -7,6 +7,7 @@ import { api, type AppNotification, type NotificationListResponse } from "@/lib/
 import { useAuth } from "@/lib/auth";
 import { useLocale, useT } from "@/lib/i18n";
 import { formatNotificationText, getNotificationHref } from "@/lib/notificationText";
+import { formatDateTime } from "@/lib/format";
 import { useNotificationPolling } from "@/lib/useNotificationPolling";
 
 export default function NotificationsPage() {
@@ -121,9 +122,7 @@ export default function NotificationsPage() {
                       {formatNotificationText(notification, locale)}
                     </p>
                     <p className="mt-2 text-xs text-night-400">
-                      {new Date(notification.created_at).toLocaleString(
-                        locale === "ar" ? "ar-EG" : undefined
-                      )}
+                      {formatDateTime(notification.created_at, locale)}
                     </p>
                   </div>
                 </div>

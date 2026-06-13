@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Match, Prediction } from "@/lib/api";
 import { useLocale, useT } from "@/lib/i18n";
 import { matchContextLabel, teamLabel } from "@/lib/localize";
+import { formatDateTime } from "@/lib/format";
 import { isMatchLive } from "@/lib/matchStatus";
 import { cupGroupAccent } from "@/lib/theme";
 
@@ -17,9 +18,7 @@ interface Props {
 export function MatchCard({ match, prediction, showPredictLink, showResultLink }: Props) {
   const { locale } = useLocale();
   const t = useT();
-  const kickoff = new Date(match.kickoff_time).toLocaleString(
-    locale === "ar" ? "ar-EG" : undefined
-  );
+  const kickoff = formatDateTime(match.kickoff_time, locale);
   const isFinished = match.status === "finished";
   const isLive = isMatchLive(match);
   const canEdit = showPredictLink && !match.is_locked && !isFinished;
@@ -103,42 +102,50 @@ export function MatchCard({ match, prediction, showPredictLink, showResultLink }
           </div>
         </div>
         {prediction && (
-          <p className="mt-4 rounded-xl bg-pitch-50/80 px-3 py-2 text-center text-sm text-pitch-900">
-            {t("yourPrediction")}:{" "}
-            <span className="font-bold">
-              {prediction.predicted_home_score}-{prediction.predicted_away_score}
-              {prediction.predicted_winner_team
-                ? ` (${teamLabel(prediction.predicted_winner_team, locale)} ${t("advances")})`
-                : match.is_knockout &&
-                    prediction.predicted_home_score === prediction.predicted_away_score
-                  ? ` (${t("noAdvancingPickSaved")})`
-                  : ""}
-            </span>
-            {(prediction.points_awarded > 0 || isFinished) && (
-              <span className="ml-2 font-extrabold text-gold-600">
-                {prediction.points_awarded > 0 ? "+" : ""}
-                {prediction.points_awarded} {t("points")}
+          <div className="mt-4 rounded-xl bg-pitch-50/80 px-3 py-2.5 text-sm text-pitch-900">
+            <p className="text-center font-medium text-pitch-800">{t("yourPrediction")}</p>
+            <div className="mt-1 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center">
+              <span className="font-bold">
+                {prediction.predicted_home_score}-{prediction.predicted_away_score}
+                {prediction.predicted_winner_team
+                  ? ` (${teamLabel(prediction.predicted_winner_team, locale)} ${t("advances")})`
+                  : match.is_knockout &&
+                      prediction.predicted_home_score === prediction.predicted_away_score
+                    ? ` (${t("noAdvancingPickSaved")})`
+                    : ""}
               </span>
-            )}
-          </p>
+              {(prediction.points_awarded > 0 || isFinished) && (
+                <span className="shrink-0 font-extrabold text-gold-600">
+                  {prediction.points_awarded > 0 ? "+" : ""}
+                  {prediction.points_awarded} {t("points")}
+                </span>
+              )}
+            </div>
+          </div>
         )}
         {match.lock_reason && !isFinished && match.is_locked && (
           <p className="mt-2 text-center text-xs font-medium text-fan-700">{match.lock_reason}</p>
         )}
-        <div className="mt-4 flex justify-center gap-2">
-          {showPredictLink && (canEdit || (prediction && isFinished)) && (
-            <Link href={`/matches/${match.id}`} className="btn-primary text-sm">
-              {predictLabel}
-            </Link>
+        <div className="mt-4 flex flex-wrap justify-center gap-2">
+          {isFinished ? (
+            showResultLink && (
+              <>
+                <Link href={`/matches/${match.id}/results`} className="btn-primary text-sm">
+                  {t("viewResults")}
+                </Link>
+                <Link href={`/matches/${match.id}/compare`} className="btn-secondary text-sm">
+                  {t("compareWithGroup")}
+                </Link>
+              </>
+            )
+          ) : (
+            showPredictLink &&
+            (canEdit || prediction) && (
+              <Link href={`/matches/${match.id}`} className="btn-primary text-sm">
+                {predictLabel}
+              </Link>
+            )
           )}
-          {showResultLink && isFinished && (
-            <Link href={`/matches/${match.id}/results`} className="btn-secondary text-sm">
-              {t("viewResults")}
-            </Link>
-          )}
-          <Link href={`/matches/${match.id}`} className="btn-secondary text-sm">
-            {t("details")}
-          </Link>
         </div>
       </div>
     </div>

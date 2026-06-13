@@ -50,10 +50,10 @@ export default function MatchResultsPage() {
   return (
     <div className="mx-auto max-w-2xl">
       <Link
-        href={`/matches/${id}`}
+        href="/matches"
         className="mb-4 inline-block text-sm text-pitch-600 hover:underline"
       >
-        ← {t("backToMatch")}
+        ← {t("backToMatches")}
       </Link>
       <h1 className="mb-6 text-3xl font-bold">{t("matchResults")}</h1>
 
@@ -107,6 +107,14 @@ export default function MatchResultsPage() {
             </div>
           </div>
         ))
+      )}
+
+      {match.status === "finished" && (
+        <div className="mt-8 text-center">
+          <Link href={`/matches/${id}/compare`} className="btn-secondary">
+            {t("compareWithGroup")}
+          </Link>
+        </div>
       )}
     </div>
   );

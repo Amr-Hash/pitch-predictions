@@ -9,6 +9,8 @@ import {
 } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useLocale, useT } from "@/lib/i18n";
+import { formatDate, formatDateTime } from "@/lib/format";
+import type { Locale } from "@/lib/messages";
 
 type ActivityFilter = "all" | "24h" | "7d" | "inactive" | "never";
 
@@ -20,13 +22,13 @@ const FILTERS: { id: ActivityFilter; labelKey: "adminActivityAll" | "adminActivi
   { id: "never", labelKey: "adminActivityNever" },
 ];
 
-function formatLastSeen(value: string | null, locale: string, t: (key: "adminNeverVisited" | "adminJustNow") => string) {
+function formatLastSeen(value: string | null, locale: Locale, t: (key: "adminNeverVisited" | "adminJustNow") => string) {
   if (!value) return t("adminNeverVisited");
   const date = new Date(value);
   const diffMs = Date.now() - date.getTime();
   const diffMins = Math.floor(diffMs / 60000);
   if (diffMins < 2) return t("adminJustNow");
-  return date.toLocaleString(locale === "ar" ? "ar-EG" : undefined);
+  return formatDateTime(date, locale);
 }
 
 export default function AdminUsersPage() {
@@ -141,7 +143,7 @@ export default function AdminUsersPage() {
                     {formatLastSeen(user.last_seen_at, locale, t)}
                   </td>
                   <td className="py-3 text-gray-500">
-                    {new Date(user.created_at).toLocaleDateString()}
+                    {formatDate(user.created_at, locale)}
                   </td>
                 </tr>
               ))}

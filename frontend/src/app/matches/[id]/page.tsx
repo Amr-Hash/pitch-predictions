@@ -7,6 +7,7 @@ import { api, Match, Prediction, unwrapList } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useLocale, useT } from "@/lib/i18n";
 import { matchContextLabel, teamLabel } from "@/lib/localize";
+import { formatDateTime } from "@/lib/format";
 
 export default function MatchDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -98,9 +99,7 @@ export default function MatchDetailPage() {
 
   const isFinished = match.status === "finished";
   const canEdit = !match.is_locked && !isFinished;
-  const kickoff = new Date(match.kickoff_time).toLocaleString(
-    locale === "ar" ? "ar-EG" : undefined
-  );
+  const kickoff = formatDateTime(match.kickoff_time, locale);
   const context = matchContextLabel(match, locale, t("group"));
   const matchdaySuffix = match.matchday ? ` · ${t("matchday", { day: match.matchday })}` : "";
 
@@ -219,15 +218,17 @@ export default function MatchDetailPage() {
       {prediction && (
         <div className="card mt-6">
           <h2 className="mb-3 font-semibold">{t("yourPrediction")}</h2>
-          <div className="text-sm">
-            {prediction.predicted_home_score}-{prediction.predicted_away_score}
-            {prediction.predicted_winner_team
-              ? ` (${teamLabel(prediction.predicted_winner_team, locale)} ${t("advances")})`
-              : match.is_knockout &&
-                prediction.predicted_home_score === prediction.predicted_away_score &&
-                ` (${t("noAdvancingPickSaved")})`}
+          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm">
+            <span>
+              {prediction.predicted_home_score}-{prediction.predicted_away_score}
+              {prediction.predicted_winner_team
+                ? ` (${teamLabel(prediction.predicted_winner_team, locale)} ${t("advances")})`
+                : match.is_knockout &&
+                  prediction.predicted_home_score === prediction.predicted_away_score &&
+                  ` (${t("noAdvancingPickSaved")})`}
+            </span>
             {isFinished && (
-              <span className="ml-2 text-pitch-600">
+              <span className="shrink-0 font-semibold text-pitch-600">
                 {prediction.points_awarded > 0 ? "+" : ""}
                 {prediction.points_awarded} {t("points")}
               </span>

@@ -5,6 +5,7 @@ import { Match, Prediction } from "@/lib/api";
 import { useCountdown } from "@/hooks/useCountdown";
 import { useLocale, useT } from "@/lib/i18n";
 import { matchContextLabel, teamLabel } from "@/lib/localize";
+import { formatDateTime } from "@/lib/format";
 import { cupGroupAccent } from "@/lib/theme";
 
 function pad(n: number) {
@@ -35,10 +36,13 @@ function NextMatchCountdown({ match }: { match: Match }) {
   const t = useT();
   const countdown = useCountdown(match.kickoff_time);
   const accent = cupGroupAccent(match.cup_group_name);
-  const kickoffDate = new Date(match.kickoff_time).toLocaleString(
-    locale === "ar" ? "ar-EG" : undefined,
-    { weekday: "short", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }
-  );
+  const kickoffDate = formatDateTime(match.kickoff_time, locale, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 
   return (
     <div className="live-hub-countdown">

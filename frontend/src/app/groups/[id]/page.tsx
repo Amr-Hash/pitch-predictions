@@ -21,6 +21,7 @@ import { GroupPredictionsPanel } from "@/components/GroupPredictionsPanel";
 import { LeaderboardTable } from "@/components/LeaderboardTable";
 import { PageTabs } from "@/components/PageTabs";
 import { useLocale, useT } from "@/lib/i18n";
+import { formatDate } from "@/lib/format";
 import { tournamentTitle } from "@/lib/localize";
 
 type Tab = "overview" | "predictions" | "members";
@@ -294,9 +295,7 @@ function GroupDetailContent() {
                             )}
                           </td>
                           <td className="px-4 py-3 text-gray-500">
-                            {new Date(member.joined_at).toLocaleDateString(
-                              locale === "ar" ? "ar-EG" : undefined
-                            )}
+                            {formatDate(member.joined_at, locale)}
                           </td>
                           {group.is_admin && (
                             <td className="px-4 py-3 text-right">
