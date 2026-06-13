@@ -19,6 +19,19 @@ export interface AdminUser {
   is_staff: boolean;
   group_count: number;
   created_at: string;
+  last_login: string | null;
+  last_seen_at: string | null;
+}
+
+export interface AdminUserActivitySummary {
+  total_fans: number;
+  active_last_24h: number;
+  active_last_7d: number;
+  active_24h_pct: number;
+  active_7d_pct: number;
+  never_seen: number;
+  inactive_over_7d: number;
+  as_of: string;
 }
 
 export interface AdminGroup {
@@ -969,8 +982,13 @@ export const api = {
       token
     ),
 
-  adminGetUsers: (token: string) =>
-    request<AdminUser[]>("/api/auth/admin/users", {}, token),
+  adminGetUsers: (token: string, activity?: "24h" | "7d" | "inactive" | "never") => {
+    const query = activity ? `?activity=${activity}` : "";
+    return request<AdminUser[]>(`/api/auth/admin/users${query}`, {}, token);
+  },
+
+  adminGetUserActivity: (token: string) =>
+    request<AdminUserActivitySummary>("/api/auth/admin/user-activity", {}, token),
 
   adminGetGroups: (token: string) =>
     request<AdminGroup[] | { results: AdminGroup[] }>("/api/groups/admin/groups", {}, token),

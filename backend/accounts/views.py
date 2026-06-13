@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
-from django.db.models import Count
+from django.db.models import Count, F
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from rest_framework import generics, permissions, status
@@ -12,6 +12,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from worldcup.permissions import IsAdminUser
+
+from .activity import fan_users_queryset, filter_users_by_activity, get_user_activity_summary
 
 from .serializers import (
     AdminUserSerializer,
@@ -78,9 +80,19 @@ class AdminUserListView(generics.ListAPIView):
     pagination_class = None
 
     def get_queryset(self):
-        return User.objects.annotate(
+        activity = self.request.query_params.get("activity")
+        qs = fan_users_queryset().annotate(
             group_count=Count("group_memberships", distinct=True)
-        ).order_by("-created_at")
+        )
+        qs = filter_users_by_activity(qs, activity)
+        return qs.order_by(F("last_seen_at").desc(nulls_last=True), "-created_at")
+
+
+class AdminUserActivityView(APIView):
+    permission_classes = (permissions.IsAuthenticated, IsAdminUser)
+
+    def get(self, request):
+        return Response(get_user_activity_summary())
 
 
 class PasswordResetRequestView(APIView):

@@ -23,6 +23,8 @@ class AdminUserSerializer(serializers.ModelSerializer):
             "is_staff",
             "group_count",
             "created_at",
+            "last_login",
+            "last_seen_at",
         )
 
 

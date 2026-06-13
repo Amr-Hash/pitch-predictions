@@ -166,9 +166,59 @@ class AdminUserListTests(TestCase):
         self.client.force_authenticate(user=self.admin)
         response = self.client.get("/api/auth/admin/users")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertGreaterEqual(len(response.data), 2)
-        regular = next(row for row in response.data if row["username"] == "regular")
+        self.assertEqual(len(response.data), 1)
+        regular = response.data[0]
+        self.assertEqual(regular["username"], "regular")
         self.assertEqual(regular["group_count"], 1)
+
+    def test_admin_user_activity_summary(self):
+        now = timezone.now()
+        self.user.last_seen_at = now - timedelta(hours=2)
+        self.user.save(update_fields=["last_seen_at"])
+        inactive = User.objects.create_user(
+            username="inactive",
+            email="inactive@example.com",
+            password="pass12345",
+        )
+        inactive.last_seen_at = now - timedelta(days=10)
+        inactive.save(update_fields=["last_seen_at"])
+
+        self.client.force_authenticate(user=self.admin)
+        response = self.client.get("/api/auth/admin/user-activity")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["total_fans"], 2)
+        self.assertEqual(response.data["active_last_24h"], 1)
+        self.assertEqual(response.data["active_last_7d"], 1)
+        self.assertEqual(response.data["inactive_over_7d"], 1)
+
+    def test_admin_users_filter_active_24h(self):
+        now = timezone.now()
+        self.user.last_seen_at = now - timedelta(hours=1)
+        self.user.save(update_fields=["last_seen_at"])
+        User.objects.create_user(
+            username="old",
+            email="old@example.com",
+            password="pass12345",
+            last_seen_at=now - timedelta(days=3),
+        )
+
+        self.client.force_authenticate(user=self.admin)
+        response = self.client.get("/api/auth/admin/users?activity=24h")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["username"], "regular")
+
+    def test_jwt_auth_updates_last_seen(self):
+        login = self.client.post(
+            "/api/auth/login",
+            {"email": "user@example.com", "password": "pass12345"},
+        )
+        self.assertEqual(login.status_code, status.HTTP_200_OK)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {login.data['access']}")
+        response = self.client.get("/api/auth/me")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.user.refresh_from_db()
+        self.assertIsNotNone(self.user.last_seen_at)
 
     def test_non_admin_forbidden(self):
         self.client.force_authenticate(user=self.user)
