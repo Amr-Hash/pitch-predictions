@@ -306,13 +306,15 @@ docker compose up --build
 # scheduler service starts automatically alongside backend
 ```
 
-**Production (API on Vercel + Neon DB):** deploy a second service anywhere that supports Docker (Render background worker, Railway, Fly.io, VPS):
+**Production (API on Vercel + Neon DB):** deploy the scheduler on **Render** using the repo blueprint:
 
-- **Dockerfile:** `backend/Dockerfile`
-- **Start command:** `/scheduler-entrypoint.sh`
-- **Env vars:** same as the API (`DATABASE_URL`, `SECRET_KEY`, `FOOTBALL_DATA_API_TOKEN`, etc.)
+1. [Render Dashboard → New Blueprint Instance](https://dashboard.render.com/blueprints) → connect this repo
+2. Set `DATABASE_URL` and `FOOTBALL_DATA_API_TOKEN` on **alhabeed-scheduler** (same values as Vercel)
+3. Deploy — see **[docs/render-scheduler.md](docs/render-scheduler.md)** for the full walkthrough
 
-The scheduler connects to the same Postgres database as the API.
+Blueprint file: `render.yaml` (worker `alhabeed-scheduler`, Starter plan ~$7/mo).
+
+The scheduler connects to the same Postgres database as the Vercel API.
 
 Optional HTTP triggers (`/api/cron/...`) remain for manual testing; production schedules should use the scheduler container.
 
