@@ -1,16 +1,10 @@
-# Alhabeed scheduled jobs — traditional crontab on an always-on host
+# Optional manual cron triggers (fallback only).
+# Production uses Vercel Cron — see backend/vercel.json.
 #
-# Setup:
-#   1. cp scripts/cron/cron.env.example scripts/cron/cron.env
-#   2. Edit cron.env — CRON_SECRET must match the Vercel API env var
-#   3. chmod +x scripts/cron/*.sh
-#   4. crontab -e and add the lines below (adjust paths)
-#
-# Log files are optional; remove redirection to run silently.
+# Linux/macOS manual setup:
+#   cp scripts/cron/cron.env.example scripts/cron/cron.env
+#   chmod +x scripts/cron/*.sh
+#   crontab -e
 
-# Live scores — every 15 minutes (conserves football-data.org free quota).
-# External API calls happen only during match sync windows.
 */15 * * * * /path/to/alhabeed/scripts/cron/sync-live-scores.sh >> /var/log/alhabeed-live-scores.log 2>&1
-
-# Kickoff reminders — every 5 minutes (in-app + optional Web Push, no external API).
 */5 * * * * /path/to/alhabeed/scripts/cron/send-match-reminders.sh >> /var/log/alhabeed-match-reminders.log 2>&1

@@ -286,26 +286,18 @@ VERCEL_TOKEN=<token> node scripts/sync-vercel-ci-secret.mjs
 Pull requests run tests only — production deploys run from the **Deploy** workflow after CI passes on `main`.
 You can also trigger deploy manually from **Actions → Deploy → Run workflow**.
 
-### Scheduled jobs (system crontab)
+### Scheduled jobs (Vercel Cron)
 
-Two background jobs run on an **always-on host** (VPS, home server, etc.) via traditional crontab. Both call the production API with the same `CRON_SECRET` — no GitHub Actions required.
+Two background jobs run on **Vercel** via `backend/vercel.json`. Vercel invokes your API on schedule and sends `Authorization: Bearer <CRON_SECRET>` automatically when `CRON_SECRET` is set on the project.
 
-| Job | Script | Schedule | Endpoint |
-|-----|--------|----------|----------|
-| Live score sync | `scripts/cron/sync-live-scores.sh` | Every **15 min** | `GET /api/cron/sync-live-scores` |
-| Kickoff reminders | `scripts/cron/send-match-reminders.sh` | Every **5 min** | `GET /api/cron/send-match-reminders` |
+| Job | Schedule | Endpoint |
+|-----|----------|----------|
+| Live score sync | Every **15 min** | `GET /api/cron/sync-live-scores` |
+| Kickoff reminders | Every **5 min** | `GET /api/cron/send-match-reminders` |
 
-**Crontab setup:**
+Deploy the backend for cron changes to take effect. The deploy workflow also runs `scripts/cron/set-cron-secret-vercel.mjs` to ensure `CRON_SECRET` exists on production.
 
-```bash
-cp scripts/cron/cron.env.example scripts/cron/cron.env
-# Edit cron.env — CRON_SECRET must match Vercel
-chmod +x scripts/cron/*.sh
-crontab -e
-# Add both lines from scripts/cron/crontab.example (adjust paths)
-```
-
-See `scripts/cron/crontab.example` for the full template. Do not commit `scripts/cron/cron.env` (secrets).
+Manual fallback (optional): `scripts/cron/*.sh` can trigger the same endpoints from any host with curl.
 
 #### Live score sync (football-data.org)
 
@@ -315,7 +307,7 @@ Add these environment variables on the **alhabeed-api** Vercel project:
 
 | Variable | Purpose |
 |----------|---------|
-| `CRON_SECRET` | Random secret; the cron host sends `Authorization: Bearer …` |
+| `CRON_SECRET` | Random secret; Vercel Cron sends `Authorization: Bearer …` (auto-created on deploy if missing) |
 | `FOOTBALL_DATA_API_TOKEN` | API token from football-data.org (free tier available) |
 | `FOOTBALL_DATA_COMPETITION_CODE` | Optional default competition code (World Cup = `WC`) |
 | `LIVE_SCORE_SYNC_START` | Optional; ISO date e.g. `2026-06-11` |

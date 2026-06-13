@@ -477,7 +477,7 @@ export const messages = {
     adminLiveScoreCompetitionCode: "Competition code (e.g. WC)",
     adminLiveScoreApiToken: "API token (FOOTBALL_DATA_API_TOKEN)",
     adminLiveScoreConfigHint:
-      "Crontab polls every 15 minutes; football-data.org is called only during match windows. Set FOOTBALL_DATA_API_TOKEN on the API server.",
+      "Vercel Cron runs every 15 minutes; football-data.org is called only during match windows. Set FOOTBALL_DATA_API_TOKEN on the API server.",
     adminSyncLiveScores: "Sync live scores now",
     adminLiveScoresSynced: "Live scores synced.",
     adminLiveScores: "Live scores",
@@ -489,6 +489,8 @@ export const messages = {
     adminLiveScoreWindowAlways: "No date restriction",
     adminLiveScoreCronSchedule: "Automatic sync schedule",
     adminLiveScoreCronEvery15: "Every 15 minutes via system crontab",
+    adminLiveScoreCronVercel:
+      "Live scores every 15 min, reminders every 5 min (Vercel Cron)",
     adminLiveScoreMatchesTotal: "Total matches",
     adminLiveScoreInWindowLabel: "In sync window",
     adminLiveScoreInWindow: "{count} match(es) in the live sync window now",
@@ -1011,7 +1013,7 @@ export const messages = {
     adminLiveScoreCompetitionCode: "رمز البطولة (مثل WC)",
     adminLiveScoreApiToken: "رمز API (FOOTBALL_DATA_API_TOKEN)",
     adminLiveScoreConfigHint:
-      "جدولة crontab كل 15 دقيقة؛ يُستدعى football-data.org فقط ضمن نافذة المباريات. اضبط FOOTBALL_DATA_API_TOKEN على خادم الـ API.",
+      "Vercel Cron كل 15 دقيقة؛ يُستدعى football-data.org فقط ضمن نافذة المباريات. اضبط FOOTBALL_DATA_API_TOKEN على خادم الـ API.",
     adminSyncLiveScores: "مزامنة النتائج المباشرة الآن",
     adminLiveScoresSynced: "تمت مزامنة النتائج المباشرة.",
     adminLiveScores: "النتائج المباشرة",
@@ -1022,6 +1024,8 @@ export const messages = {
     adminLiveScoreWindowAlways: "بدون قيد تاريخ",
     adminLiveScoreCronSchedule: "جدول المزامنة التلقائية",
     adminLiveScoreCronEvery15: "كل 15 دقيقة عبر crontab على الخادم",
+    adminLiveScoreCronVercel:
+      "النتائج كل 15 دقيقة والتذكيرات كل 5 دقائق (Vercel Cron)",
     adminLiveScoreMatchesTotal: "إجمالي المباريات",
     adminLiveScoreInWindowLabel: "ضمن نافذة المزامنة",
     adminLiveScoreInWindow: "{count} مباراة ضمن نافذة المزامنة الآن",

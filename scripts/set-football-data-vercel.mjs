@@ -105,5 +105,5 @@ if (deploy.status !== 0) {
 }
 
 console.log(
-  "Done. Set CRON_SECRET on Vercel and install scripts/cron/crontab.example on your cron host."
+  "Done. Set FOOTBALL_DATA_API_TOKEN on Vercel; cron jobs run via backend/vercel.json."
 );

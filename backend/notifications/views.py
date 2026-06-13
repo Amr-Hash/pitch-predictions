@@ -115,7 +115,7 @@ class PushUnsubscribeView(APIView):
 def cron_send_match_reminders(request):
     """
     Cron entrypoint for ~1-hour-before-kickoff match reminders.
-    System crontab calls this every 5 minutes (see scripts/cron/crontab.example):
+    Vercel Cron invokes this every 5 minutes (see backend/vercel.json) with:
       Authorization: Bearer <CRON_SECRET>
     """
     if not _authorize_cron_request(request):

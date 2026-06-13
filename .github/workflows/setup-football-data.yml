@@ -29,6 +29,12 @@ jobs:
           VERCEL_TEAM_SLUG: amr-hashem
         run: bash .github/scripts/vercel-validate-token.sh
 
+      - name: Ensure CRON_SECRET on Vercel
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          ENSURE_CRON_SECRET: "1"
+        run: node scripts/cron/set-cron-secret-vercel.mjs
+
       - name: Set football-data env vars and redeploy API
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
@@ -40,7 +46,7 @@ jobs:
           for i in $(seq 1 12); do
             if curl -fsS "https://alhabeed-api.vercel.app/api/health" >/dev/null; then
               echo "API health check passed after redeploy."
-              echo "Ensure CRON_SECRET is set on Vercel and crontab is installed (see scripts/cron/crontab.example)."
+              echo "Ensure CRON_SECRET is set on Vercel and cron jobs are defined in backend/vercel.json."
               exit 0
             fi
             echo "Waiting for production redeploy (attempt ${i}/12)..."

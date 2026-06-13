@@ -375,7 +375,7 @@ def _authorize_cron_request(request) -> bool:
 def cron_sync_live_scores(request):
     """
     Cron entrypoint for live score sync. Set CRON_SECRET on the API server.
-    A system crontab (see scripts/cron/) calls this with:
+    Vercel Cron invokes this every 15 minutes (see backend/vercel.json) with:
       Authorization: Bearer <CRON_SECRET>
     """
     if not _authorize_cron_request(request):

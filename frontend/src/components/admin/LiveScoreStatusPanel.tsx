@@ -31,8 +31,9 @@ const HEALTH_KEYS: Record<string, MessageKey> = {
 };
 
 const CRON_SCHEDULE_KEYS: Record<string, MessageKey> = {
-  every_15_minutes_crontab: "adminLiveScoreCronEvery15",
-  every_15_minutes: "adminLiveScoreCronEvery15",
+  vercel_cron: "adminLiveScoreCronVercel",
+  every_15_minutes_crontab: "adminLiveScoreCronVercel",
+  every_15_minutes: "adminLiveScoreCronVercel",
 };
 
 function HealthBadge({ health }: { health: string }) {
@@ -97,7 +98,7 @@ function EnvironmentCard({ environment }: { environment: LiveScoreEnvironment })
         label={t("adminLiveScoreCronSchedule")}
         ok={environment.cron_secret_configured}
         detail={t(
-          CRON_SCHEDULE_KEYS[environment.cron_schedule] ?? "adminLiveScoreCronEvery15",
+          CRON_SCHEDULE_KEYS[environment.cron_schedule] ?? "adminLiveScoreCronVercel",
         )}
       />
       <EnvRow

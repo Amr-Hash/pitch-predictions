@@ -65,6 +65,13 @@ jobs:
           VERCEL_TEAM_SLUG: ${{ env.VERCEL_TEAM_SLUG }}
         run: bash .github/scripts/vercel-validate-token.sh
 
+      - name: Ensure CRON_SECRET on Vercel
+        if: steps.should_deploy.outputs.deploy == 'true'
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          ENSURE_CRON_SECRET: "1"
+        run: node scripts/cron/set-cron-secret-vercel.mjs
+
       - name: Deploy Django API and update live alias
         if: steps.should_deploy.outputs.deploy == 'true'
         working-directory: backend
