@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRef } from "react";
 import { DashboardGroupSummary } from "@/lib/api";
 import { OlympicPodium } from "@/components/OlympicPodium";
+import { GroupChallengeAudience } from "@/components/GroupChallengeAudience";
 import { useT } from "@/lib/i18n";
 
 function GroupSlide({ group }: { group: DashboardGroupSummary }) {
@@ -83,17 +84,20 @@ export function DashboardGroupsSlider({ groups }: Props) {
           <h2 className="section-heading-royal text-base normal-case tracking-normal">
             {t("yourGroups")}
           </h2>
-          <Link href="/groups" className="btn-fan text-sm">
+          <Link href="/groups#create-group" className="btn-fan text-sm">
             {t("createOrJoinGroup")}
           </Link>
         </div>
         <div className="card border-2 border-dashed border-royal-200 bg-gradient-to-br from-royal-50/50 to-white p-8 text-center">
-          <span className="mb-3 block text-4xl" aria-hidden>
-            👥
+          <span className="mb-2 block text-4xl" aria-hidden>
+            🏆
           </span>
           <p className="font-display text-lg font-extrabold text-night-900">{t("noGroupsYet")}</p>
-          <p className="mx-auto mt-2 max-w-md text-sm text-gray-600">{t("noGroupsDesc")}</p>
-          <Link href="/groups" className="btn-primary mt-5 inline-block text-sm">
+          <GroupChallengeAudience variant="light" className="mx-auto mt-4 max-w-md justify-center" />
+          <p className="mx-auto mt-4 max-w-lg text-sm leading-relaxed text-gray-600">
+            {t("noGroupsDesc")}
+          </p>
+          <Link href="/groups#create-group" className="btn-primary mt-5 inline-block text-sm">
             {t("createOrJoinGroup")}
           </Link>
         </div>
@@ -143,6 +147,22 @@ export function DashboardGroupsSlider({ groups }: Props) {
       {groups.length > 1 && (
         <p className="mt-2 text-center text-xs text-gray-400 sm:hidden">{t("swipeGroups")}</p>
       )}
+
+      <Link
+        href="/groups#create-group"
+        className="card card-hover mt-4 block border-l-4 border-l-pitch-500 bg-gradient-to-r from-pitch-50/80 to-white p-4"
+      >
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0 flex-1 text-start">
+            <p className="font-display text-base font-extrabold text-night-900">
+              {t("createAnotherGroup")}
+            </p>
+            <GroupChallengeAudience variant="light" className="mt-3" />
+            <p className="mt-3 text-sm text-gray-600">{t("groupsCreateAnotherHint")}</p>
+          </div>
+          <span className="shrink-0 font-bold text-pitch-700">{t("createOrJoinGroup")} →</span>
+        </div>
+      </Link>
     </section>
   );
 }

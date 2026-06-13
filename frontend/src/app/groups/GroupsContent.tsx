@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import { GroupInviteShare } from "@/components/GroupInviteShare";
+import { GroupChallengeAudience } from "@/components/GroupChallengeAudience";
 import { api, Group, unwrapList } from "@/lib/api";
 import { loginUrlWithNext } from "@/lib/authRedirect";
 import { useAuth } from "@/lib/auth";
@@ -74,12 +75,26 @@ export default function GroupsContent() {
   return (
     <div>
       <h1 className="page-title mb-2">{t("myGroups")}</h1>
-      <p className="mb-6 font-medium text-night-700/70">
-        {t("createGroupsDesc")}{" "}
-        <Link href="/tournament-groups" className="font-bold text-royal-600 hover:underline">
-          {t("standings")} →
-        </Link>
-      </p>
+
+      <div className="mb-8 overflow-hidden rounded-2xl bg-gradient-to-r from-royal-800 via-night-900 to-pitch-800 p-6 text-white shadow-xl sm:p-8">
+        <div className="flex flex-wrap items-start gap-4">
+          <span className="text-3xl" aria-hidden>
+            🏆
+          </span>
+          <div className="min-w-0 flex-1">
+            <h2 className="font-display text-2xl font-extrabold sm:text-3xl">{t("groupsHeroTitle")}</h2>
+            <GroupChallengeAudience variant="dark" className="mt-4" />
+            <p className="mt-4 max-w-2xl text-sm leading-relaxed text-white/90 sm:text-base">
+              {t("groupsHeroDesc")}
+            </p>
+            <p className="mt-4 text-xs font-medium text-white/70">
+              <Link href="/tournament-groups" className="font-bold text-gold-300 hover:underline">
+                {t("standings")} →
+              </Link>
+            </p>
+          </div>
+        </div>
+      </div>
 
       {error && (
         <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
@@ -93,10 +108,11 @@ export default function GroupsContent() {
       )}
 
       <div className="mb-8 grid gap-6 lg:grid-cols-2">
-        <div className="feature-card-pitch">
-          <h2 className="mb-4 font-display text-lg font-extrabold text-pitch-800">
+        <div id="create-group" className="feature-card-pitch scroll-mt-24">
+          <h2 className="font-display text-lg font-extrabold text-pitch-800">
             {t("createGroups")}
           </h2>
+          <p className="mb-4 mt-2 text-sm text-gray-600">{t("createGroupCardDesc")}</p>
           <form onSubmit={handleCreate} className="space-y-3">
             <input
               className="input"
@@ -118,9 +134,10 @@ export default function GroupsContent() {
           </form>
         </div>
         <div className="feature-card-royal">
-          <h2 className="mb-4 font-display text-lg font-extrabold text-royal-800">
+          <h2 className="font-display text-lg font-extrabold text-royal-800">
             {t("joinGroup")}
           </h2>
+          <p className="mb-4 mt-2 text-sm text-gray-600">{t("joinGroupCardDesc")}</p>
           <form onSubmit={handleJoin} className="space-y-3">
             <input
               className="input font-mono uppercase tracking-widest"
@@ -140,7 +157,11 @@ export default function GroupsContent() {
         {t("yourGroups")}
       </h2>
       {groups.length === 0 ? (
-        <p className="text-gray-500">{t("noGroupsDesc")}</p>
+        <div className="rounded-xl border-2 border-dashed border-royal-200 bg-royal-50/40 p-6 text-center">
+          <p className="font-display text-lg font-extrabold text-night-900">{t("noGroupsYet")}</p>
+          <GroupChallengeAudience variant="light" className="mx-auto mt-4 max-w-md justify-center" />
+          <p className="mx-auto mt-4 max-w-lg text-sm text-gray-600">{t("noGroupsDesc")}</p>
+        </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {groups.map((g, index) => {
