@@ -143,6 +143,19 @@ class DashboardView(APIView):
             None,
         )
 
+        from predictions.serializers import PredictionSerializer
+
+        predictions_data = PredictionSerializer(
+            predictions_qs.select_related(
+                "match__home_team",
+                "match__away_team",
+                "match__stage",
+                "predicted_winner_team",
+            ),
+            many=True,
+            context=serializer_context,
+        ).data
+
         return Response(
             {
                 "groups": groups_data,
@@ -166,6 +179,7 @@ class DashboardView(APIView):
                 "recent_results": MatchSerializer(
                     recent_results, many=True, context=serializer_context
                 ).data,
+                "predictions": predictions_data,
                 "total_points": total_points,
                 "current_rank": current_rank,
             }

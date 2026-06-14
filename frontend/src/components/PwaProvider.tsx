@@ -48,9 +48,10 @@ function isPromptRoute(pathname: string): boolean {
 type CompactPromptProps = {
   icon: string;
   message: string;
-  actionLabel?: string;
-  onAction?: () => void;
+  actionLabel: string;
+  onAction: () => void;
   actionDisabled?: boolean;
+  expandedMessage?: string;
   onDismiss: () => void;
   dismissLabel: string;
 };
@@ -61,33 +62,39 @@ function CompactPrompt({
   actionLabel,
   onAction,
   actionDisabled,
+  expandedMessage,
   onDismiss,
   dismissLabel,
 }: CompactPromptProps) {
   return (
-    <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-night-900/95 px-3 py-2 text-sm text-white shadow-lg backdrop-blur-md">
-      <span className="shrink-0 text-base" aria-hidden>
-        {icon}
-      </span>
-      <p className="min-w-0 flex-1 text-white/80">{message}</p>
-      {actionLabel && onAction ? (
+    <div className="rounded-xl border border-white/10 bg-night-900/95 px-3 py-2 text-sm text-white shadow-lg backdrop-blur-md">
+      <div className="flex items-center gap-2">
+        <span className="shrink-0 text-base" aria-hidden>
+          {icon}
+        </span>
+        <p className="min-w-0 flex-1 text-white/80">{message}</p>
         <button
           type="button"
           onClick={onAction}
           disabled={actionDisabled}
-          className="shrink-0 rounded-lg bg-gold-500 px-2.5 py-1 text-xs font-bold text-night-900 disabled:opacity-60"
+          className="btn-fan shrink-0 px-2.5 py-1 text-xs disabled:opacity-60"
         >
           {actionLabel}
         </button>
+        <button
+          type="button"
+          onClick={onDismiss}
+          className="shrink-0 rounded-lg px-1.5 py-1 text-white/60 hover:bg-white/10 hover:text-white"
+          aria-label={dismissLabel}
+        >
+          ✕
+        </button>
+      </div>
+      {expandedMessage ? (
+        <p className="mt-2 border-t border-white/10 pt-2 text-xs leading-relaxed text-white/75">
+          {expandedMessage}
+        </p>
       ) : null}
-      <button
-        type="button"
-        onClick={onDismiss}
-        className="shrink-0 rounded-lg px-1.5 py-1 text-white/60 hover:bg-white/10 hover:text-white"
-        aria-label={dismissLabel}
-      >
-        ✕
-      </button>
     </div>
   );
 }
@@ -113,6 +120,8 @@ export function PwaProvider() {
   });
   const [hasPushSubscription, setHasPushSubscription] = useState<boolean | null>(null);
   const [enabling, setEnabling] = useState(false);
+  const [installing, setInstalling] = useState(false);
+  const [installStepsOpen, setInstallStepsOpen] = useState(false);
 
   const refreshState = useCallback(async () => {
     if (typeof window === "undefined") return;
@@ -166,6 +175,12 @@ export function PwaProvider() {
   }, []);
 
   useEffect(() => {
+    if (installEvent) {
+      setInstallStepsOpen(false);
+    }
+  }, [installEvent]);
+
+  useEffect(() => {
     if (!token) {
       setHasPushSubscription(null);
       return;
@@ -198,16 +213,16 @@ export function PwaProvider() {
     return null;
   }
 
-  const installHint = (() => {
-    if (installEvent) return t("installAppHintShort");
-    if (isIos()) return t("installAppIosHintShort");
-    if (isAndroid()) return t("installAppAndroidHintShort");
-    return t("installAppHintShort");
-  })();
+  const manualInstallSteps = isIos()
+    ? t("installAppIosHint")
+    : isAndroid()
+      ? t("installAppAndroidHint")
+      : t("installAppHint");
 
   const dismissInstall = () => {
     localStorage.setItem(INSTALL_DISMISS_KEY, "1");
     setInstallDismissed(true);
+    setInstallStepsOpen(false);
   };
 
   const dismissNotifications = () => {
@@ -215,14 +230,29 @@ export function PwaProvider() {
     setNotificationDismissed(true);
   };
 
-  const install = async () => {
-    if (!installEvent) return;
-    await installEvent.prompt();
-    await installEvent.userChoice;
-    localStorage.setItem(INSTALL_DISMISS_KEY, "1");
-    setInstallDismissed(true);
-    setInstallEvent(null);
-    await refreshState();
+  const runNativeInstall = async () => {
+    if (!installEvent) return false;
+    setInstalling(true);
+    try {
+      await installEvent.prompt();
+      await installEvent.userChoice;
+      localStorage.setItem(INSTALL_DISMISS_KEY, "1");
+      setInstallDismissed(true);
+      setInstallEvent(null);
+      setInstallStepsOpen(false);
+      await refreshState();
+      return true;
+    } finally {
+      setInstalling(false);
+    }
+  };
+
+  const handleInstall = async () => {
+    if (installEvent) {
+      await runNativeInstall();
+      return;
+    }
+    setInstallStepsOpen((open) => !open);
   };
 
   const enableNotifications = async () => {
@@ -252,9 +282,11 @@ export function PwaProvider() {
       {showInstall ? (
         <CompactPrompt
           icon="📲"
-          message={installHint}
-          actionLabel={installEvent ? t("installNow") : undefined}
-          onAction={installEvent ? install : undefined}
+          message={t("installAppHintShort")}
+          actionLabel={installing ? t("loading") : t("installNow")}
+          onAction={handleInstall}
+          actionDisabled={installing}
+          expandedMessage={installStepsOpen && !installEvent ? manualInstallSteps : undefined}
           onDismiss={dismissInstall}
           dismissLabel={t("dismiss")}
         />

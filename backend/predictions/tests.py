@@ -1017,6 +1017,12 @@ class DashboardPendingTests(TestCase):
         self.assertNotIn(locked_match.id, pending_ids)
         self.assertNotIn(predicted_match.id, pending_ids)
         self.assertEqual(response.data["pending_count"], 1)
+        prediction_rows = {
+            row["match"]: row for row in response.data["predictions"]
+        }
+        self.assertIn(predicted_match.id, prediction_rows)
+        self.assertEqual(prediction_rows[predicted_match.id]["predicted_home_score"], 1)
+        self.assertEqual(prediction_rows[predicted_match.id]["predicted_away_score"], 0)
 
 
 class DashboardOptimizationTests(TestCase):

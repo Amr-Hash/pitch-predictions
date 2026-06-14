@@ -267,6 +267,7 @@ export interface Dashboard {
   pending_predictions: Match[];
   pending_count: number;
   recent_results: Match[];
+  predictions: Prediction[];
   total_points: number;
   current_rank: number | null;
 }

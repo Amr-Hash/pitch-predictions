@@ -1,15 +1,18 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { GroupMatchPredictions } from "@/lib/api";
 import { useT } from "@/lib/i18n";
 import { MatchGroupComparisonCard } from "@/components/MatchGroupComparisonCard";
+import { PageTabs } from "@/components/PageTabs";
+
+type PredictionTab = "upcoming" | "finished";
 
 function hasAnyPrediction(predictions: GroupMatchPredictions["predictions"]) {
   return predictions.some((p) => p.has_prediction ?? p.predicted_home_score !== null);
 }
 
-function PredictionColumn({
-  title,
+function PredictionList({
   hint,
   items,
   locale,
@@ -18,7 +21,6 @@ function PredictionColumn({
   emptyTitle,
   emptyDesc,
 }: {
-  title: string;
   hint?: string;
   items: GroupMatchPredictions[];
   locale: "en" | "ar";
@@ -29,9 +31,7 @@ function PredictionColumn({
 }) {
   return (
     <div>
-      <h3 className="section-heading-royal mb-1 text-sm normal-case tracking-normal">{title}</h3>
-      {hint && <p className="mb-3 text-xs text-gray-500">{hint}</p>}
-      {!hint && <div className="mb-3" />}
+      {hint && <p className="mb-4 text-xs text-gray-500">{hint}</p>}
       {items.length === 0 ? (
         <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50/80 px-4 py-8 text-center">
           <span className="mb-2 block text-2xl" aria-hidden>
@@ -84,33 +84,55 @@ interface Props {
 export function GroupPredictionsPanel({ matches, locale }: Props) {
   const t = useT();
   const { finished, upcoming } = splitMatches(matches);
+  const [activeTab, setActiveTab] = useState<PredictionTab>("upcoming");
+
+  useEffect(() => {
+    if (upcoming.length === 0 && finished.length > 0) {
+      setActiveTab("finished");
+    } else if (upcoming.length > 0 && finished.length === 0) {
+      setActiveTab("upcoming");
+    }
+  }, [upcoming.length, finished.length]);
 
   if (finished.length === 0 && upcoming.length === 0) {
     return null;
   }
 
+  const tabLabel = (label: string, count: number) =>
+    count > 0 ? `${label} (${count})` : label;
+
   return (
-    <div className="grid gap-8 lg:grid-cols-2 lg:gap-6">
-      <PredictionColumn
-        title={t("predictionsUpcoming")}
-        hint={t("predictionsUpcomingHint")}
-        items={upcoming}
-        locale={locale}
-        showPoints={false}
-        emptyIcon="📅"
-        emptyTitle={t("noUpcomingGroupPredictions")}
-        emptyDesc={t("noUpcomingGroupPredictionsDesc")}
+    <div>
+      <PageTabs
+        tabs={[
+          { id: "upcoming", label: tabLabel(t("predictionsUpcoming"), upcoming.length) },
+          { id: "finished", label: tabLabel(t("predictionsFinished"), finished.length) },
+        ]}
+        active={activeTab}
+        onChange={setActiveTab}
       />
-      <PredictionColumn
-        title={t("predictionsFinished")}
-        hint={t("predictionsFinishedHint")}
-        items={finished}
-        locale={locale}
-        showPoints
-        emptyIcon="🏁"
-        emptyTitle={t("noFinishedGroupPredictions")}
-        emptyDesc={t("noFinishedGroupPredictionsDesc")}
-      />
+
+      {activeTab === "upcoming" ? (
+        <PredictionList
+          hint={t("predictionsUpcomingHint")}
+          items={upcoming}
+          locale={locale}
+          showPoints={false}
+          emptyIcon="📅"
+          emptyTitle={t("noUpcomingGroupPredictions")}
+          emptyDesc={t("noUpcomingGroupPredictionsDesc")}
+        />
+      ) : (
+        <PredictionList
+          hint={t("predictionsFinishedHint")}
+          items={finished}
+          locale={locale}
+          showPoints
+          emptyIcon="🏁"
+          emptyTitle={t("noFinishedGroupPredictions")}
+          emptyDesc={t("noFinishedGroupPredictionsDesc")}
+        />
+      )}
     </div>
   );
 }

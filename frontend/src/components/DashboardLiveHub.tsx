@@ -32,7 +32,29 @@ function CountdownSeparator() {
   );
 }
 
-function NextMatchCountdown({ match }: { match: Match }) {
+function formatPredictionSummary(
+  match: Match,
+  prediction: Prediction,
+  locale: string,
+  t: ReturnType<typeof useT>
+) {
+  const score = `${prediction.predicted_home_score}-${prediction.predicted_away_score}`;
+  if (prediction.predicted_winner_team) {
+    return `${score} (${teamLabel(prediction.predicted_winner_team, locale)} ${t("advances")})`;
+  }
+  if (match.is_knockout && prediction.predicted_home_score === prediction.predicted_away_score) {
+    return `${score} (${t("noAdvancingPickSaved")})`;
+  }
+  return score;
+}
+
+function NextMatchCountdown({
+  match,
+  prediction,
+}: {
+  match: Match;
+  prediction?: Prediction | null;
+}) {
   const { locale } = useLocale();
   const t = useT();
   const countdown = useCountdown(match.kickoff_time);
@@ -44,6 +66,12 @@ function NextMatchCountdown({ match }: { match: Match }) {
     hour: "2-digit",
     minute: "2-digit",
   });
+  const canEdit = !match.is_locked && match.status !== "finished";
+  const actionLabel = prediction
+    ? canEdit
+      ? t("editPrediction")
+      : t("viewPrediction")
+    : t("predict");
 
   return (
     <div className="live-hub-countdown">
@@ -104,12 +132,23 @@ function NextMatchCountdown({ match }: { match: Match }) {
         </div>
       )}
 
+      {prediction ? (
+        <div className="mb-4 rounded-xl bg-white/10 px-3 py-2.5 text-center text-sm text-white">
+          <p className="text-xs font-bold uppercase tracking-wide text-white/70">
+            {t("yourPrediction")}
+          </p>
+          <p className="mt-1 font-display text-lg font-extrabold">
+            {formatPredictionSummary(match, prediction, locale, t)}
+          </p>
+        </div>
+      ) : null}
+
       <div className="mt-5 flex justify-center">
         <Link
           href={`/matches/${match.id}`}
           className="rounded-full bg-white/15 px-5 py-2 text-sm font-bold text-white backdrop-blur transition hover:bg-white/25"
         >
-          {t("viewMatch")} →
+          {actionLabel} →
         </Link>
       </div>
     </div>
@@ -193,7 +232,12 @@ export function DashboardLiveHub({ nextMatch, liveMatches, predictionsByMatch }:
           </div>
         )}
 
-        {nextMatch && <NextMatchCountdown match={nextMatch} />}
+        {nextMatch && (
+          <NextMatchCountdown
+            match={nextMatch}
+            prediction={predictionsByMatch[nextMatch.id]}
+          />
+        )}
       </div>
     </section>
   );

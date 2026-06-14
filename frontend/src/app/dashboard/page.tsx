@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { api, Dashboard, Prediction, unwrapList } from "@/lib/api";
+import { api, Dashboard, Prediction } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { loginUrlWithNext } from "@/lib/authRedirect";
 import { useTournament } from "@/lib/tournament";
@@ -33,12 +33,11 @@ function DashboardContent() {
     setDashboard(null);
     Promise.all([
       api.getDashboard(token, { tournament: selectedTournament.id }),
-      api.getPredictions(token, { tournament: selectedTournament.id }),
     ])
-      .then(([dashboardData, predictionsData]) => {
+      .then(([dashboardData]) => {
         setDashboard(dashboardData);
         const map: Record<number, Prediction> = {};
-        for (const prediction of unwrapList(predictionsData)) {
+        for (const prediction of dashboardData.predictions ?? []) {
           map[prediction.match] = prediction;
         }
         setPredictionsByMatch(map);
