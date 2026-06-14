@@ -24,6 +24,9 @@ VERCEL_TOKEN=... node scripts/cron/set-cron-secret-vercel.mjs
 
 # 4. Register jobs on cron-job.org
 node scripts/cron/setup-cron-job-org.mjs
+
+# 5. Verify latest runs return HTTP 200
+node scripts/cron/verify-cron-job-org.mjs
 ```
 
 ## Verify

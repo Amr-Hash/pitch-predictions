@@ -488,11 +488,6 @@ export const messages = {
     adminLiveScoreSyncWindow: "Sync date window",
     adminLiveScoreWindowAlways: "No date restriction",
     adminLiveScoreCronSchedule: "Automatic sync schedule",
-    adminLiveScoreCronEvery15: "Every 15 minutes via system crontab",
-    adminLiveScoreCronVercel:
-      "Live scores every 15 min, reminders every 5 min (Vercel Cron)",
-    adminLiveScoreCronScheduler:
-      "Live scores every 15 min, reminders every 5 min (Django scheduler container)",
     adminLiveScoreCronJobOrg:
       "Live scores every 15 min, reminders every 5 min (cron-job.org → Vercel API)",
     adminLiveScoreMatchesTotal: "Total matches",
@@ -1027,11 +1022,6 @@ export const messages = {
     adminLiveScoreSyncWindow: "نافذة تواريخ المزامنة",
     adminLiveScoreWindowAlways: "بدون قيد تاريخ",
     adminLiveScoreCronSchedule: "جدول المزامنة التلقائية",
-    adminLiveScoreCronEvery15: "كل 15 دقيقة عبر crontab على الخادم",
-    adminLiveScoreCronVercel:
-      "النتائج كل 15 دقيقة والتذكيرات كل 5 دقائق (Vercel Cron)",
-    adminLiveScoreCronScheduler:
-      "النتائج كل 15 دقيقة والتذكيرات كل 5 دقائق (حاوية مجدول Django)",
     adminLiveScoreCronJobOrg:
       "النتائج كل 15 دقيقة والتذكيرات كل 5 دقائق (cron-job.org → Vercel API)",
     adminLiveScoreMatchesTotal: "إجمالي المباريات",

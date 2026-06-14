@@ -1,6 +1,0 @@
-# Django scheduler — runs inside the scheduler container (see scheduler-entrypoint.sh).
-SHELL=/bin/bash
-PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-
-*/15 * * * * root cd /app && python manage.py sync_live_scores >> /proc/1/fd/1 2>&1
-*/5 * * * * root cd /app && python manage.py send_match_reminders >> /proc/1/fd/1 2>&1

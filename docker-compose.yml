@@ -34,29 +34,6 @@ services:
     volumes:
       - ./backend:/app
 
-  scheduler:
-    build: ./backend
-    entrypoint: ["/scheduler-entrypoint.sh"]
-    environment:
-      SECRET_KEY: dev-secret-key
-      DEBUG: "True"
-      DATABASE_URL: postgres://alhabeed:alhabeed@postgres:5432/alhabeed
-      ALLOWED_HOSTS: localhost,127.0.0.1,backend
-      CORS_ALLOWED_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
-      JWT_SECRET: dev-jwt-secret
-      FOOTBALL_DATA_API_TOKEN: ${FOOTBALL_DATA_API_TOKEN:-}
-      FOOTBALL_DATA_COMPETITION_CODE: ${FOOTBALL_DATA_COMPETITION_CODE:-WC}
-      LIVE_SCORE_SYNC_START: ${LIVE_SCORE_SYNC_START:-2026-06-11}
-      LIVE_SCORE_SYNC_END: ${LIVE_SCORE_SYNC_END:-2026-07-19}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      backend:
-        condition: service_started
-    volumes:
-      - ./backend:/app
-    restart: unless-stopped
-
   frontend:
     image: node:20-alpine
     working_dir: /app

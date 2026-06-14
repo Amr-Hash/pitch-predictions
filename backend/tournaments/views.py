@@ -374,9 +374,8 @@ def _authorize_cron_request(request) -> bool:
 @permission_classes([permissions.AllowAny])
 def cron_sync_live_scores(request):
     """
-    Optional HTTP trigger for live score sync (manual/external use).
-    Production schedules use the Django scheduler container (backend/cron/crontab).
-    When called via HTTP, send: Authorization: Bearer <CRON_SECRET>
+    HTTP trigger for live score sync (cron-job.org in production).
+    Send: Authorization: Bearer <CRON_SECRET>
     """
     if not _authorize_cron_request(request):
         return Response({"detail": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)

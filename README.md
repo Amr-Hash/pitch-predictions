@@ -181,25 +181,15 @@ Only the highest base score applies; winner bonus is additive.
 2. Copy the connection string (enable connection pooling)
 3. Use the pooled connection URL as `DATABASE_URL`
 
-### 2. Backend — Render
+### 2. Backend — Vercel
 
-1. Connect your GitHub repository on [render.com](https://render.com)
-2. Create a **Web Service** using the `backend/Dockerfile`
-3. Set environment variables:
+Production API: **https://alhabeed-api.vercel.app** (see [Production URLs](#production-urls-vercel) above).
 
-```
-SECRET_KEY=<generate-a-strong-secret>
-DEBUG=False
-DATABASE_URL=<neon-pooled-connection-string>
-ALLOWED_HOSTS=your-app.onrender.com
-CORS_ALLOWED_ORIGINS=https://your-app.vercel.app
-JWT_SECRET=<generate-a-strong-jwt-secret>
-```
+1. Import the repo on [vercel.com](https://vercel.com) with root directory **`backend`**
+2. Set environment variables (Neon `DATABASE_URL`, `SECRET_KEY`, `JWT_SECRET`, `CRON_SECRET`, `FOOTBALL_DATA_API_TOKEN`, etc.)
+3. Deploy — migrations run during the Vercel build (`backend/build.py`)
 
-4. Add a **Release Command**: `python manage.py migrate --noinput`
-5. Deploy — Render provides HTTPS automatically
-
-**Alternative: Railway** — Create a project, deploy from Docker, set the same env vars, and run migrations via Railway CLI or a release command.
+The **Deploy** GitHub workflow also deploys the API and syncs `CRON_SECRET` from repo secrets.
 
 ### 3. Frontend — Vercel
 
@@ -208,7 +198,7 @@ JWT_SECRET=<generate-a-strong-jwt-secret>
 3. Add environment variable:
 
 ```
-NEXT_PUBLIC_API_URL=https://your-app.onrender.com
+NEXT_PUBLIC_API_URL=https://alhabeed-api.vercel.app
 ```
 
 4. Deploy — Vercel auto-deploys on every push to `main`
@@ -216,14 +206,14 @@ NEXT_PUBLIC_API_URL=https://your-app.onrender.com
 ### 4. Post-Deploy Setup
 
 ```bash
-# Create superuser on Render shell or locally against Neon
+# Create superuser locally against Neon or via Django admin after first login setup
 python manage.py createsuperuser
 
 # Seed tournament data
 python manage.py seed_data
 ```
 
-Access Django admin at `https://your-app.onrender.com/admin/` to manage tournaments, teams, matches, and results.
+Access Django admin at `https://alhabeed-api.vercel.app/admin/` to manage tournaments, teams, matches, and results.
 
 ## Environment Variables
 
@@ -295,26 +285,14 @@ Vercel **Hobby** plans cannot run frequent cron (only daily). The API on Vercel 
 | Live score sync | Every **15 min** | `GET /api/cron/sync-live-scores` |
 | Kickoff reminders | Every **5 min** | `GET /api/cron/send-match-reminders` |
 
-**Production setup:** [cron-job.org](https://cron-job.org) (free) → see **[docs/cron-job-org.md](docs/cron-job-org.md)**
-
 ```bash
 cp scripts/cron/cron-job-org.env.example scripts/cron/cron-job-org.env
 VERCEL_TOKEN=... node scripts/cron/set-cron-secret-vercel.mjs
 node scripts/cron/setup-cron-job-org.mjs
+node scripts/cron/verify-cron-job-org.mjs
 ```
 
-#### Alternative: Django scheduler container (Docker / Render)
-
-For self-hosted cron without HTTP, use the scheduler container in `docker-compose.yml` or Render (`render.yaml`). See **[docs/render-scheduler.md](docs/render-scheduler.md)**.
-
-Crontab definition: `backend/cron/crontab`
-
-**Local Docker:**
-
-```bash
-docker compose up --build
-# scheduler service starts automatically alongside backend
-```
+See **[docs/cron-job-org.md](docs/cron-job-org.md)** for the full walkthrough.
 
 #### Live score sync (football-data.org)
 

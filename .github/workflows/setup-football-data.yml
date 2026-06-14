@@ -40,7 +40,7 @@ jobs:
           for i in $(seq 1 12); do
             if curl -fsS "https://alhabeed-api.vercel.app/api/health" >/dev/null; then
               echo "API health check passed after redeploy."
-              echo "Deploy the scheduler container (scheduler-entrypoint.sh) for live scores and reminders."
+              echo "Set up cron-job.org jobs — see docs/cron-job-org.md"
               exit 0
             fi
             echo "Waiting for production redeploy (attempt ${i}/12)..."

@@ -1,5 +1,0 @@
-# Optional manual HTTP triggers (fallback only).
-# Production uses the Django scheduler container — see backend/cron/crontab.
-
-*/15 * * * * /path/to/alhabeed/scripts/cron/sync-live-scores.sh >> /var/log/alhabeed-live-scores.log 2>&1
-*/5 * * * * /path/to/alhabeed/scripts/cron/send-match-reminders.sh >> /var/log/alhabeed-match-reminders.log 2>&1

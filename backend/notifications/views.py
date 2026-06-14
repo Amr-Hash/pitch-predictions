@@ -114,9 +114,8 @@ class PushUnsubscribeView(APIView):
 @permission_classes([permissions.AllowAny])
 def cron_send_match_reminders(request):
     """
-    Optional HTTP trigger for kickoff reminders (manual/external use).
-    Production schedules use the Django scheduler container (backend/cron/crontab).
-    When called via HTTP, send: Authorization: Bearer <CRON_SECRET>
+    HTTP trigger for kickoff reminders (cron-job.org in production).
+    Send: Authorization: Bearer <CRON_SECRET>
     """
     if not _authorize_cron_request(request):
         return Response({"detail": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
