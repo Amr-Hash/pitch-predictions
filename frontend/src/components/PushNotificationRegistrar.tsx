@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { dismissPushPrompt, pushSupported, subscribeToPush } from "@/lib/push";
+import { pushSupported, subscribeToPush } from "@/lib/push";
 
 export function PushNotificationRegistrar() {
   const { token } = useAuth();
@@ -21,14 +21,6 @@ export function PushNotificationRegistrar() {
     if (!token || !pushEnabled || !pushSupported()) return;
     if (Notification.permission === "granted") {
       subscribeToPush(token).catch(() => undefined);
-      return;
-    }
-    if (Notification.permission === "default") {
-      subscribeToPush(token)
-        .then((ok) => {
-          if (!ok) dismissPushPrompt();
-        })
-        .catch(() => dismissPushPrompt());
     }
   }, [token, pushEnabled]);
 

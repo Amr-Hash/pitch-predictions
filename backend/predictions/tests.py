@@ -740,6 +740,25 @@ class CompetitionRankTests(TestCase):
         self.assertEqual(len(rank_two), 1)
         self.assertEqual(rank_two[0]["username"], "middle")
 
+    def test_group_leaderboard_sorted_by_rank(self):
+        group = Group.objects.create(name="Rank Group", created_by=self.user)
+        for user in (self.third, self.tie_user, self.user):
+            GroupMember.objects.create(group=group, user=user, role=GroupMember.Role.MEMBER)
+
+        from predictions.services.leaderboard import rebuild_group_leaderboard_entries
+
+        rebuild_group_leaderboard_entries(group, self.tournament.id)
+
+        response = self.client.get(
+            f"/api/leaderboards/group/{group.id}?tournament={self.tournament.id}"
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            [row["username"] for row in response.data],
+            ["alpha", "zulu", "middle"],
+        )
+        self.assertEqual([row["rank"] for row in response.data], [1, 1, 2])
+
 
 class NotificationTests(TestCase):
     def setUp(self):
@@ -841,7 +860,7 @@ class NotificationTests(TestCase):
         match_push = next(
             call
             for call in mock_push.call_args_list
-            if call.kwargs.get("url") == f"/matches/{self.match.id}"
+            if call.kwargs.get("url") == "/leaderboards"
             and "pts" in call.kwargs.get("body", "")
         )
         self.assertIn("Home", match_push.kwargs["title"])
@@ -874,6 +893,12 @@ class NotificationTests(TestCase):
             podium_notifications.filter(user=self.spectator).exists()
         )
         self.assertGreaterEqual(mock_push.call_count, 3)
+        podium_push = next(
+            call
+            for call in mock_push.call_args_list
+            if call.kwargs.get("url") == f"/leaderboards?group={self.group.id}"
+        )
+        self.assertIn(self.group.name, podium_push.kwargs["title"])
 
     def test_scoring_push_not_sent_when_notification_already_exists(self):
         from notifications.models import Notification

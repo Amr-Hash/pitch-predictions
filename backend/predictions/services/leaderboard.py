@@ -189,15 +189,28 @@ def build_group_leaderboard(group, tournament_id):
         .order_by("rank", "user__username")
     )
     if stored:
-        member_order = list(
+        member_ids = set(
             GroupMember.objects.filter(group=group).values_list("user_id", flat=True)
         )
-        by_user = {entry.user_id: entry for entry in stored}
-        rows = []
-        for member_id in member_order:
-            entry = by_user.get(member_id)
-            if not entry:
-                member = User.objects.filter(pk=member_id).first()
+        rows = [
+            {
+                "user_id": entry.user_id,
+                "username": entry.user.username,
+                "total_points": entry.total_points,
+                "exact_predictions": entry.exact_predictions,
+                "correct_outcomes": entry.correct_outcomes,
+                "rank": entry.rank,
+            }
+            for entry in stored
+            if entry.user_id in member_ids
+        ]
+        present = {row["user_id"] for row in rows}
+        missing = member_ids - present
+        if missing:
+            users = User.objects.in_bulk(missing)
+            fallback_rank = max((row["rank"] for row in rows), default=0) + 1
+            for member_id in missing:
+                member = users.get(member_id)
                 rows.append(
                     {
                         "user_id": member_id,
@@ -205,20 +218,10 @@ def build_group_leaderboard(group, tournament_id):
                         "total_points": 0,
                         "exact_predictions": 0,
                         "correct_outcomes": 0,
-                        "rank": len(member_order),
+                        "rank": fallback_rank,
                     }
                 )
-                continue
-            rows.append(
-                {
-                    "user_id": entry.user_id,
-                    "username": entry.user.username,
-                    "total_points": entry.total_points,
-                    "exact_predictions": entry.exact_predictions,
-                    "correct_outcomes": entry.correct_outcomes,
-                    "rank": entry.rank,
-                }
-            )
+        rows.sort(key=lambda row: (row["rank"], row["username"].lower()))
         return rows
 
     rows = _compute_group_leaderboard_rows(group, tournament_id)

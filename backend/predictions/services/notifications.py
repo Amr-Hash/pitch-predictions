@@ -1,5 +1,6 @@
 from groups.models import GroupMember
 from notifications.models import Notification
+from notifications.services.notification_urls import notification_action_url
 from notifications.services.push import push_configured, send_push_to_user
 from notifications.services.push_copy import group_podium_push_copy, match_result_push_copy
 from predictions.services.leaderboard import (
@@ -74,8 +75,7 @@ def _maybe_send_scoring_push(
     if not created or not push_configured():
         return
 
-    match_id = payload.get("match_id")
-    url = f"/matches/{match_id}" if match_id else "/dashboard"
+    url = notification_action_url(notification_type, payload)
 
     if notification_type == Notification.Type.MATCH_RESULT:
         title, body = match_result_push_copy(payload)

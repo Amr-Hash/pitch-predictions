@@ -106,13 +106,39 @@ function formatMatchKickoffReminder(
   return t("notificationKickoffNoPrediction", { home, away });
 }
 
+function rankChanged(
+  rank: number | null | undefined,
+  previous: number | null | undefined
+): boolean {
+  if (rank == null) return false;
+  if (previous == null) return true;
+  return rank !== previous;
+}
+
 export function getNotificationHref(notification: AppNotification): string | null {
   if (notification.notification_type === "match_kickoff_reminder") {
     const payload = notification.payload as MatchKickoffReminderPayload;
     return `/matches/${payload.match_id}`;
   }
-  const payload = notification.payload as { match_id?: number };
-  if (payload.match_id) return `/matches/${payload.match_id}`;
+
+  if (notification.notification_type === "group_podium") {
+    const payload = notification.payload as GroupPodiumNotificationPayload;
+    return `/leaderboards?group=${payload.group_id}`;
+  }
+
+  if (notification.notification_type === "match_result") {
+    const payload = notification.payload as MatchResultNotificationPayload;
+    if (rankChanged(payload.global_rank, payload.previous_global_rank)) {
+      return "/leaderboards";
+    }
+    for (const group of payload.groups ?? []) {
+      if (rankChanged(group.rank, group.previous_rank)) {
+        return `/leaderboards?group=${group.group_id}`;
+      }
+    }
+    return `/matches/${payload.match_id}`;
+  }
+
   return null;
 }
 
