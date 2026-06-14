@@ -52,6 +52,11 @@ export function Navbar() {
       .catch(() => setPendingCount(0));
   }, [token, selectedTournament]);
 
+  const handleLogout = async () => {
+    await logout();
+    router.push("/login");
+  };
+
   if (showAdminNav) {
     return <AdminNavbar />;
   }
@@ -106,7 +111,12 @@ export function Navbar() {
                 </div>
                 <NotificationBell />
                 <span className="hidden text-sm text-white/60 lg:inline">{user.username}</span>
-                <button onClick={logout} className="btn-ghost-nav hidden sm:inline-flex">
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="btn-ghost-nav inline-flex shrink-0 px-2 text-xs sm:px-3 sm:text-sm"
+                  aria-label={t("logout")}
+                >
                   {t("logout")}
                 </button>
               </>
