@@ -22,6 +22,37 @@ export function pushSupported(): boolean {
   );
 }
 
+export function isAppInstalled(): boolean {
+  if (typeof window === "undefined") return false;
+  if (
+    window.matchMedia("(display-mode: standalone)").matches ||
+    (window.navigator as Navigator & { standalone?: boolean }).standalone === true
+  ) {
+    return true;
+  }
+  return false;
+}
+
+export async function hasActivePushSubscription(): Promise<boolean> {
+  if (!pushSupported()) return false;
+  if (Notification.permission !== "granted") return false;
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    const subscription = await registration.pushManager.getSubscription();
+    return Boolean(subscription);
+  } catch {
+    return false;
+  }
+}
+
+export function isNotificationPermissionGranted(): boolean {
+  return pushSupported() && Notification.permission === "granted";
+}
+
+export function isNotificationPermissionDenied(): boolean {
+  return pushSupported() && Notification.permission === "denied";
+}
+
 export async function subscribeToPush(token: string): Promise<boolean> {
   if (!pushSupported()) return false;
 
@@ -52,12 +83,14 @@ export async function subscribeToPush(token: string): Promise<boolean> {
     p256dh: keys.p256dh,
     auth: keys.auth,
   });
+  dismissPushPrompt();
   return true;
 }
 
 export function shouldOfferPushPrompt(): boolean {
   if (!pushSupported()) return false;
-  if (Notification.permission === "denied") return false;
+  if (isNotificationPermissionDenied()) return false;
+  if (isNotificationPermissionGranted()) return false;
   if (localStorage.getItem(PUSH_DISMISS_KEY) === "1") return false;
   return true;
 }

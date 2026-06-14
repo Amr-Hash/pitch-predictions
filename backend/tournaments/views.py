@@ -330,11 +330,7 @@ class AdminMatchViewSet(viewsets.ModelViewSet):
         return qs
 
     def perform_update(self, serializer):
-        match = serializer.save()
-        if match.status == Match.Status.FINISHED:
-            from predictions.services.scoring import recalculate_match_scores
-
-            recalculate_match_scores(match)
+        serializer.save()
 
     @action(detail=True, methods=["post"], url_path="recalculate")
     def recalculate(self, request, pk=None):
@@ -381,10 +377,12 @@ def cron_sync_live_scores(request):
     if not _authorize_cron_request(request):
         return Response({"detail": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
 
+    from predictions.services.background_jobs import process_pending_background_jobs
     from tournaments.services.live_scores import sync_all_configured_tournaments
 
     tournaments = sync_all_configured_tournaments()
-    return Response({"tournaments": tournaments})
+    jobs = process_pending_background_jobs(limit=50)
+    return Response({"tournaments": tournaments, "jobs": jobs})
 
 
 @api_view(["GET", "POST"])
@@ -396,7 +394,7 @@ def cron_process_background_jobs(request):
 
     from predictions.services.background_jobs import process_pending_background_jobs
 
-    limit = int(request.query_params.get("limit", 10))
+    limit = int(request.query_params.get("limit", 50))
     result = process_pending_background_jobs(limit=min(limit, 50))
     return Response(result)
 

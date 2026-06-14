@@ -8,6 +8,7 @@ cron-job.org calls these endpoints on a schedule with `Authorization: Bearer <CR
 |-----|----------|-----|
 | Alhabeed Live Scores | Every 15 min | `/api/cron/sync-live-scores` |
 | Alhabeed Match Reminders | Every 5 min | `/api/cron/send-match-reminders` |
+| Alhabeed Background Jobs | Every 1 min | `/api/cron/process-jobs?limit=50` |
 
 ## One-time setup
 
@@ -31,7 +32,7 @@ node scripts/cron/verify-cron-job-org.mjs
 
 ## Verify
 
-1. [cron-job.org Console](https://console.cron-job.org/) → both jobs enabled
+1. [cron-job.org Console](https://console.cron-job.org/) → all three jobs enabled
 2. Run **Run now** on a job → history should show HTTP **200**
 3. If **401**, `CRON_SECRET` on Vercel does not match `scripts/cron/cron.env`
 

@@ -16,6 +16,7 @@ from typing import Any
 
 import requests
 from django.db import transaction
+from django.db.models.signals import post_save
 from django.utils import timezone
 
 from tournaments.models import Match, Tournament
@@ -62,7 +63,7 @@ def is_sync_window_open() -> bool:
     return True
 
 
-def apply_live_match_update(
+def _save_live_match_fields(
     match: Match,
     *,
     status: str,
@@ -71,9 +72,6 @@ def apply_live_match_update(
     winner_team_id: int | None = None,
     finalize: bool = False,
 ) -> Match:
-    """Update display scores; recalculate predictions only when finished."""
-    from predictions.services.scoring import recalculate_match_scores
-
     match.status = Match.Status.FINISHED if finalize else status
     match.home_score = home_score
     match.away_score = away_score
@@ -83,10 +81,27 @@ def apply_live_match_update(
     if finalize or status == Match.Status.FINISHED:
         update_fields.append("winner_team")
     match.save(update_fields=update_fields)
-
-    if match.status == Match.Status.FINISHED:
-        recalculate_match_scores(match)
     return match
+
+
+def apply_live_match_update(
+    match: Match,
+    *,
+    status: str,
+    home_score: int | None,
+    away_score: int | None,
+    winner_team_id: int | None = None,
+    finalize: bool = False,
+) -> Match:
+    """Update display scores; post_save signal recalculates when finished."""
+    return _save_live_match_fields(
+        match,
+        status=status,
+        home_score=home_score,
+        away_score=away_score,
+        winner_team_id=winner_team_id,
+        finalize=finalize,
+    )
 
 
 def sync_all_configured_tournaments() -> list[dict[str, Any]]:
@@ -123,6 +138,9 @@ def _match_in_sync_window(match: Match, now: datetime) -> bool:
 
 
 def _sync_football_data(tournament: Tournament) -> dict[str, Any]:
+    from predictions.services.scoring import recalculate_match_scores
+    from predictions.signals import recalculate_predictions_when_match_finishes
+
     config = tournament.live_score_config or {}
     if not resolve_api_token():
         return {"updated": 0, "skipped": 0, "error": "missing_api_token"}
@@ -159,42 +177,58 @@ def _sync_football_data(tournament: Tournament) -> dict[str, Any]:
         return {"updated": 0, "skipped": 0, "error": "api_fetch_failed"}
 
     updated = 0
-    with transaction.atomic():
-        for match in active_matches:
-            external = find_football_data_match_for_match(match, api_matches)
-            if not external:
-                skipped += 1
-                continue
-            if external.home_score is None or external.away_score is None:
-                if external.status == Match.Status.SCHEDULED:
+    finalized_match_ids: list[int] = []
+
+    post_save.disconnect(recalculate_predictions_when_match_finishes, sender=Match)
+    try:
+        with transaction.atomic():
+            for match in active_matches:
+                external = find_football_data_match_for_match(match, api_matches)
+                if not external:
                     skipped += 1
                     continue
-                home_score = external.home_score if external.home_score is not None else 0
-                away_score = external.away_score if external.away_score is not None else 0
-            else:
-                home_score = external.home_score
-                away_score = external.away_score
+                if external.home_score is None or external.away_score is None:
+                    if external.status == Match.Status.SCHEDULED:
+                        skipped += 1
+                        continue
+                    home_score = external.home_score if external.home_score is not None else 0
+                    away_score = external.away_score if external.away_score is not None else 0
+                else:
+                    home_score = external.home_score
+                    away_score = external.away_score
 
-            winner_team_id = None
-            if external.status == Match.Status.FINISHED and match.is_knockout:
-                if home_score > away_score:
-                    winner_team_id = match.home_team_id
-                elif away_score > home_score:
-                    winner_team_id = match.away_team_id
+                winner_team_id = None
+                if external.status == Match.Status.FINISHED and match.is_knockout:
+                    if home_score > away_score:
+                        winner_team_id = match.home_team_id
+                    elif away_score > home_score:
+                        winner_team_id = match.away_team_id
 
-            apply_live_match_update(
-                match,
-                status=external.status,
-                home_score=home_score,
-                away_score=away_score,
-                winner_team_id=winner_team_id,
-                finalize=external.status == Match.Status.FINISHED,
-            )
-            updated += 1
+                finalize = external.status == Match.Status.FINISHED
+                _save_live_match_fields(
+                    match,
+                    status=external.status,
+                    home_score=home_score,
+                    away_score=away_score,
+                    winner_team_id=winner_team_id,
+                    finalize=finalize,
+                )
+                if finalize:
+                    finalized_match_ids.append(match.id)
+                updated += 1
+    finally:
+        post_save.connect(recalculate_predictions_when_match_finishes, sender=Match)
+
+    for match_id in finalized_match_ids:
+        match = Match.objects.select_related(
+            "stage", "home_team", "away_team", "winner_team"
+        ).get(pk=match_id)
+        recalculate_match_scores(match)
 
     return {
         "updated": updated,
         "skipped": skipped,
+        "finalized": len(finalized_match_ids),
         "api_matches": len(api_matches),
         "competition_code": competition_code,
     }

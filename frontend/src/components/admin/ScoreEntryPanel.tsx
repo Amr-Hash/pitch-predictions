@@ -96,7 +96,6 @@ export function ScoreEntryPanel({
             ? Number(draft.winner_team)
             : null,
       });
-      await api.adminRecalculateMatch(token, match.id);
       onSaved();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save score.");

@@ -45,6 +45,19 @@ const JOBS = [
       wdays: [-1],
     },
   },
+  {
+    title: "Alhabeed Background Jobs",
+    path: "/api/cron/process-jobs?limit=50",
+    schedule: {
+      timezone: "UTC",
+      expiresAt: 0,
+      hours: [-1],
+      mdays: [-1],
+      minutes: [-1],
+      months: [-1],
+      wdays: [-1],
+    },
+  },
 ];
 
 function loadEnvFile(path) {

@@ -1,4 +1,4 @@
-const CACHE_VERSION = "alhabeed-v4";
+const CACHE_VERSION = "alhabeed-v5";
 const SHELL_CACHE = `${CACHE_VERSION}-shell`;
 
 const SHELL_ASSETS = [
@@ -48,6 +48,8 @@ self.addEventListener("push", (event) => {
       icon: "/icons/icon-192.png",
       badge: "/icons/icon-192.png",
       data: { url },
+      silent: false,
+      vibrate: [200, 100, 200],
     })
   );
 });

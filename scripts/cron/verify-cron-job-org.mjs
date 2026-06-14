@@ -9,7 +9,16 @@ import { fileURLToPath } from "node:url";
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const API = "https://api.cron-job.org";
-const JOB_IDS = [7812074, 7812075];
+const API_URL = (process.env.ALHABEED_API_URL || "https://alhabeed-api.vercel.app").replace(
+  /\/$/,
+  ""
+);
+
+const EXPECTED_JOBS = [
+  { title: "Alhabeed Live Scores", path: "/api/cron/sync-live-scores" },
+  { title: "Alhabeed Match Reminders", path: "/api/cron/send-match-reminders" },
+  { title: "Alhabeed Background Jobs", path: "/api/cron/process-jobs?limit=50" },
+];
 
 function loadEnvFile(path) {
   try {
@@ -47,12 +56,25 @@ async function api(path) {
 }
 
 async function main() {
+  const { jobs = [] } = await api("/jobs");
   let ok = true;
-  for (const jobId of JOB_IDS) {
-    const { jobDetails } = await api(`/jobs/${jobId}`);
-    const { history = [] } = await api(`/jobs/${jobId}/history`);
+
+  for (const expected of EXPECTED_JOBS) {
+    const expectedUrl = `${API_URL}${expected.path}`;
+    const match = jobs.find(
+      (job) => job.title === expected.title || job.url === expectedUrl
+    );
+    if (!match) {
+      console.log(`\n${expected.title}`);
+      console.log(`  MISSING — run: node scripts/cron/setup-cron-job-org.mjs`);
+      ok = false;
+      continue;
+    }
+
+    const { jobDetails } = await api(`/jobs/${match.jobId}`);
+    const { history = [] } = await api(`/jobs/${match.jobId}/history`);
     const latest = history[0];
-    console.log(`\n${jobDetails.title} (${jobId})`);
+    console.log(`\n${jobDetails.title} (${match.jobId})`);
     console.log(`  URL: ${jobDetails.url}`);
     console.log(`  Enabled: ${jobDetails.enabled}`);
     if (latest) {
@@ -64,6 +86,7 @@ async function main() {
       console.log("  Latest run: none yet (wait for next schedule or Run now in console)");
     }
   }
+
   if (!ok) process.exit(1);
 }
 

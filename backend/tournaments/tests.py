@@ -841,6 +841,9 @@ class LiveScoreSyncTests(TestCase):
             predicted_home_score=2,
             predicted_away_score=1,
         )
+        TournamentSubscription.objects.get_or_create(
+            user=self.user, tournament=self.tournament
+        )
 
     def _api_row(self, *, status: str, home: int, away: int):
         from tournaments.services.football_data import FootballDataMatch
@@ -875,10 +878,36 @@ class LiveScoreSyncTests(TestCase):
         ]
         result = sync_tournament_live_scores(self.tournament)
         self.assertEqual(result["updated"], 1)
+        self.assertEqual(result["finalized"], 1)
         self.prediction.refresh_from_db()
         self.match.refresh_from_db()
         self.assertEqual(self.match.status, Match.Status.FINISHED)
         self.assertGreater(self.prediction.points_awarded, 0)
+
+    @patch.dict(os.environ, {"FOOTBALL_DATA_API_TOKEN": "test-token"}, clear=False)
+    @patch("tournaments.services.live_scores.fetch_competition_matches")
+    def test_football_data_sync_finished_creates_match_result_notification(self, mock_fetch):
+        mock_fetch.return_value = [
+            self._api_row(status=Match.Status.FINISHED, home=2, away=1)
+        ]
+        with (
+            patch("predictions.services.notifications.push_configured", return_value=True),
+            patch(
+                "predictions.services.notifications.send_push_to_user", return_value=1
+            ) as mock_push,
+        ):
+            sync_tournament_live_scores(self.tournament)
+
+        from notifications.models import Notification
+
+        notification = Notification.objects.get(
+            user=self.user,
+            notification_type=Notification.Type.MATCH_RESULT,
+        )
+        self.assertFalse(notification.is_read)
+        self.assertEqual(notification.payload["points_awarded"], 5)
+        self.assertEqual(notification.payload["home_score"], 2)
+        self.assertGreaterEqual(mock_push.call_count, 1)
 
     @patch.dict(os.environ, {"FOOTBALL_DATA_API_TOKEN": "test-token"}, clear=False)
     @patch("tournaments.services.live_scores.fetch_competition_matches")

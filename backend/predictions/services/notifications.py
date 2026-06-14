@@ -32,10 +32,34 @@ def _match_result_payload(match, prediction, points_awarded, before_global, afte
     }
 
 
-def _group_rank_changes_for_user(user_id, before_group_ranks, after_group_ranks, groups):
+def _load_user_group_ids(groups):
+    group_ids = [group.id for group in groups]
+    if not group_ids:
+        return {}
+    user_group_ids = {}
+    for group_id, user_id in GroupMember.objects.filter(
+        group_id__in=group_ids
+    ).values_list("group_id", "user_id"):
+        user_group_ids.setdefault(user_id, set()).add(group_id)
+    return user_group_ids
+
+
+def _group_rank_changes_for_user(
+    user_id,
+    before_group_ranks,
+    after_group_ranks,
+    groups,
+    user_group_ids=None,
+):
     changes = []
+    member_group_ids = (
+        user_group_ids.get(user_id, set()) if user_group_ids is not None else None
+    )
     for group in groups:
-        if not GroupMember.objects.filter(group=group, user_id=user_id).exists():
+        if member_group_ids is not None:
+            if group.id not in member_group_ids:
+                continue
+        elif not GroupMember.objects.filter(group=group, user_id=user_id).exists():
             continue
         after_rank = after_group_ranks.get((group.id, user_id))
         before_rank = before_group_ranks.get((group.id, user_id))
@@ -125,6 +149,7 @@ def process_match_scoring_notifications(
     }
 
     subscribed_user_ids = subscribed_user_ids_for_tournament(tournament_id)
+    user_group_ids = _load_user_group_ids(groups)
 
     for result in scoring_results:
         user_id = result["user_id"]
@@ -134,7 +159,11 @@ def process_match_scoring_notifications(
         if not prediction:
             continue
         group_changes = _group_rank_changes_for_user(
-            user_id, before_group_ranks, after_group_ranks, groups
+            user_id,
+            before_group_ranks,
+            after_group_ranks,
+            groups,
+            user_group_ids=user_group_ids,
         )
         payload = _match_result_payload(
             match,

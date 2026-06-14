@@ -50,6 +50,13 @@ def _deserialize_before_state(state):
 
 
 def enqueue_scoring_notifications_job(match_id, tournament_id, *, before_state):
+    existing = BackgroundJob.objects.filter(
+        status=BackgroundJob.Status.PENDING,
+        job_type=BackgroundJob.JobType.PROCESS_SCORING_NOTIFICATIONS,
+        payload__match_id=match_id,
+    ).first()
+    if existing:
+        return existing
     return BackgroundJob.objects.create(
         job_type=BackgroundJob.JobType.PROCESS_SCORING_NOTIFICATIONS,
         payload={
@@ -109,7 +116,7 @@ def _process_job(job):
     raise ValueError(f"Unknown job type: {job.job_type}")
 
 
-def process_pending_background_jobs(*, limit=10):
+def process_pending_background_jobs(*, limit=50):
     processed = 0
     failed = 0
     jobs = list(

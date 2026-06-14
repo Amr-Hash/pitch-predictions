@@ -44,6 +44,10 @@ def send_push_to_user(user_id: int, *, title: str, body: str, url: str) -> int:
                 data=payload,
                 vapid_private_key=os.environ["VAPID_PRIVATE_KEY"].strip(),
                 vapid_claims=vapid_claims,
+                headers={
+                    "Urgency": "high",
+                    "TTL": "86400",
+                },
             )
             sent += 1
         except WebPushException as exc:

@@ -221,16 +221,7 @@ class MatchAdminUpdateSerializer(serializers.ModelSerializer):
         return attrs
 
     def update(self, instance, validated_data):
-        from predictions.services.scoring import recalculate_match_scores
-
-        match = super().update(instance, validated_data)
-        if (
-            match.status == Match.Status.FINISHED
-            and match.home_score is not None
-            and match.away_score is not None
-        ):
-            recalculate_match_scores(match)
-        return match
+        return super().update(instance, validated_data)
 
 
 class StandingRuleSetSummarySerializer(serializers.ModelSerializer):

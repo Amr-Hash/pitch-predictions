@@ -134,14 +134,15 @@ def recalculate_match_scores(match):
         for user_id, rank in group_rank_map(group, tournament_id).items():
             before_group_ranks[(group.id, user_id)] = rank
 
-    predictions = Prediction.objects.filter(match=match).select_related(
-        "user", "predicted_winner_team"
+    predictions = list(
+        Prediction.objects.filter(match=match).select_related(
+            "user", "predicted_winner_team"
+        )
     )
     results = []
     for prediction in predictions:
         breakdown = calculate_prediction_points(prediction, match)
         prediction.points_awarded = breakdown.total_points
-        prediction.save(update_fields=["points_awarded"])
         results.append(
             {
                 "prediction_id": prediction.id,
@@ -152,6 +153,9 @@ def recalculate_match_scores(match):
                 "points_awarded": breakdown.total_points,
             }
         )
+
+    if predictions:
+        Prediction.objects.bulk_update(predictions, ["points_awarded"])
 
     rebuild_tournament_leaderboards(tournament_id)
     invalidate_tournament_leaderboard_cache(tournament_id)
