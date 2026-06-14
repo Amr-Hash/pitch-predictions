@@ -21,6 +21,8 @@ htmlcov/
 .env*.local
 backend/.env
 scripts/cron/cron.env
+scripts/cron/render.env
+scripts/cron/cron-job-org.env
 
 # IDE
 .idea/

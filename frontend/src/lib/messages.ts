@@ -477,7 +477,7 @@ export const messages = {
     adminLiveScoreCompetitionCode: "Competition code (e.g. WC)",
     adminLiveScoreApiToken: "API token (FOOTBALL_DATA_API_TOKEN)",
     adminLiveScoreConfigHint:
-      "The scheduler container runs every 15 minutes; football-data.org is called only during match windows. Set FOOTBALL_DATA_API_TOKEN on the scheduler.",
+      "cron-job.org calls the API every 15 minutes; football-data.org is only queried during match windows. Set FOOTBALL_DATA_API_TOKEN on the Vercel API project.",
     adminSyncLiveScores: "Sync live scores now",
     adminLiveScoresSynced: "Live scores synced.",
     adminLiveScores: "Live scores",
@@ -493,6 +493,8 @@ export const messages = {
       "Live scores every 15 min, reminders every 5 min (Vercel Cron)",
     adminLiveScoreCronScheduler:
       "Live scores every 15 min, reminders every 5 min (Django scheduler container)",
+    adminLiveScoreCronJobOrg:
+      "Live scores every 15 min, reminders every 5 min (cron-job.org → Vercel API)",
     adminLiveScoreMatchesTotal: "Total matches",
     adminLiveScoreInWindowLabel: "In sync window",
     adminLiveScoreInWindow: "{count} match(es) in the live sync window now",
@@ -1030,6 +1032,8 @@ export const messages = {
       "النتائج كل 15 دقيقة والتذكيرات كل 5 دقائق (Vercel Cron)",
     adminLiveScoreCronScheduler:
       "النتائج كل 15 دقيقة والتذكيرات كل 5 دقائق (حاوية مجدول Django)",
+    adminLiveScoreCronJobOrg:
+      "النتائج كل 15 دقيقة والتذكيرات كل 5 دقائق (cron-job.org → Vercel API)",
     adminLiveScoreMatchesTotal: "إجمالي المباريات",
     adminLiveScoreInWindowLabel: "ضمن نافذة المزامنة",
     adminLiveScoreInWindow: "{count} مباراة ضمن نافذة المزامنة الآن",

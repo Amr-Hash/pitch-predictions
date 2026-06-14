@@ -286,16 +286,26 @@ VERCEL_TOKEN=<token> node scripts/sync-vercel-ci-secret.mjs
 Pull requests run tests only — production deploys run from the **Deploy** workflow after CI passes on `main`.
 You can also trigger deploy manually from **Actions → Deploy → Run workflow**.
 
-### Scheduled jobs (Django scheduler container)
+### Scheduled jobs (cron-job.org → Vercel API)
 
-Vercel **Hobby** plans cannot run frequent cron (only daily). The API on Vercel also cannot host a system crontab — it is serverless.
+Vercel **Hobby** plans cannot run frequent cron (only daily). The API on Vercel is serverless, so an external scheduler calls the protected HTTP endpoints:
 
-Instead, run a **scheduler container** using the same `backend/Dockerfile`. It runs `cron` inside the container and executes Django management commands directly (no HTTP, no Vercel Cron):
+| Job | Schedule | Endpoint |
+|-----|----------|----------|
+| Live score sync | Every **15 min** | `GET /api/cron/sync-live-scores` |
+| Kickoff reminders | Every **5 min** | `GET /api/cron/send-match-reminders` |
 
-| Job | Schedule | Command |
-|-----|----------|---------|
-| Live score sync | Every **15 min** | `python manage.py sync_live_scores` |
-| Kickoff reminders | Every **5 min** | `python manage.py send_match_reminders` |
+**Production setup:** [cron-job.org](https://cron-job.org) (free) → see **[docs/cron-job-org.md](docs/cron-job-org.md)**
+
+```bash
+cp scripts/cron/cron-job-org.env.example scripts/cron/cron-job-org.env
+VERCEL_TOKEN=... node scripts/cron/set-cron-secret-vercel.mjs
+node scripts/cron/setup-cron-job-org.mjs
+```
+
+#### Alternative: Django scheduler container (Docker / Render)
+
+For self-hosted cron without HTTP, use the scheduler container in `docker-compose.yml` or Render (`render.yaml`). See **[docs/render-scheduler.md](docs/render-scheduler.md)**.
 
 Crontab definition: `backend/cron/crontab`
 
@@ -306,18 +316,6 @@ docker compose up --build
 # scheduler service starts automatically alongside backend
 ```
 
-**Production (API on Vercel + Neon DB):** deploy the scheduler on **Render** using the repo blueprint:
-
-1. [Render Dashboard → New Blueprint Instance](https://dashboard.render.com/blueprints) → connect this repo
-2. Set `DATABASE_URL` and `FOOTBALL_DATA_API_TOKEN` on **alhabeed-scheduler** (same values as Vercel)
-3. Deploy — see **[docs/render-scheduler.md](docs/render-scheduler.md)** for the full walkthrough
-
-Blueprint file: `render.yaml` (worker `alhabeed-scheduler`, Starter plan ~$7/mo).
-
-The scheduler connects to the same Postgres database as the Vercel API.
-
-Optional HTTP triggers (`/api/cron/...`) remain for manual testing; production schedules should use the scheduler container.
-
 #### Live score sync (football-data.org)
 
 Live scores can be **manual** (admin enters results) or **football_data** (automatic from [football-data.org](https://www.football-data.org/)).
@@ -326,7 +324,7 @@ Add these environment variables on the **alhabeed-api** Vercel project:
 
 | Variable | Purpose |
 |----------|---------|
-| `CRON_SECRET` | Optional; protects `/api/cron/*` HTTP endpoints for manual/external triggers |
+| `CRON_SECRET` | Required in production; protects `/api/cron/*` (used by cron-job.org) |
 | `FOOTBALL_DATA_API_TOKEN` | API token from football-data.org (free tier available) |
 | `FOOTBALL_DATA_COMPETITION_CODE` | Optional default competition code (World Cup = `WC`) |
 | `LIVE_SCORE_SYNC_START` | Optional; ISO date e.g. `2026-06-11` |

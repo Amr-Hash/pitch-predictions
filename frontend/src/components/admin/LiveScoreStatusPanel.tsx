@@ -31,10 +31,11 @@ const HEALTH_KEYS: Record<string, MessageKey> = {
 };
 
 const CRON_SCHEDULE_KEYS: Record<string, MessageKey> = {
+  cron_job_org: "adminLiveScoreCronJobOrg",
   django_scheduler: "adminLiveScoreCronScheduler",
-  vercel_cron: "adminLiveScoreCronScheduler",
-  every_15_minutes_crontab: "adminLiveScoreCronScheduler",
-  every_15_minutes: "adminLiveScoreCronScheduler",
+  vercel_cron: "adminLiveScoreCronVercel",
+  every_15_minutes_crontab: "adminLiveScoreCronEvery15",
+  every_15_minutes: "adminLiveScoreCronEvery15",
 };
 
 function HealthBadge({ health }: { health: string }) {

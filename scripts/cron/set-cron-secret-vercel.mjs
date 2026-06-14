@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Ensure CRON_SECRET exists on the alhabeed-api Vercel project (production).
- * Vercel Cron sends Authorization: Bearer <CRON_SECRET> to the cron endpoints.
+ * Vercel Cron / cron-job.org send Authorization: Bearer <CRON_SECRET> to the cron endpoints.
  *
  * Usage:
  *   VERCEL_TOKEN=... node scripts/cron/set-cron-secret-vercel.mjs
@@ -86,7 +86,7 @@ const existingCron = (existing.envs || []).find(
   (row) => row.key === "CRON_SECRET" && hasProductionTarget(row.target)
 );
 
-if (existingCron && process.env.ENSURE_CRON_SECRET === "1") {
+if (existingCron && process.env.ENSURE_CRON_SECRET === "1" && !process.env.CRON_SECRET?.trim()) {
   console.log("CRON_SECRET already configured on production; leaving unchanged.");
   process.exit(0);
 }

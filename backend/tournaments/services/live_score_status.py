@@ -47,7 +47,7 @@ def get_global_live_score_environment() -> dict[str, Any]:
         "sync_window_start": start.isoformat() if start else (start_raw or None),
         "sync_window_end": end.isoformat() if end else (end_raw or None),
         # Schedules run in the Django scheduler container (backend/cron/crontab).
-        "cron_schedule": "django_scheduler",
+        "cron_schedule": "cron_job_org",
         "football_data_api_configured": bool(resolve_api_token()),
         "default_competition_code": DEFAULT_COMPETITION_CODE,
     }
