@@ -284,6 +284,9 @@ Vercel **Hobby** plans cannot run frequent cron (only daily). The API on Vercel 
 |-----|----------|----------|
 | Live score sync | Every **15 min** | `GET /api/cron/sync-live-scores` |
 | Kickoff reminders | Every **5 min** | `GET /api/cron/send-match-reminders` |
+| Background jobs | Every **1 min** | `GET /api/cron/process-jobs` |
+| Cache cleanup | Daily | `GET /api/cron/cull-cache` |
+| JWT token cleanup | Weekly | `GET /api/cron/purge-expired-tokens` |
 
 ```bash
 cp scripts/cron/cron-job-org.env.example scripts/cron/cron-job-org.env
@@ -319,6 +322,26 @@ Live scores update match `status` and display scores; prediction points are awar
 Reminders notify tournament subscribers about **1 hour before kickoff** (in-app notification + Web Push when VAPID is configured). The job runs every **5 minutes** so reminders land close to the one-hour mark; it uses only your database — **no football-data.org calls**.
 
 Optional VAPID env vars on the API server: `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_ADMIN_EMAIL` (see `backend/.env.example`).
+
+## Scaling (free tier)
+
+The API is optimized for growth on **Vercel + Neon** without paid Redis:
+
+- **Query fixes** — dashboard builds the global leaderboard once; group leaderboards use a single aggregate query.
+- **Postgres cache** — leaderboards are cached in the `app_cache` table (created on deploy via `createcachetable` in `build.py`).
+- **Materialized leaderboards** — `GlobalLeaderboardEntry` / `GroupLeaderboardEntry` tables are rebuilt when match scores change.
+- **Lightweight pending count** — `GET /api/dashboard/pending-count` for navbar badges (no leaderboard work).
+- **Background jobs** — scoring notifications run via `BackgroundJob` rows processed by the VPS cron (`process-background-jobs.sh`).
+
+`/api/health` reports `cache_ok: true` when the database cache is working.
+
+### If free limits are hit (optional paid upgrades)
+
+| Signal | Upgrade |
+|--------|---------|
+| Neon storage or compute exhausted | Neon Scale (~$19/mo) |
+| Postgres cache too slow at peak | Upstash Redis (~$10/mo) — swap `CACHES` backend, same cache keys |
+| Vercel function timeouts persist | Move API to Render (~$7/mo) using `render.yaml` |
 
 ## Project Structure
 

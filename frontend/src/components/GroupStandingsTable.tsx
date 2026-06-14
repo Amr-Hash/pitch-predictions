@@ -4,6 +4,7 @@ import type { GroupStandingRow } from "@/lib/api";
 import { useT } from "@/lib/i18n";
 import { teamLabel } from "@/lib/localize";
 import type { Locale } from "@/lib/messages";
+import { TeamFlag } from "@/components/TeamFlag";
 
 type Props = {
   standings: GroupStandingRow[];
@@ -61,13 +62,7 @@ export function GroupStandingsTable({ standings, locale }: Props) {
               </td>
               <td className="py-2 pe-2">
                 <div className="flex items-center gap-2">
-                  {row.team.flag_url ? (
-                    <img
-                      src={row.team.flag_url}
-                      alt=""
-                      className="h-4 w-5 rounded-sm object-cover"
-                    />
-                  ) : null}
+                  <TeamFlag src={row.team.flag_url} size="xs" className="shadow-none" />
                   <span className="font-semibold text-night-900">
                     {teamLabel(row.team, locale)}
                   </span>

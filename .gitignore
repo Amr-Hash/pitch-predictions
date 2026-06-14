@@ -14,6 +14,7 @@ backend/staticfiles/
 .coverage
 htmlcov/
 .pytest_cache/
+backend/test.db
 
 # Environment
 .env

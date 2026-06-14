@@ -45,13 +45,22 @@ def health(request):
 
     migration_head_ok = False
     pending_migrations: list[str] = []
+    cache_ok = False
     if db_ok:
         migration_head_ok, pending_migrations = _migration_head_ok()
+        try:
+            from django.core.cache import cache
 
-    overall_ok = db_ok and migration_head_ok
+            cache.set("health_check", "ok", 10)
+            cache_ok = cache.get("health_check") == "ok"
+        except Exception:
+            cache_ok = False
+
+    overall_ok = db_ok and migration_head_ok and cache_ok
     payload = {
         "status": "ok" if overall_ok else "degraded",
         "database": "connected" if db_ok else "unavailable",
+        "cache_ok": cache_ok,
         "migration_head_ok": migration_head_ok,
         "pending_migrations": pending_migrations,
         "detail": db_error,

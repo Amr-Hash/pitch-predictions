@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/auth";
 import { useLocale, useT } from "@/lib/i18n";
 import { matchContextLabel, teamLabel } from "@/lib/localize";
 import { formatDateTime } from "@/lib/format";
+import { TeamFlag } from "@/components/TeamFlag";
 
 export default function MatchDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -30,10 +31,7 @@ export default function MatchDetailPage() {
   useEffect(() => {
     if (!token || !id) return;
     Promise.all([
-      api.getMatches(token).then((data) => {
-        const list = unwrapList(data);
-        setMatch(list.find((m) => m.id === Number(id)) || null);
-      }),
+      api.getMatch(token, Number(id)).then(setMatch),
       api.getPredictions(token, { match: Number(id) }).then((data) => {
         const existing = unwrapList(data)[0] ?? null;
         setPrediction(existing);
@@ -116,10 +114,8 @@ export default function MatchDetailPage() {
 
       <div className="card mb-6">
         <div className="flex items-center justify-between gap-4">
-          <div className="flex-1 text-center">
-            {match.home_team.flag_url && (
-              <img src={match.home_team.flag_url} alt="" className="mx-auto mb-2 h-12 w-16 object-cover" />
-            )}
+          <div className="flex min-w-0 flex-1 flex-col items-center">
+            <TeamFlag src={match.home_team.flag_url} size="lg" className="mb-2" />
             <p className="text-lg font-semibold">{teamLabel(match.home_team, locale)}</p>
           </div>
           <div className="text-center">
@@ -131,10 +127,8 @@ export default function MatchDetailPage() {
               <p className="text-gray-400">{t("vs")}</p>
             )}
           </div>
-          <div className="flex-1 text-center">
-            {match.away_team.flag_url && (
-              <img src={match.away_team.flag_url} alt="" className="mx-auto mb-2 h-12 w-16 object-cover" />
-            )}
+          <div className="flex min-w-0 flex-1 flex-col items-center">
+            <TeamFlag src={match.away_team.flag_url} size="lg" className="mb-2" />
             <p className="text-lg font-semibold">{teamLabel(match.away_team, locale)}</p>
           </div>
         </div>

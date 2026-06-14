@@ -66,6 +66,44 @@ interface Props {
   groups: DashboardGroupSummary[];
 }
 
+function CreateGroupHero({ variant }: { variant: "empty" | "another" }) {
+  const t = useT();
+  const isEmpty = variant === "empty";
+
+  return (
+    <Link
+      href="/groups#create-group"
+      className="group block overflow-hidden rounded-2xl bg-gradient-to-br from-royal-800 via-night-900 to-pitch-800 p-8 text-white shadow-xl transition hover:shadow-2xl sm:p-10"
+    >
+      <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0 flex-1">
+          <span className="mb-3 block text-5xl" aria-hidden>
+            🏆
+          </span>
+          <h2 className="font-display text-2xl font-extrabold leading-tight sm:text-3xl">
+            {isEmpty ? t("groupsHeroTitle") : t("createAnotherGroup")}
+          </h2>
+          <GroupChallengeAudience
+            variant="dark"
+            className="mt-4 justify-center sm:justify-start"
+          />
+          <p className="mt-4 max-w-xl text-base leading-relaxed text-white/90">
+            {isEmpty ? t("noGroupsDesc") : t("groupsCreateAnotherHint")}
+          </p>
+        </div>
+        <div className="shrink-0 sm:text-center">
+          <span className="inline-flex min-h-[3.25rem] min-w-[12rem] items-center justify-center rounded-xl bg-white px-8 py-3.5 text-base font-extrabold text-pitch-700 shadow-lg transition group-hover:bg-gold-50 group-hover:shadow-xl">
+            {isEmpty ? t("createGroups") : t("createOrJoinGroup")} →
+          </span>
+          {!isEmpty && (
+            <p className="mt-3 text-xs font-medium text-white/70">{t("createGroupCardDesc")}</p>
+          )}
+        </div>
+      </div>
+    </Link>
+  );
+}
+
 export function DashboardGroupsSlider({ groups }: Props) {
   const t = useT();
   const trackRef = useRef<HTMLDivElement>(null);
@@ -80,44 +118,33 @@ export function DashboardGroupsSlider({ groups }: Props) {
   if (groups.length === 0) {
     return (
       <section className="mb-8">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="section-heading-royal text-base normal-case tracking-normal">
-            {t("yourGroups")}
-          </h2>
-          <Link href="/groups#create-group" className="btn-fan text-sm">
-            {t("createOrJoinGroup")}
+        <CreateGroupHero variant="empty" />
+        <p className="mt-4 text-center text-sm text-gray-600">
+          {t("joinGroupCardDesc")}{" "}
+          <Link href="/groups" className="font-bold text-royal-600 hover:underline">
+            {t("joinGroup")} →
           </Link>
-        </div>
-        <div className="card border-2 border-dashed border-royal-200 bg-gradient-to-br from-royal-50/50 to-white p-8 text-center">
-          <span className="mb-2 block text-4xl" aria-hidden>
-            🏆
-          </span>
-          <p className="font-display text-lg font-extrabold text-night-900">{t("noGroupsYet")}</p>
-          <GroupChallengeAudience variant="light" className="mx-auto mt-4 max-w-md justify-center" />
-          <p className="mx-auto mt-4 max-w-lg text-sm leading-relaxed text-gray-600">
-            {t("noGroupsDesc")}
-          </p>
-          <Link href="/groups#create-group" className="btn-primary mt-5 inline-block text-sm">
-            {t("createOrJoinGroup")}
-          </Link>
-        </div>
+        </p>
       </section>
     );
   }
 
   return (
     <section className="mb-8">
-      <div className="mb-4 flex items-center justify-between gap-3">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h2 className="section-heading-royal text-base normal-case tracking-normal">
           {t("yourGroups")}
         </h2>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Link href="/groups#create-group" className="btn-fan px-5 py-2.5 text-base font-bold">
+            + {t("createGroups")}
+          </Link>
           {groups.length > 1 && (
             <>
               <button
                 type="button"
                 onClick={() => scroll("left")}
-                className="hidden h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-white text-lg font-bold text-night-700 shadow-sm transition hover:bg-royal-50 sm:flex"
+                className="hidden h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white text-lg font-bold text-night-700 shadow-sm transition hover:bg-royal-50 sm:flex"
                 aria-label={t("scrollLeft")}
               >
                 ‹
@@ -125,14 +152,14 @@ export function DashboardGroupsSlider({ groups }: Props) {
               <button
                 type="button"
                 onClick={() => scroll("right")}
-                className="hidden h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-white text-lg font-bold text-night-700 shadow-sm transition hover:bg-royal-50 sm:flex"
+                className="hidden h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white text-lg font-bold text-night-700 shadow-sm transition hover:bg-royal-50 sm:flex"
                 aria-label={t("scrollRight")}
               >
                 ›
               </button>
             </>
           )}
-          <Link href="/groups" className="btn-secondary text-sm">
+          <Link href="/groups" className="btn-secondary px-4 py-2.5 text-sm">
             {t("manageGroups")}
           </Link>
         </div>
@@ -148,21 +175,9 @@ export function DashboardGroupsSlider({ groups }: Props) {
         <p className="mt-2 text-center text-xs text-gray-400 sm:hidden">{t("swipeGroups")}</p>
       )}
 
-      <Link
-        href="/groups#create-group"
-        className="card card-hover mt-4 block border-l-4 border-l-pitch-500 bg-gradient-to-r from-pitch-50/80 to-white p-4"
-      >
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0 flex-1 text-start">
-            <p className="font-display text-base font-extrabold text-night-900">
-              {t("createAnotherGroup")}
-            </p>
-            <GroupChallengeAudience variant="light" className="mt-3" />
-            <p className="mt-3 text-sm text-gray-600">{t("groupsCreateAnotherHint")}</p>
-          </div>
-          <span className="shrink-0 font-bold text-pitch-700">{t("createOrJoinGroup")} →</span>
-        </div>
-      </Link>
+      <div className="mt-6">
+        <CreateGroupHero variant="another" />
+      </div>
     </section>
   );
 }

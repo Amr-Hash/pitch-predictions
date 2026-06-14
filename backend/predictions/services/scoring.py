@@ -106,19 +106,26 @@ def calculate_prediction_points(prediction, match):
 
 def recalculate_match_scores(match):
     from predictions.models import Prediction
+    from predictions.services.background_jobs import (
+        _serialize_before_state,
+        enqueue_scoring_notifications_job,
+        run_background_jobs_inline,
+    )
+    from predictions.services.cache_keys import invalidate_tournament_leaderboard_cache
     from predictions.services.leaderboard import (
         capture_tournament_podiums,
         global_rank_map,
         group_rank_map,
+        rebuild_tournament_leaderboards,
         tournament_groups_with_members,
     )
-    from predictions.services.notifications import process_match_scoring_notifications
 
     match = Match.objects.select_related(
         "stage", "home_team", "away_team", "winner_team"
     ).get(pk=match.pk)
 
     tournament_id = match.tournament_id
+
     before_podiums = capture_tournament_podiums(tournament_id)
     before_global_ranks = global_rank_map(tournament_id)
     before_group_ranks = {}
@@ -145,11 +152,15 @@ def recalculate_match_scores(match):
                 "points_awarded": breakdown.total_points,
             }
         )
-    process_match_scoring_notifications(
-        match,
-        results,
-        before_podiums,
-        before_global_ranks,
-        before_group_ranks,
+
+    rebuild_tournament_leaderboards(tournament_id)
+    invalidate_tournament_leaderboard_cache(tournament_id)
+    enqueue_scoring_notifications_job(
+        match.id,
+        tournament_id,
+        before_state=_serialize_before_state(
+            before_podiums, before_global_ranks, before_group_ranks
+        ),
     )
+    run_background_jobs_inline()
     return results

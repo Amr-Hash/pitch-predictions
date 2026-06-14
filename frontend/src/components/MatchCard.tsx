@@ -7,6 +7,7 @@ import { matchContextLabel, teamLabel } from "@/lib/localize";
 import { formatDateTime } from "@/lib/format";
 import { isMatchLive } from "@/lib/matchStatus";
 import { cupGroupAccent } from "@/lib/theme";
+import { TeamFlag } from "@/components/TeamFlag";
 
 interface Props {
   match: Match;
@@ -68,14 +69,8 @@ export function MatchCard({ match, prediction, showPredictLink, showResultLink }
           )}
         </div>
         <div className="flex items-center justify-between gap-3">
-          <div className="flex-1 text-center">
-            {match.home_team.flag_url && (
-              <img
-                src={match.home_team.flag_url}
-                alt=""
-                className="mx-auto mb-2 h-10 w-14 rounded object-cover shadow-sm ring-1 ring-black/5"
-              />
-            )}
+          <div className="flex min-w-0 flex-1 flex-col items-center">
+            <TeamFlag src={match.home_team.flag_url} size="md" className="mb-2" />
             <p className="text-sm font-bold text-night-900">{teamLabel(match.home_team, locale)}</p>
           </div>
           <div className="text-center">
@@ -90,14 +85,8 @@ export function MatchCard({ match, prediction, showPredictLink, showResultLink }
             )}
             <p className="mt-1 text-xs font-medium text-gray-500">{kickoff}</p>
           </div>
-          <div className="flex-1 text-center">
-            {match.away_team.flag_url && (
-              <img
-                src={match.away_team.flag_url}
-                alt=""
-                className="mx-auto mb-2 h-10 w-14 rounded object-cover shadow-sm ring-1 ring-black/5"
-              />
-            )}
+          <div className="flex min-w-0 flex-1 flex-col items-center">
+            <TeamFlag src={match.away_team.flag_url} size="md" className="mb-2" />
             <p className="text-sm font-bold text-night-900">{teamLabel(match.away_team, locale)}</p>
           </div>
         </div>

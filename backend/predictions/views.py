@@ -1,7 +1,7 @@
-from django.db.models import Count, Q, Sum
-from django.utils import timezone
+from django.db.models import Sum
 from rest_framework import permissions, viewsets
 from rest_framework.response import Response
+from rest_framework.throttling import UserRateThrottle
 from rest_framework.views import APIView
 
 from groups.models import Group, GroupMember
@@ -9,11 +9,26 @@ from tournaments.models import Match
 
 from .models import Prediction
 from .serializers import PredictionCreateUpdateSerializer, PredictionSerializer
+from .services.dashboard import (
+    count_pending_predictions,
+    get_live_matches,
+    get_pending_matches,
+    get_recent_results,
+    get_upcoming_matches,
+)
 from .services.scoring import calculate_prediction_points
+
+
+class PendingCountThrottle(UserRateThrottle):
+    rate = "6000/hour"
+
+
+from worldcup.pagination import OptionalPagination
 
 
 class PredictionViewSet(viewsets.ModelViewSet):
     permission_classes = (permissions.IsAuthenticated,)
+    pagination_class = OptionalPagination
 
     def get_queryset(self):
         qs = Prediction.objects.filter(user=self.request.user).select_related(
@@ -56,20 +71,35 @@ class GroupLeaderboardView(APIView):
         if not GroupMember.objects.filter(user=request.user, group=group).exists():
             return Response({"detail": "Not a group member."}, status=403)
 
-        from predictions.services.leaderboard import build_group_leaderboard
+        from predictions.services.leaderboard import get_cached_group_leaderboard
 
         tournament_id = request.query_params.get("tournament")
-        return Response(build_group_leaderboard(group, tournament_id))
+        return Response(get_cached_group_leaderboard(group, tournament_id))
 
 
 class GlobalLeaderboardView(APIView):
     permission_classes = (permissions.IsAuthenticated,)
 
     def get(self, request):
-        from predictions.services.leaderboard import build_global_leaderboard
+        from predictions.services.leaderboard import get_cached_global_leaderboard
 
         tournament_id = request.query_params.get("tournament")
-        return Response(build_global_leaderboard(tournament_id))
+        return Response(get_cached_global_leaderboard(tournament_id))
+
+
+class DashboardPendingCountView(APIView):
+    permission_classes = (permissions.IsAuthenticated,)
+    throttle_classes = (PendingCountThrottle,)
+
+    def get(self, request):
+        tournament_id = request.query_params.get("tournament")
+        return Response(
+            {
+                "pending_count": count_pending_predictions(
+                    request.user, tournament_id
+                ),
+            }
+        )
 
 
 class DashboardView(APIView):
@@ -82,41 +112,15 @@ class DashboardView(APIView):
         groups = Group.objects.filter(memberships__user=user).distinct()
         groups_data = self._get_group_summaries(user, tournament_id, groups)
 
-        base_matches_qs = Match.objects.select_related(
-            "home_team", "away_team", "stage", "cup_group"
-        )
-        if tournament_id:
-            base_matches_qs = base_matches_qs.filter(tournament_id=tournament_id)
-
-        now = timezone.now()
-        non_finished = list(
-            base_matches_qs.exclude(status=Match.Status.FINISHED).order_by("kickoff_time")
-        )
-        upcoming = [match for match in non_finished if match.kickoff_time > now]
-        live_matches = (
-            base_matches_qs.exclude(status=Match.Status.FINISHED)
-            .filter(Q(status=Match.Status.LIVE) | Q(kickoff_time__lte=now))
-            .order_by("-kickoff_time")[:10]
-        )
+        upcoming = get_upcoming_matches(tournament_id)
+        live_matches = get_live_matches(tournament_id)
         next_match = upcoming[0] if upcoming else None
+        pending = get_pending_matches(user, tournament_id)
+        recent_results = get_recent_results(tournament_id)
 
         predictions_qs = Prediction.objects.filter(user=user)
         if tournament_id:
             predictions_qs = predictions_qs.filter(match__tournament_id=tournament_id)
-
-        predicted_match_ids = set(predictions_qs.values_list("match_id", flat=True))
-        pending = [
-            match
-            for match in non_finished
-            if match.id not in predicted_match_ids and not match.is_locked
-        ]
-
-        recent_results_qs = Match.objects.filter(
-            status=Match.Status.FINISHED
-        ).select_related("home_team", "away_team", "stage")
-        if tournament_id:
-            recent_results_qs = recent_results_qs.filter(tournament_id=tournament_id)
-        recent_results = recent_results_qs.order_by("-kickoff_time")[:10]
 
         total_points = predictions_qs.aggregate(total=Sum("points_awarded"))["total"] or 0
 
@@ -125,20 +129,24 @@ class DashboardView(APIView):
         serializer_context = {"request": request}
 
         from predictions.services.leaderboard import (
-            build_global_leaderboard,
-            global_podium_for_user,
-            global_rank_map,
+            build_podium_from_leaderboard,
+            get_cached_global_leaderboard,
         )
 
-        global_leaderboard = build_global_leaderboard(tournament_id)
+        global_leaderboard = get_cached_global_leaderboard(tournament_id)
         global_leader_points = (
             global_leaderboard[0]["total_points"] if global_leaderboard else 0
+        )
+        global_podium = build_podium_from_leaderboard(global_leaderboard, user.id)
+        current_rank = next(
+            (row["rank"] for row in global_leaderboard if row["user_id"] == user.id),
+            None,
         )
 
         return Response(
             {
                 "groups": groups_data,
-                "global_podium": global_podium_for_user(tournament_id, user.id),
+                "global_podium": global_podium,
                 "global_leader_points": global_leader_points,
                 "upcoming_matches": MatchSerializer(
                     upcoming, many=True, context=serializer_context
@@ -159,19 +167,19 @@ class DashboardView(APIView):
                     recent_results, many=True, context=serializer_context
                 ).data,
                 "total_points": total_points,
-                "current_rank": global_rank_map(tournament_id).get(user.id),
+                "current_rank": current_rank,
             }
         )
 
     def _get_group_summaries(self, user, tournament_id, groups):
         from predictions.services.leaderboard import (
-            build_group_leaderboard,
             build_podium_from_leaderboard,
+            get_cached_group_leaderboard,
         )
 
         summaries = []
         for group in groups:
-            leaderboard = build_group_leaderboard(group, tournament_id)
+            leaderboard = get_cached_group_leaderboard(group, tournament_id)
             member_ids = [row["user_id"] for row in leaderboard]
 
             user_row = next(

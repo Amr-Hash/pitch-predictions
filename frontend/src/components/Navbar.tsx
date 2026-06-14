@@ -12,6 +12,7 @@ import { NotificationBell } from "@/components/NotificationBell";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { TournamentSwitcher } from "@/components/TournamentSwitcher";
 import { isStaff, isStaffAllowedPath } from "@/lib/staff";
+import { formatBadgeCount } from "@/lib/format";
 import { useTournament } from "@/lib/tournament";
 import { useT } from "@/lib/i18n";
 
@@ -46,10 +47,10 @@ export function Navbar() {
       return;
     }
     api
-      .getDashboard(token, { tournament: selectedTournament.id })
-      .then((data) => setPendingCount(data.pending_count ?? data.pending_predictions.length))
+      .getPendingCount(token, { tournament: selectedTournament.id })
+      .then((data) => setPendingCount(data.pending_count))
       .catch(() => setPendingCount(0));
-  }, [token, selectedTournament, pathname]);
+  }, [token, selectedTournament]);
 
   if (showAdminNav) {
     return <AdminNavbar />;
@@ -82,8 +83,8 @@ export function Navbar() {
                   >
                     {t("matches")}
                     {pendingCount > 0 && (
-                      <span className="inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-gold-500 px-1.5 py-0.5 text-xs font-bold text-night-900 shadow">
-                        {pendingCount > 9 ? "9+" : pendingCount}
+                      <span className="inline-flex min-w-[1.75rem] items-center justify-center rounded-full bg-gold-500 px-1.5 py-0.5 text-xs font-bold tabular-nums text-night-900 shadow">
+                        {formatBadgeCount(pendingCount)}
                       </span>
                     )}
                   </Link>

@@ -7,6 +7,7 @@ import { useLocale, useT } from "@/lib/i18n";
 import { matchContextLabel, teamLabel } from "@/lib/localize";
 import { formatDateTime } from "@/lib/format";
 import { cupGroupAccent } from "@/lib/theme";
+import { TeamFlag } from "@/components/TeamFlag";
 
 function pad(n: number) {
   return String(n).padStart(2, "0");
@@ -61,15 +62,13 @@ function NextMatchCountdown({ match }: { match: Match }) {
         </span>
       </div>
 
-      <div className="mb-4 flex items-center justify-center gap-4">
-        {match.home_team.flag_url && (
-          <img
-            src={match.home_team.flag_url}
-            alt=""
-            className="h-12 w-16 rounded object-cover shadow-lg ring-2 ring-white/30"
-          />
-        )}
-        <div className="text-center">
+      <div className="mb-4 flex items-center justify-center gap-3 sm:gap-4">
+        <TeamFlag
+          src={match.home_team.flag_url}
+          size="lg"
+          className="bg-white/15 ring-2 ring-white/30"
+        />
+        <div className="min-w-0 text-center">
           <p className="font-display text-lg font-extrabold text-white sm:text-xl">
             {teamLabel(match.home_team, locale)}
           </p>
@@ -78,13 +77,11 @@ function NextMatchCountdown({ match }: { match: Match }) {
             {teamLabel(match.away_team, locale)}
           </p>
         </div>
-        {match.away_team.flag_url && (
-          <img
-            src={match.away_team.flag_url}
-            alt=""
-            className="h-12 w-16 rounded object-cover shadow-lg ring-2 ring-white/30"
-          />
-        )}
+        <TeamFlag
+          src={match.away_team.flag_url}
+          size="lg"
+          className="bg-white/15 ring-2 ring-white/30"
+        />
       </div>
 
       {countdown.expired ? (

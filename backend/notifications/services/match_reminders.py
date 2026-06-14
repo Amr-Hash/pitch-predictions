@@ -123,33 +123,39 @@ def send_match_kickoff_reminders() -> dict:
         )
         dedup_key = f"match_kickoff_reminder:{match.id}"
         match_url = f"/matches/{match.id}"
+        user_list = list(users)
+        push_batch_size = 50
 
-        for user in users:
-            eligible_users += 1
-            prediction = prediction_by_user_match.get((user.id, match.id))
-            payload = _reminder_payload(match, prediction)
-            _notification, was_created = Notification.objects.get_or_create(
-                user_id=user.id,
-                dedup_key=dedup_key,
-                defaults={
-                    "notification_type": Notification.Type.MATCH_KICKOFF_REMINDER,
-                    "payload": payload,
-                    "is_read": False,
-                },
-            )
-            if was_created:
-                in_app_created += 1
-
-            if push_enabled and user.id in push_user_ids:
-                title, body = _push_copy(match, prediction)
-                push_sent += send_push_to_user(
-                    user.id,
-                    title=title,
-                    body=body,
-                    url=match_url,
+        for batch_start in range(0, len(user_list), push_batch_size):
+            batch = user_list[batch_start : batch_start + push_batch_size]
+            for user in batch:
+                eligible_users += 1
+                prediction = prediction_by_user_match.get((user.id, match.id))
+                payload = _reminder_payload(match, prediction)
+                _notification, was_created = Notification.objects.get_or_create(
+                    user_id=user.id,
+                    dedup_key=dedup_key,
+                    defaults={
+                        "notification_type": Notification.Type.MATCH_KICKOFF_REMINDER,
+                        "payload": payload,
+                        "is_read": False,
+                    },
                 )
+                if was_created:
+                    in_app_created += 1
 
-            KickoffReminderSent.objects.get_or_create(user_id=user.id, match_id=match.id)
+                if push_enabled and user.id in push_user_ids:
+                    title, body = _push_copy(match, prediction)
+                    push_sent += send_push_to_user(
+                        user.id,
+                        title=title,
+                        body=body,
+                        url=match_url,
+                    )
+
+                KickoffReminderSent.objects.get_or_create(
+                    user_id=user.id, match_id=match.id
+                )
 
     return {
         "enabled": True,

@@ -624,6 +624,9 @@ class GroupMemberViewsTests(TestCase):
 
 class LeaderboardTests(TestCase):
     def setUp(self):
+        from django.core.cache import cache
+
+        cache.clear()
         self.user = User.objects.create_user(
             username="leader", email="leader@example.com", password="pass12345"
         )
@@ -989,3 +992,109 @@ class DashboardPendingTests(TestCase):
         self.assertNotIn(locked_match.id, pending_ids)
         self.assertNotIn(predicted_match.id, pending_ids)
         self.assertEqual(response.data["pending_count"], 1)
+
+
+class DashboardOptimizationTests(TestCase):
+    def setUp(self):
+        from django.core.cache import cache
+
+        cache.clear()
+        self.user = User.objects.create_user(
+            username="optuser",
+            email="opt@example.com",
+            password="pass12345",
+        )
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.user)
+        self.tournament = Tournament.objects.create(
+            name="Opt Cup",
+            year=2026,
+            start_date=timezone.now().date(),
+            end_date=timezone.now().date() + timedelta(days=30),
+        )
+        self.stage = Stage.objects.create(
+            tournament=self.tournament,
+            name="MD1",
+            order=1,
+            stage_type=Stage.StageType.GROUP,
+        )
+        self.home = Team.objects.create(name="Home", code="HOM")
+        self.away = Team.objects.create(name="Away", code="AWY")
+
+    def test_dashboard_builds_global_leaderboard_once(self):
+        Match.objects.create(
+            tournament=self.tournament,
+            stage=self.stage,
+            home_team=self.home,
+            away_team=self.away,
+            kickoff_time=timezone.now() + timedelta(hours=24),
+            status=Match.Status.SCHEDULED,
+        )
+        with patch(
+            "predictions.services.leaderboard.get_cached_global_leaderboard",
+            wraps=__import__(
+                "predictions.services.leaderboard",
+                fromlist=["get_cached_global_leaderboard"],
+            ).get_cached_global_leaderboard,
+        ) as mock_cached:
+            response = self.client.get(
+                f"/api/dashboard?tournament={self.tournament.id}"
+            )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(mock_cached.call_count, 1)
+
+    def test_pending_count_endpoint(self):
+        Match.objects.create(
+            tournament=self.tournament,
+            stage=self.stage,
+            home_team=self.home,
+            away_team=self.away,
+            kickoff_time=timezone.now() + timedelta(hours=24),
+            status=Match.Status.SCHEDULED,
+        )
+        response = self.client.get(
+            f"/api/dashboard/pending-count?tournament={self.tournament.id}"
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["pending_count"], 1)
+
+    def test_group_leaderboard_uses_single_aggregate_query(self):
+        group = Group.objects.create(name="Opt Group", created_by=self.user)
+        GroupMember.objects.create(
+            group=group, user=self.user, role=GroupMember.Role.ADMIN
+        )
+        other = User.objects.create_user(
+            username="optother", email="optother@example.com", password="pass12345"
+        )
+        GroupMember.objects.create(group=group, user=other)
+        match = Match.objects.create(
+            tournament=self.tournament,
+            stage=self.stage,
+            home_team=self.home,
+            away_team=self.away,
+            kickoff_time=timezone.now() - timedelta(days=1),
+            status=Match.Status.FINISHED,
+            home_score=1,
+            away_score=0,
+        )
+        Prediction.objects.create(
+            user=self.user,
+            match=match,
+            predicted_home_score=1,
+            predicted_away_score=0,
+            points_awarded=5,
+        )
+        from django.test.utils import CaptureQueriesContext
+        from django.db import connection
+
+        with CaptureQueriesContext(connection) as context:
+            response = self.client.get(
+                f"/api/leaderboards/group/{group.id}?tournament={self.tournament.id}"
+            )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        prediction_queries = [
+            q["sql"]
+            for q in context.captured_queries
+            if "predictions_prediction" in q["sql"].lower()
+        ]
+        self.assertLessEqual(len(prediction_queries), 2)

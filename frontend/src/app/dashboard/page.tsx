@@ -84,6 +84,8 @@ function DashboardContent() {
         {t("overviewFor", { tournament: tournamentName })}
       </p>
 
+      {!hasGroups && <DashboardGroupsSlider groups={dashboard.groups} />}
+
       <DashboardLiveHub
         nextMatch={dashboard.next_match ?? null}
         liveMatches={dashboard.live_matches ?? []}
@@ -97,7 +99,7 @@ function DashboardContent() {
         leaderPoints={dashboard.global_leader_points ?? 0}
       />
 
-      <DashboardGroupsSlider groups={dashboard.groups} />
+      {hasGroups && <DashboardGroupsSlider groups={dashboard.groups} />}
 
       <div className="mb-8">
         <div className="stat-card-gold">

@@ -605,6 +605,9 @@ export const api = {
     return request<{ results?: Match[] } | Match[]>(`/api/tournaments/matches${query}`, {}, token);
   },
 
+  getMatch: (token: string, id: number) =>
+    request<Match>(`/api/tournaments/matches/${id}`, {}, token),
+
   getPredictions: (token: string, params?: { tournament?: number; match?: number }) => {
     const qs = new URLSearchParams();
     if (params?.tournament) qs.set("tournament", String(params.tournament));
@@ -644,6 +647,13 @@ export const api = {
     if (params?.tournament) qs.set("tournament", String(params.tournament));
     const query = qs.toString() ? `?${qs}` : "";
     return request<Dashboard>(`/api/dashboard${query}`, {}, token);
+  },
+
+  getPendingCount: (token: string, params?: { tournament?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.tournament) qs.set("tournament", String(params.tournament));
+    const query = qs.toString() ? `?${qs}` : "";
+    return request<{ pending_count: number }>(`/api/dashboard/pending-count${query}`, {}, token);
   },
 
   // Admin API (requires is_staff)

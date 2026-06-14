@@ -31,10 +31,7 @@ export default function MatchResultsPage() {
   useEffect(() => {
     if (!token || !id) return;
     Promise.all([
-      api.getMatches(token).then((data) => {
-        const list = unwrapList(data);
-        setMatch(list.find((m) => m.id === Number(id)) || null);
-      }),
+      api.getMatch(token, Number(id)).then(setMatch),
       api.getPredictions(token).then((data) => {
         setPredictions(unwrapList(data).filter((p) => p.match === Number(id)));
       }),

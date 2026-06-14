@@ -37,11 +37,8 @@ function CompareContent() {
   useEffect(() => {
     if (!token || !matchId) return;
     api
-      .getMatches(token)
-      .then((data) => {
-        const list = unwrapList(data);
-        setMatch(list.find((m) => m.id === matchId) || null);
-      })
+      .getMatch(token, matchId)
+      .then(setMatch)
       .catch(() => setMatch(null));
   }, [token, matchId]);
 

@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { api, type NotificationListResponse } from "@/lib/api";
 
-export const NOTIFICATION_POLL_INTERVAL_MS = 5 * 60 * 1000;
+export const NOTIFICATION_POLL_INTERVAL_MS = 10 * 60 * 1000;
 
 export function useNotificationPolling(
   token: string | null,

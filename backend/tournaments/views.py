@@ -32,6 +32,7 @@ from .serializers import (
 )
 
 
+from worldcup.pagination import OptionalPagination
 from worldcup.permissions import IsAdminUser
 
 logger = logging.getLogger(__name__)
@@ -233,7 +234,7 @@ class TeamViewSet(viewsets.ModelViewSet):
 class MatchViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = MatchSerializer
     permission_classes = (permissions.IsAuthenticated,)
-    pagination_class = None
+    pagination_class = OptionalPagination
 
     def get_queryset(self):
         qs = Match.objects.select_related(
@@ -384,3 +385,45 @@ def cron_sync_live_scores(request):
 
     tournaments = sync_all_configured_tournaments()
     return Response({"tournaments": tournaments})
+
+
+@api_view(["GET", "POST"])
+@authentication_classes([])
+@permission_classes([permissions.AllowAny])
+def cron_process_background_jobs(request):
+    if not _authorize_cron_request(request):
+        return Response({"detail": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
+
+    from predictions.services.background_jobs import process_pending_background_jobs
+
+    limit = int(request.query_params.get("limit", 10))
+    result = process_pending_background_jobs(limit=min(limit, 50))
+    return Response(result)
+
+
+@api_view(["GET", "POST"])
+@authentication_classes([])
+@permission_classes([permissions.AllowAny])
+def cron_cull_cache(request):
+    if not _authorize_cron_request(request):
+        return Response({"detail": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
+
+    from django.core.cache import cache
+
+    cache.cull()
+    return Response({"detail": "Cache culled."})
+
+
+@api_view(["GET", "POST"])
+@authentication_classes([])
+@permission_classes([permissions.AllowAny])
+def cron_purge_expired_tokens(request):
+    if not _authorize_cron_request(request):
+        return Response({"detail": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
+
+    from django.core.management import call_command
+    from io import StringIO
+
+    out = StringIO()
+    call_command("purge_expired_tokens", stdout=out)
+    return Response({"detail": out.getvalue().strip()})

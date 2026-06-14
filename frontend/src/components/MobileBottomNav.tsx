@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { isStaff } from "@/lib/staff";
+import { formatBadgeCount } from "@/lib/format";
 import { useTournament } from "@/lib/tournament";
 import { useT } from "@/lib/i18n";
 
@@ -36,10 +37,10 @@ export function MobileBottomNav() {
       return;
     }
     api
-      .getDashboard(token, { tournament: selectedTournament.id })
-      .then((data) => setPendingCount(data.pending_count ?? data.pending_predictions.length))
+      .getPendingCount(token, { tournament: selectedTournament.id })
+      .then((data) => setPendingCount(data.pending_count))
       .catch(() => setPendingCount(0));
-  }, [token, selectedTournament, pathname, show]);
+  }, [token, selectedTournament, show]);
 
   if (!show) return null;
 
@@ -61,8 +62,8 @@ export function MobileBottomNav() {
           </span>
           <span>{t("matches")}</span>
           {pendingCount > 0 && (
-            <span className="absolute end-2 top-0 inline-flex min-w-[1rem] items-center justify-center rounded-full bg-gold-500 px-1 text-[9px] font-bold text-night-900">
-              {pendingCount > 9 ? "9+" : pendingCount}
+            <span className="absolute end-1 top-0 inline-flex min-w-[1.35rem] items-center justify-center rounded-full bg-gold-500 px-1 text-[9px] font-bold tabular-nums text-night-900">
+              {formatBadgeCount(pendingCount)}
             </span>
           )}
         </Link>
