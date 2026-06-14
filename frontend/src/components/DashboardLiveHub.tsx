@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Match, Prediction } from "@/lib/api";
 import { useCountdown } from "@/hooks/useCountdown";
 import { useLocale, useT } from "@/lib/i18n";
+import { type Locale } from "@/lib/messages";
 import { matchContextLabel, teamLabel } from "@/lib/localize";
 import { formatDateTime } from "@/lib/format";
 import { cupGroupAccent } from "@/lib/theme";
@@ -35,7 +36,7 @@ function CountdownSeparator() {
 function formatPredictionSummary(
   match: Match,
   prediction: Prediction,
-  locale: string,
+  locale: Locale,
   t: ReturnType<typeof useT>
 ) {
   const score = `${prediction.predicted_home_score}-${prediction.predicted_away_score}`;
