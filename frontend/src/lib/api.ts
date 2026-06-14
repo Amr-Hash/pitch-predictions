@@ -38,6 +38,7 @@ export interface AdminGroup {
   id: number;
   name: string;
   description: string;
+  icon?: "university" | "school" | "club_friends";
   created_by: number;
   created_by_username: string;
   invite_code: string;
@@ -55,6 +56,7 @@ export interface Group {
   id: number;
   name: string;
   description: string;
+  icon: "university" | "school" | "club_friends";
   created_by: number;
   created_by_username?: string;
   invite_code: string;
@@ -249,6 +251,7 @@ export interface DashboardPodiumEntry {
 export interface DashboardGroupSummary {
   id: number;
   name: string;
+  icon?: "university" | "school" | "club_friends";
   invite_code: string;
   member_count: number;
   rank: number | null;
@@ -544,7 +547,7 @@ export const api = {
 
   getGroups: (token: string) => request<Group[]>("/api/groups", {}, token),
 
-  createGroup: (token: string, data: { name: string; description?: string }) =>
+  createGroup: (token: string, data: { name: string; description?: string; icon?: string }) =>
     request<Group>("/api/groups", { method: "POST", body: JSON.stringify(data) }, token),
 
   getGroupMembers: (token: string, groupId: number) =>

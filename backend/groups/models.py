@@ -11,8 +11,18 @@ def generate_invite_code():
 
 
 class Group(models.Model):
+    class Icon(models.TextChoices):
+        UNIVERSITY = "university", "University"
+        SCHOOL = "school", "School"
+        CLUB_FRIENDS = "club_friends", "Club friends"
+
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True)
+    icon = models.CharField(
+        max_length=20,
+        choices=Icon.choices,
+        default=Icon.CLUB_FRIENDS,
+    )
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,

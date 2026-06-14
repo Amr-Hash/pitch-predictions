@@ -16,6 +16,7 @@ import { useAuth } from "@/lib/auth";
 import { useTournament } from "@/lib/tournament";
 import { RequireTournament } from "@/components/RequireTournament";
 import { EmptyState } from "@/components/EmptyState";
+import { groupIconEmoji } from "@/lib/groupIcons";
 import { GroupInviteShare } from "@/components/GroupInviteShare";
 import { GroupPredictionsPanel } from "@/components/GroupPredictionsPanel";
 import { LeaderboardTable } from "@/components/LeaderboardTable";
@@ -150,8 +151,12 @@ function GroupDetailContent() {
             )}
             <div className="league-hero mb-6">
               <div className="flex flex-wrap items-start justify-between gap-4">
-                <div>
-                  <h1 className="font-display text-3xl font-extrabold">{group.name}</h1>
+                <div className="flex min-w-0 items-start gap-4">
+                  <span className="text-4xl" aria-hidden>
+                    {groupIconEmoji(group.icon)}
+                  </span>
+                  <div className="min-w-0">
+                    <h1 className="font-display text-3xl font-extrabold">{group.name}</h1>
                   {group.description && (
                     <p className="mt-1 text-white/90">{group.description}</p>
                   )}
@@ -168,6 +173,7 @@ function GroupDetailContent() {
                       {tournamentTitle(selectedTournament, locale, "space")}
                     </p>
                   )}
+                  </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <Link

@@ -27,6 +27,7 @@ class GroupSerializer(serializers.ModelSerializer):
             "id",
             "name",
             "description",
+            "icon",
             "created_by",
             "created_by_username",
             "invite_code",
@@ -52,7 +53,7 @@ class GroupSerializer(serializers.ModelSerializer):
 class GroupCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Group
-        fields = ("name", "description")
+        fields = ("name", "description", "icon")
 
 
 class JoinGroupSerializer(serializers.Serializer):
@@ -87,6 +88,7 @@ class AdminGroupListSerializer(serializers.ModelSerializer):
             "id",
             "name",
             "description",
+            "icon",
             "created_by",
             "created_by_username",
             "invite_code",

@@ -168,6 +168,10 @@ export const messages = {
     groupsHeroDesc:
       "Create a private group, share the invite code, and find out who really knows ball. Join as many groups as you want — office trash talk, family bragging rights, and neighborhood rivalry, all at once.",
     groupsChallengeAudience: "People you can challenge",
+    groupIconLabel: "Who is this group for?",
+    groupIconUniversity: "University",
+    groupIconSchool: "School",
+    groupIconClubFriends: "Club friends",
     challengeFriends: "Friends",
     challengeFamily: "Family",
     challengeCoworkers: "Coworkers",
@@ -717,6 +721,10 @@ export const messages = {
     groupsHeroDesc:
       "أنشئ مجموعة خاصة، شارك رمز الدعوة، واكتشف من يفهم الكرة فعلًا. انضم لعدة مجموعات كما تشاء — مزاح المكتب، تفاخر العائلة، ومنافسة الجيران دفعة واحدة.",
     groupsChallengeAudience: "من يمكنك تحديه",
+    groupIconLabel: "لمن هذه المجموعة؟",
+    groupIconUniversity: "الجامعة",
+    groupIconSchool: "المدرسة",
+    groupIconClubFriends: "أصدقاء النادي",
     challengeFriends: "الأصدقاء",
     challengeFamily: "العائلة",
     challengeCoworkers: "زملاء العمل",

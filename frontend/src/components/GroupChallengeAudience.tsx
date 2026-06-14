@@ -1,14 +1,7 @@
 "use client";
 
+import { GROUP_ICONS } from "@/lib/groupIcons";
 import { useT } from "@/lib/i18n";
-import type { MessageKey } from "@/lib/messages";
-
-const AUDIENCE: { key: MessageKey; icon: string }[] = [
-  { key: "challengeFriends", icon: "🤝" },
-  { key: "challengeFamily", icon: "👨‍👩‍👧‍👦" },
-  { key: "challengeCoworkers", icon: "💼" },
-  { key: "challengeNeighbors", icon: "🏘️" },
-];
 
 type Variant = "dark" | "light";
 
@@ -30,14 +23,14 @@ export function GroupChallengeAudience({ variant = "dark", className = "" }: Pro
       role="list"
       aria-label={t("groupsChallengeAudience")}
     >
-      {AUDIENCE.map(({ key, icon }) => (
+      {GROUP_ICONS.map(({ id, emoji, labelKey }) => (
         <span
-          key={key}
+          key={id}
           role="listitem"
           className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold ${chipClass}`}
         >
-          <span aria-hidden>{icon}</span>
-          {t(key)}
+          <span aria-hidden>{emoji}</span>
+          {t(labelKey)}
         </span>
       ))}
     </div>

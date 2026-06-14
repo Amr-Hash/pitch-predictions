@@ -207,6 +207,7 @@ class DashboardView(APIView):
                 {
                     "id": group.id,
                     "name": group.name,
+                    "icon": group.icon,
                     "invite_code": group.invite_code,
                     "member_count": len(member_ids),
                     "rank": rank,

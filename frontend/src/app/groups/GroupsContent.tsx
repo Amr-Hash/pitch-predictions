@@ -5,7 +5,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import { GroupInviteShare } from "@/components/GroupInviteShare";
 import { GroupChallengeAudience } from "@/components/GroupChallengeAudience";
+import { GroupIconPicker } from "@/components/GroupIconPicker";
 import { api, Group, unwrapList } from "@/lib/api";
+import { DEFAULT_GROUP_ICON, groupIconEmoji, type GroupIconId } from "@/lib/groupIcons";
 import { loginUrlWithNext } from "@/lib/authRedirect";
 import { useAuth } from "@/lib/auth";
 import { groupJoinPath } from "@/lib/groupInvite";
@@ -19,6 +21,7 @@ export default function GroupsContent() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [icon, setIcon] = useState<GroupIconId>(DEFAULT_GROUP_ICON);
   const [joinCode, setJoinCode] = useState(searchParams.get("code") || "");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -46,9 +49,10 @@ export default function GroupsContent() {
     if (!token) return;
     setError("");
     try {
-      await api.createGroup(token, { name, description });
+      await api.createGroup(token, { name, description, icon });
       setName("");
       setDescription("");
+      setIcon(DEFAULT_GROUP_ICON);
       setSuccess(t("groupCreated"));
       loadGroups();
     } catch (err) {
@@ -114,6 +118,7 @@ export default function GroupsContent() {
           </h2>
           <p className="mb-4 mt-2 text-sm text-gray-600">{t("createGroupCardDesc")}</p>
           <form onSubmit={handleCreate} className="space-y-3">
+            <GroupIconPicker value={icon} onChange={setIcon} />
             <input
               className="input"
               placeholder={t("groupNamePlaceholder")}
@@ -177,19 +182,26 @@ export default function GroupsContent() {
                 className={`card border-l-4 bg-gradient-to-br to-white ${accent}`}
               >
                 <Link href={`/groups/${g.id}`} className="card-hover block">
-                  <h3 className="font-display text-lg font-extrabold text-night-900">{g.name}</h3>
-                  {g.description && (
-                    <p className="mt-1 text-sm text-gray-600">{g.description}</p>
-                  )}
-                  <p className="mt-1 text-sm font-medium text-gray-500">
-                    {t("groupMembersCount", { count: g.member_count })}
-                  </p>
-                  {g.is_admin && (
-                    <span className="mt-2 inline-block rounded-full bg-gold-100 px-2.5 py-0.5 text-xs font-bold text-gold-800">
-                      {t("groupAdmin")}
+                  <div className="flex items-start gap-3">
+                    <span className="text-3xl" aria-hidden>
+                      {groupIconEmoji(g.icon)}
                     </span>
-                  )}
-                  <p className="mt-3 text-sm font-bold text-royal-600">{t("openGroup")} →</p>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-display text-lg font-extrabold text-night-900">{g.name}</h3>
+                      {g.description && (
+                        <p className="mt-1 text-sm text-gray-600">{g.description}</p>
+                      )}
+                      <p className="mt-1 text-sm font-medium text-gray-500">
+                        {t("groupMembersCount", { count: g.member_count })}
+                      </p>
+                      {g.is_admin && (
+                        <span className="mt-2 inline-block rounded-full bg-gold-100 px-2.5 py-0.5 text-xs font-bold text-gold-800">
+                          {t("groupAdmin")}
+                        </span>
+                      )}
+                      <p className="mt-3 text-sm font-bold text-royal-600">{t("openGroup")} →</p>
+                    </div>
+                  </div>
                 </Link>
                 <GroupInviteShare
                   inviteCode={g.invite_code}

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRef } from "react";
 import { DashboardGroupSummary } from "@/lib/api";
+import { groupIconEmoji } from "@/lib/groupIcons";
 import { OlympicPodium } from "@/components/OlympicPodium";
 import { GroupChallengeAudience } from "@/components/GroupChallengeAudience";
 import { useT } from "@/lib/i18n";
@@ -21,11 +22,16 @@ function GroupSlide({ group }: { group: DashboardGroupSummary }) {
       className="group-slider-card card-hover flex flex-col border-t-4 border-t-royal-500 bg-gradient-to-b from-royal-50/40 to-white"
     >
       <div className="mb-3 flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <h3 className="truncate font-display text-lg font-extrabold text-night-900">
-            {group.name}
-          </h3>
-          <p className="text-xs font-semibold text-gray-500">{rankLabel}</p>
+        <div className="flex min-w-0 items-start gap-2">
+          <span className="text-2xl" aria-hidden>
+            {groupIconEmoji(group.icon)}
+          </span>
+          <div className="min-w-0">
+            <h3 className="truncate font-display text-lg font-extrabold text-night-900">
+              {group.name}
+            </h3>
+            <p className="text-xs font-semibold text-gray-500">{rankLabel}</p>
+          </div>
         </div>
         <div className="shrink-0 rounded-xl bg-night-900 px-3 py-1.5 text-center text-white shadow">
           <p className="text-[10px] font-bold uppercase tracking-wide text-gold-400">
