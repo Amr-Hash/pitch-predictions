@@ -34,11 +34,23 @@ export interface AdminUserActivitySummary {
   as_of: string;
 }
 
+export type GroupIcon =
+  | "friends"
+  | "family"
+  | "coworkers"
+  | "neighbors"
+  | "university"
+  | "school"
+  | "club_friends"
+  | "cafe_friends"
+  | "best_friends"
+  | "others";
+
 export interface AdminGroup {
   id: number;
   name: string;
   description: string;
-  icon?: "university" | "school" | "club_friends";
+  icon?: GroupIcon;
   created_by: number;
   created_by_username: string;
   invite_code: string;
@@ -56,7 +68,7 @@ export interface Group {
   id: number;
   name: string;
   description: string;
-  icon: "university" | "school" | "club_friends";
+  icon: GroupIcon;
   created_by: number;
   created_by_username?: string;
   invite_code: string;
@@ -251,7 +263,7 @@ export interface DashboardPodiumEntry {
 export interface DashboardGroupSummary {
   id: number;
   name: string;
-  icon?: "university" | "school" | "club_friends";
+  icon?: GroupIcon;
   invite_code: string;
   member_count: number;
   rank: number | null;
@@ -549,6 +561,13 @@ export const api = {
 
   createGroup: (token: string, data: { name: string; description?: string; icon?: string }) =>
     request<Group>("/api/groups", { method: "POST", body: JSON.stringify(data) }, token),
+
+  updateGroup: (
+    token: string,
+    groupId: number,
+    data: { name?: string; description?: string; icon?: string }
+  ) =>
+    request<Group>(`/api/groups/${groupId}`, { method: "PATCH", body: JSON.stringify(data) }, token),
 
   getGroupMembers: (token: string, groupId: number) =>
     request<GroupMember[]>(`/api/groups/${groupId}/members`, {}, token),

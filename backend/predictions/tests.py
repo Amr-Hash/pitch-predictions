@@ -62,9 +62,10 @@ class GroupTests(TestCase):
     def test_create_and_join_group(self):
         response = self.client.post(
             "/api/groups",
-            {"name": "Test Group", "description": "A test group"},
+            {"name": "Test Group", "description": "A test group", "icon": "school"},
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["icon"], "school")
         invite_code = response.data["invite_code"]
 
         other = User.objects.create_user(
@@ -75,6 +76,44 @@ class GroupTests(TestCase):
             "/api/groups/join", {"invite_code": invite_code}
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_admin_can_update_group_icon(self):
+        response = self.client.post(
+            "/api/groups",
+            {"name": "Icon Group", "description": ""},
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        group_id = response.data["id"]
+        self.assertEqual(response.data["icon"], "club_friends")
+
+        response = self.client.patch(
+            f"/api/groups/{group_id}",
+            {"icon": "best_friends"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["icon"], "best_friends")
+
+    def test_member_cannot_update_group_icon(self):
+        response = self.client.post(
+            "/api/groups",
+            {"name": "Locked Group", "description": ""},
+        )
+        group_id = response.data["id"]
+        invite_code = response.data["invite_code"]
+
+        member = User.objects.create_user(
+            username="member", email="member@example.com", password="pass12345"
+        )
+        self.client.force_authenticate(user=member)
+        self.client.post("/api/groups/join", {"invite_code": invite_code})
+
+        response = self.client.patch(
+            f"/api/groups/{group_id}",
+            {"icon": "university"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
 
 class ScoringEngineTests(TestCase):

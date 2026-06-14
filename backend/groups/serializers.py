@@ -56,6 +56,17 @@ class GroupCreateSerializer(serializers.ModelSerializer):
         fields = ("name", "description", "icon")
 
 
+class GroupUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Group
+        fields = ("name", "description", "icon")
+        extra_kwargs = {
+            "name": {"required": False},
+            "description": {"required": False},
+            "icon": {"required": False},
+        }
+
+
 class JoinGroupSerializer(serializers.Serializer):
     invite_code = serializers.CharField(max_length=8, required=False)
     invite_link = serializers.CharField(required=False)

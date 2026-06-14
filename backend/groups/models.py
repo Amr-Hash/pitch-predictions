@@ -12,9 +12,16 @@ def generate_invite_code():
 
 class Group(models.Model):
     class Icon(models.TextChoices):
+        FRIENDS = "friends", "Friends"
+        FAMILY = "family", "Family"
+        COWORKERS = "coworkers", "Coworkers"
+        NEIGHBORS = "neighbors", "Neighbors"
         UNIVERSITY = "university", "University"
         SCHOOL = "school", "School"
         CLUB_FRIENDS = "club_friends", "Club friends"
+        CAFE_FRIENDS = "cafe_friends", "Café friends"
+        BEST_FRIENDS = "best_friends", "Best friends"
+        OTHERS = "others", "Others"
 
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True)

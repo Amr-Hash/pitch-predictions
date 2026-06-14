@@ -17,6 +17,8 @@ import { useTournament } from "@/lib/tournament";
 import { RequireTournament } from "@/components/RequireTournament";
 import { EmptyState } from "@/components/EmptyState";
 import { groupIconEmoji } from "@/lib/groupIcons";
+import { GroupIconSettings, parseGroupIcon } from "@/components/GroupIconSettings";
+import type { GroupIconId } from "@/lib/groupIcons";
 import { GroupInviteShare } from "@/components/GroupInviteShare";
 import { GroupPredictionsPanel } from "@/components/GroupPredictionsPanel";
 import { LeaderboardTable } from "@/components/LeaderboardTable";
@@ -46,6 +48,8 @@ function GroupDetailContent() {
   const [loading, setLoading] = useState(true);
   const [memberActionId, setMemberActionId] = useState<number | null>(null);
   const [leaving, setLeaving] = useState(false);
+  const [editIcon, setEditIcon] = useState<GroupIconId>("club_friends");
+  const [savingIcon, setSavingIcon] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -61,6 +65,9 @@ function GroupDetailContent() {
       api.getGroups(token).then((data) => {
         const found = unwrapList(data).find((g) => g.id === groupId) || null;
         setGroup(found);
+        if (found) {
+          setEditIcon(parseGroupIcon(found.icon));
+        }
         if (!found) setError(t("groupNotFound"));
       }),
       api.getGroupMembers(token, groupId).then(setMembers).catch(() => {
@@ -106,6 +113,22 @@ function GroupDetailContent() {
     } catch (err) {
       setError(err instanceof Error ? err.message : t("tryAgain"));
       setLeaving(false);
+    }
+  };
+
+  const handleSaveGroupIcon = async () => {
+    if (!token || !group || editIcon === group.icon) return;
+    setSavingIcon(true);
+    setError("");
+    setSuccess("");
+    try {
+      const updated = await api.updateGroup(token, group.id, { icon: editIcon });
+      setGroup(updated);
+      setSuccess(t("groupIconSaved"));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("tryAgain"));
+    } finally {
+      setSavingIcon(false);
     }
   };
 
@@ -199,6 +222,15 @@ function GroupDetailContent() {
                 variant="dark"
                 className="mt-5 border-t border-white/20 pt-5"
               />
+              {group.is_admin && (
+                <GroupIconSettings
+                  value={editIcon}
+                  onChange={setEditIcon}
+                  onSave={handleSaveGroupIcon}
+                  saving={savingIcon}
+                  dirty={editIcon !== group.icon}
+                />
+              )}
             </div>
 
             <PageTabs

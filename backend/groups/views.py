@@ -19,6 +19,7 @@ from .serializers import (
     GroupCreateSerializer,
     GroupMemberSerializer,
     GroupSerializer,
+    GroupUpdateSerializer,
     InviteUserSerializer,
     JoinGroupSerializer,
 )
@@ -79,7 +80,14 @@ class GroupViewSet(viewsets.ModelViewSet):
     def get_serializer_class(self):
         if self.action == "create":
             return GroupCreateSerializer
+        if self.action in ("update", "partial_update"):
+            return GroupUpdateSerializer
         return GroupSerializer
+
+    def get_permissions(self):
+        if self.action in ("update", "partial_update"):
+            return [permissions.IsAuthenticated(), IsGroupAdmin()]
+        return super().get_permissions()
 
     def perform_create(self, serializer):
         group = serializer.save(created_by=self.request.user)
